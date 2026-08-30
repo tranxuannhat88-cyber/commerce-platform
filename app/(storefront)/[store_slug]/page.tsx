@@ -31,7 +31,7 @@ function StorefrontContent() {
   const params = useParams();
   const storeSlug = (params?.store_slug as string) || "2k-store";
   const { store, offers, categories } = useCommerceStore();
-  const { addToCart, setIsCartOpen, totalItems } = useCart();
+  const { addToCart, setIsCartOpen, totalItems, subtotal } = useCart();
 
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -172,8 +172,8 @@ function StorefrontContent() {
           </div>
         </div>
 
-        {/* Offers Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 pt-2">
+        {/* Offers Grid: 2 columns on mobile, 3 on tablet, 4 on desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-5 pt-2">
           {filteredOffers.map((offer) => {
             const avail = ProductAvailabilityService.computeAvailability({
               inventory_tracking: offer.inventory_tracking,
@@ -193,7 +193,7 @@ function StorefrontContent() {
                 }`}
               >
                 <div>
-                  <Link href={`/${storeSlug}/o/${offer.slug}`} className="block relative aspect-16/9 overflow-hidden group">
+                  <Link href={`/${storeSlug}/o/${offer.slug}`} className="block relative aspect-4/3 overflow-hidden group">
                     <img
                       src={offer.image_url || "https://images.unsplash.com/photo-1585670270608-b4be4fbcf05d?w=600"}
                       alt={offer.name}
@@ -201,66 +201,66 @@ function StorefrontContent() {
                         isOutOfStock ? "grayscale-30" : ""
                       }`}
                     />
-                    <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-900/80 text-white backdrop-blur-md">
-                        {offer.offer_type === "PRODUCT" ? "📦 Sản phẩm" : "🛠️ Dịch vụ"}
+                    <div className="absolute top-1.5 left-1.5 sm:top-2.5 sm:left-2.5 flex flex-wrap items-center gap-1">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold bg-neutral-900/80 text-white backdrop-blur-md">
+                        {offer.offer_type === "PRODUCT" ? "📦 Hàng" : "🛠️ DV"}
                       </span>
                       {isOutOfStock && (
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-600 text-white shadow-xs">
-                          Tạm Hết Hàng
+                        <span className="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold bg-red-600 text-white shadow-xs">
+                          Hết Hàng
                         </span>
                       )}
                       {isLowStock && (
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500 text-white shadow-xs">
-                          Sắp hết ({offer.available_quantity})
+                        <span className="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold bg-amber-500 text-white shadow-xs">
+                          Còn {offer.available_quantity}
                         </span>
                       )}
                     </div>
                   </Link>
 
-                  <div className="p-4 space-y-1.5">
+                  <div className="p-2.5 sm:p-4 space-y-1 sm:space-y-1.5">
                     <Link href={`/${storeSlug}/o/${offer.slug}`}>
-                      <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 hover:text-blue-600 line-clamp-1">
+                      <h3 className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-neutral-100 hover:text-blue-600 line-clamp-2 leading-snug">
                         {offer.name}
                       </h3>
                     </Link>
-                    <p className="text-xs text-neutral-500 line-clamp-2">
+                    <p className="text-[11px] sm:text-xs text-neutral-500 line-clamp-1 sm:line-clamp-2 hidden xs:block">
                       {offer.short_description || offer.description}
                     </p>
 
-                    <div className="pt-2 flex items-baseline gap-2">
-                      <span className="text-base font-black text-blue-600 dark:text-blue-400">
+                    <div className="pt-1 flex flex-wrap items-baseline gap-1 sm:gap-2">
+                      <span className="text-xs sm:text-base font-black text-blue-600 dark:text-blue-400">
                         {formatVND(offer.price)}
                       </span>
                       {offer.compare_at_price && offer.compare_at_price > offer.price && (
-                        <span className="text-xs text-neutral-400 line-through">
+                        <span className="text-[10px] sm:text-xs text-neutral-400 line-through">
                           {formatVND(offer.compare_at_price)}
                         </span>
                       )}
                       {offer.service_unit && (
-                        <span className="text-[11px] text-neutral-500">/{offer.service_unit}</span>
+                        <span className="text-[10px] sm:text-[11px] text-neutral-500">/{offer.service_unit}</span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className="p-4 pt-0">
+                <div className="p-2.5 sm:p-4 pt-0">
                   <button
                     disabled={isOutOfStock}
                     onClick={() => !isOutOfStock && addToCart(offer, offer.variants?.[0], 1)}
-                    className={`w-full py-2.5 rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 transition-all ${
+                    className={`w-full py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-bold shadow-xs flex items-center justify-center gap-1 sm:gap-1.5 transition-all min-h-[38px] ${
                       isOutOfStock
                         ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-500 cursor-not-allowed border border-neutral-300 dark:border-neutral-700"
                         : "bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-white text-white dark:text-neutral-900 cursor-pointer"
                     }`}
                   >
-                    <ShoppingCart className="w-3.5 h-3.5" />
-                    <span>
+                    <ShoppingCart className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+                    <span className="truncate">
                       {isOutOfStock
-                        ? "TẠM HẾT HÀNG"
+                        ? "TẠM HẾT"
                         : offer.offer_type === "PRODUCT"
                         ? "Thêm vào giỏ"
-                        : "Chọn dịch vụ này"}
+                        : "Chọn dịch vụ"}
                     </span>
                   </button>
                 </div>
@@ -269,6 +269,27 @@ function StorefrontContent() {
           })}
         </div>
       </div>
+
+      {/* Floating Bottom Cart Bar on Mobile */}
+      {totalItems > 0 && (
+        <div className="sm:hidden fixed bottom-4 inset-x-3 z-40 animate-in slide-in-from-bottom-4">
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="w-full p-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white rounded-2xl shadow-xl shadow-blue-600/30 flex items-center justify-between font-bold text-xs transition-all"
+          >
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-white text-blue-600 flex items-center justify-center font-black text-[11px]">
+                {totalItems}
+              </span>
+              <span>Xem giỏ hàng</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>{formatVND(subtotal)}</span>
+              <span>→</span>
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* Cart Drawer Component */}
       <CartDrawer storeSlug={storeSlug} />

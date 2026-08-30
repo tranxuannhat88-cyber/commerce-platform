@@ -10,60 +10,73 @@ import {
   FileQuestion,
   ExternalLink,
   CheckCircle2,
+  Menu,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { QRModal } from "@/components/shared/qr-modal";
 import { AppUrlService } from "@/lib/services/url";
+import { MobileDashboardDrawer } from "./sidebar";
 
 export function DashboardHeader() {
   const { notifications, markNotificationRead, store } = useCommerceStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showStoreQR, setShowStoreQR] = useState(false);
+  const [showMobileDrawer, setShowMobileDrawer] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
   const storeUrl = AppUrlService.getStoreUrl(store.slug);
 
   return (
-    <header className="h-16 border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
-      {/* Search / Breadcrumbs */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 text-xs text-neutral-500">
-          <span className="font-semibold text-neutral-800 dark:text-neutral-200">{store.store_name}</span>
-          <span>/</span>
-          <span className="text-neutral-400">Workspace V1</span>
-        </div>
-      </div>
-
-      {/* Action Buttons & Notifications */}
-      <div className="flex items-center gap-3">
-        {/* Quick QR button */}
-        <button
-          onClick={() => setShowStoreQR(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors"
-        >
-          <QrCode className="w-4 h-4 text-blue-600" />
-          <span>QR Cửa Hàng</span>
-        </button>
-
-        {/* Quick Actions Dropdown */}
-        <div className="flex items-center gap-2">
-          <Link
-            href="/sell/offers?create=true"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors"
+    <>
+      <header className="h-16 border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
+        {/* Left: Mobile Menu Trigger & Breadcrumbs */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowMobileDrawer(true)}
+            className="lg:hidden p-2 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+            title="Menu điều hướng"
           >
-            <Tag className="w-3.5 h-3.5" />
-            <span>+ Tạo Offer</span>
-          </Link>
+            <Menu className="w-5 h-5" />
+          </button>
 
-          <Link
-            href="/buy/requests?create=true"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-neutral-800 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors border border-neutral-200 dark:border-neutral-700"
-          >
-            <FileQuestion className="w-3.5 h-3.5 text-emerald-600" />
-            <span>+ Tạo Yêu Cầu (RFQ)</span>
-          </Link>
+          <div className="flex items-center gap-2 text-xs text-neutral-500">
+            <span className="font-semibold text-neutral-800 dark:text-neutral-200 truncate max-w-[120px] sm:max-w-[200px]">
+              {store.store_name}
+            </span>
+            <span className="hidden sm:inline">/</span>
+            <span className="text-neutral-400 hidden sm:inline">Workspace V1</span>
+          </div>
         </div>
 
+        {/* Action Buttons & Notifications */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Quick QR button */}
+          <button
+            onClick={() => setShowStoreQR(true)}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors"
+          >
+            <QrCode className="w-4 h-4 text-blue-600" />
+            <span>QR Cửa Hàng</span>
+          </button>
+
+          {/* Quick Actions Dropdown */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Link
+              href="/sell/offers?create=true"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors"
+            >
+              <Tag className="w-3.5 h-3.5" />
+              <span>+ Offer</span>
+            </Link>
+
+            <Link
+              href="/buy/requests?create=true"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-neutral-800 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors border border-neutral-200 dark:border-neutral-700"
+            >
+              <FileQuestion className="w-3.5 h-3.5 text-emerald-600" />
+              <span>+ RFQ</span>
+            </Link>
+          </div>
         {/* Notification Bell */}
         <div className="relative">
           <button
@@ -112,6 +125,13 @@ export function DashboardHeader() {
           )}
         </div>
       </div>
+      </header>
+
+      {/* Mobile Drawer */}
+      <MobileDashboardDrawer
+        isOpen={showMobileDrawer}
+        onClose={() => setShowMobileDrawer(false)}
+      />
 
       {/* Store QR Modal */}
       <QRModal
@@ -121,6 +141,6 @@ export function DashboardHeader() {
         title="Mã QR Cửa Hàng"
         subtitle={`Quét để mở trực tiếp ${store.store_name}`}
       />
-    </header>
+    </>
   );
 }

@@ -315,8 +315,10 @@ export default function OrderStatusPage() {
                     </p>
                   </div>
                   <button
+                    type="button"
                     onClick={() => handleCopy(bankAccount, setCopiedBank)}
-                    className="p-1.5 text-neutral-500 hover:text-blue-600 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                    className="min-w-[40px] min-h-[40px] flex items-center justify-center text-neutral-500 hover:text-blue-600 rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 active:scale-95 transition-all cursor-pointer"
+                    title="Sao chép số tài khoản"
                   >
                     {copiedBank ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                   </button>
@@ -339,8 +341,10 @@ export default function OrderStatusPage() {
                     </p>
                   </div>
                   <button
+                    type="button"
                     onClick={() => handleCopy(order.order_number.replace(/[^a-zA-Z0-9]/g, ""), setCopiedRef)}
-                    className="p-1.5 text-neutral-500 hover:text-blue-600 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                    className="min-w-[40px] min-h-[40px] flex items-center justify-center text-neutral-500 hover:text-blue-600 rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 active:scale-95 transition-all cursor-pointer"
+                    title="Sao chép nội dung chuyển khoản"
                   >
                     {copiedRef ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                   </button>

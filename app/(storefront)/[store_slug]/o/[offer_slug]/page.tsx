@@ -282,6 +282,14 @@ function DirectOfferContent() {
     }, 600);
   };
 
+  const avail = ProductAvailabilityService.computeAvailability({
+    inventory_tracking: offer.inventory_tracking,
+    availability_status: offer.availability_status,
+    available_quantity: offer.available_quantity,
+  });
+  const isOutOfStock = avail === "OUT_OF_STOCK";
+  const isLowStock = avail === "LOW_STOCK";
+
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 font-sans pb-32 text-neutral-900 dark:text-neutral-100">
       {/* Top Bar */}
@@ -816,6 +824,37 @@ function DirectOfferContent() {
                 </div>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* Sticky Mobile Bottom Buy Bar (Single Product Offer) */}
+      {!isMenuMode && (
+        <div className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-800 p-3 z-40 flex items-center justify-between gap-3 shadow-2xl pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
+          <div className="min-w-0">
+            <p className="text-[10px] text-neutral-400 uppercase font-bold">Tổng tiền</p>
+            <p className="text-sm font-black text-blue-600 dark:text-blue-400 truncate">
+              {formatVND(currentPrice * quantity)}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              disabled={isOutOfStock}
+              onClick={() => !isOutOfStock && addToCart(offer, selectedVariant, quantity)}
+              className="px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all min-h-[40px]"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span>+ Giỏ</span>
+            </button>
+
+            <button
+              disabled={isOutOfStock}
+              onClick={() => !isOutOfStock && handleBuyNow()}
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs shadow-md shadow-blue-600/30 flex items-center gap-1.5 transition-all min-h-[40px]"
+            >
+              <span>{isOutOfStock ? "HẾT HÀNG" : "Mua Ngay"}</span>
+            </button>
           </div>
         </div>
       )}
