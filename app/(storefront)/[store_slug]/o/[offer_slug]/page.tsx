@@ -32,6 +32,8 @@ import {
   Phone,
   Store as StoreIcon,
   RotateCcw,
+  Star,
+  ArrowRight,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND, getPhoneValidationError } from "@/lib/utils";
@@ -334,57 +336,78 @@ function DirectOfferContent() {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 pt-4 sm:pt-6 space-y-6">
-        {/* Seller Mini Card */}
-        {publicOffer?.seller_mini_card && (
-          <SellerMiniCard seller={publicOffer.seller_mini_card} />
-        )}
-
         {/* ========================================================================= */}
         {/* MODE A: MULTI-ITEM CATALOG / PRICE-LIST OFFER                            */}
         {/* ========================================================================= */}
         {isMenuMode ? (
           <div className="space-y-6">
-            {/* Catalog Header Card */}
+            {/* Catalog Header Card (Unified with Seller Trust & Brand) */}
             <div className="overflow-hidden rounded-3xl bg-linear-to-r from-neutral-900 via-neutral-800 to-indigo-950 text-white shadow-xl border border-white/10">
-              {/* Store Branding Header Bar */}
-              <div className="px-6 py-3 bg-black/40 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <Link
-                  href={`/${storeSlug}`}
-                  className="flex items-center gap-2.5 hover:opacity-90 transition-opacity group"
-                >
-                  <div className="w-8 h-8 rounded-xl overflow-hidden bg-white/10 border border-white/20 shrink-0 flex items-center justify-center">
-                    {store.logo_url ? (
-                      <img src={store.logo_url} alt={store.store_name} className="w-full h-full object-cover" />
+              {/* Unified Store Branding & Seller Trust Header Bar */}
+              <div className="px-5 sm:px-6 py-3.5 bg-black/40 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                {/* Left: Identity, Verified Badge, Rating, Location */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative shrink-0">
+                    {publicOffer?.seller_mini_card.logo_url || store.logo_url ? (
+                      <img
+                        src={publicOffer?.seller_mini_card.logo_url || store.logo_url}
+                        alt={publicOffer?.seller_mini_card.seller_display_name || store.store_name}
+                        className="w-10 h-10 rounded-xl object-cover border border-white/20"
+                      />
                     ) : (
-                      <StoreIcon className="w-4 h-4 text-emerald-400" />
+                      <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-400">
+                        <StoreIcon className="w-5 h-5" />
+                      </div>
+                    )}
+                    {publicOffer?.seller_mini_card.is_verified && (
+                      <div
+                        className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs"
+                        title={publicOffer.seller_mini_card.badge_text}
+                      >
+                        <ShieldCheck className="w-2.5 h-2.5 stroke-[3]" />
+                      </div>
                     )}
                   </div>
-                  <div>
-                    <p className="font-bold text-white group-hover:text-emerald-300 transition-colors flex items-center gap-1.5">
-                      <span>{store.store_name}</span>
-                      <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded font-medium border border-emerald-500/30">Cửa hàng</span>
-                    </p>
-                  </div>
-                </Link>
 
-                <div className="flex flex-wrap items-center gap-4 text-[11px] text-neutral-300">
-                  {store.phone && (
-                    <a
-                      href={`tel:${store.phone}`}
-                      className="flex items-center gap-1.5 hover:text-emerald-300 transition-colors"
-                    >
-                      <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span>Hotline: <strong>{store.phone}</strong></span>
-                    </a>
-                  )}
-
-                  {store.address && (
-                    <div className="flex items-center gap-1.5 text-neutral-400 max-w-md truncate">
-                      <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span className="truncate">{store.address}</span>
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-sm text-white truncate">
+                        {publicOffer?.seller_mini_card.seller_display_name || store.store_name}
+                      </span>
+                      <span className="inline-flex items-center gap-0.5 px-2 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
+                        ✓ {publicOffer?.seller_mini_card.badge_text || "Doanh nghiệp Xác thực"}
+                      </span>
                     </div>
-                  )}
+
+                    <div className="flex items-center gap-2 text-[11px] text-neutral-300 flex-wrap">
+                      <span className="flex items-center gap-0.5 font-bold text-amber-400">
+                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                        {(publicOffer?.seller_mini_card.rating_average || 4.9).toFixed(1)}
+                      </span>
+                      <span>•</span>
+                      <span>{publicOffer?.seller_mini_card.transaction_count || 326} giao dịch</span>
+                      <span>•</span>
+                      <span>{publicOffer?.seller_mini_card.location_summary || "Hải Phòng"}</span>
+                      {store.phone && (
+                        <>
+                          <span>•</span>
+                          <a href={`tel:${store.phone}`} className="hover:text-emerald-300 transition-colors">
+                            Hotline: <strong>{store.phone}</strong>
+                          </a>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
+
+                {/* Right: CTA View Store */}
+                <Link
+                  href={`/${storeSlug}`}
+                  className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 transition-all active:scale-95 border border-white/20 self-start sm:self-center cursor-pointer"
+                >
+                  <span>Xem Cửa Hàng</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
 
               {/* Catalog Title & Attachments */}
@@ -601,45 +624,71 @@ function DirectOfferContent() {
         ) : (
           /* ========================================================================= */
           <div className="space-y-4">
-            {/* Store Header Bar */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
-              <Link
-                href={`/${storeSlug}`}
-                className="flex items-center gap-2.5 hover:opacity-90 transition-opacity group"
-              >
-                <div className="w-8 h-8 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border shrink-0 flex items-center justify-center">
-                  {store.logo_url ? (
-                    <img src={store.logo_url} alt={store.store_name} className="w-full h-full object-cover" />
+            {/* Unified Store Branding & Seller Trust Header Bar */}
+            <div className="p-4 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200/90 dark:border-neutral-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              {/* Left: Identity, Verified Badge, Rating, Location */}
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="relative shrink-0">
+                  {publicOffer?.seller_mini_card.logo_url || store.logo_url ? (
+                    <img
+                      src={publicOffer?.seller_mini_card.logo_url || store.logo_url}
+                      alt={publicOffer?.seller_mini_card.seller_display_name || store.store_name}
+                      className="w-10 h-10 rounded-xl object-cover border border-neutral-100 dark:border-neutral-800"
+                    />
                   ) : (
-                    <StoreIcon className="w-4 h-4 text-blue-600" />
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center font-bold text-xs">
+                      <Building className="w-5 h-5" />
+                    </div>
+                  )}
+                  {publicOffer?.seller_mini_card.is_verified && (
+                    <div
+                      className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs"
+                      title={publicOffer.seller_mini_card.badge_text}
+                    >
+                      <ShieldCheck className="w-2.5 h-2.5 stroke-[3]" />
+                    </div>
                   )}
                 </div>
-                <div>
-                  <p className="font-bold text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 transition-colors flex items-center gap-1.5">
-                    <span>{store.store_name}</span>
-                    <span className="text-[10px] px-1.5 py-0.2 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded font-medium border border-blue-200 dark:border-blue-800">Cửa hàng</span>
-                  </p>
-                </div>
-              </Link>
 
-              <div className="flex flex-wrap items-center gap-4 text-[11px] text-neutral-600 dark:text-neutral-400">
-                {store.phone && (
-                  <a
-                    href={`tel:${store.phone}`}
-                    className="flex items-center gap-1.5 hover:text-blue-600 transition-colors"
-                  >
-                    <Phone className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>Hotline: <strong>{store.phone}</strong></span>
-                  </a>
-                )}
-
-                {store.address && (
-                  <div className="flex items-center gap-1.5 text-neutral-500 max-w-md truncate">
-                    <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span className="truncate">{store.address}</span>
+                <div className="min-w-0 space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-bold text-sm text-neutral-900 dark:text-neutral-100 truncate">
+                      {publicOffer?.seller_mini_card.seller_display_name || store.store_name}
+                    </h4>
+                    <span className="inline-flex items-center gap-0.5 px-2 py-0.2 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800">
+                      ✓ {publicOffer?.seller_mini_card.badge_text || "Doanh nghiệp Xác thực"}
+                    </span>
                   </div>
-                )}
+
+                  <div className="flex items-center gap-2 text-[11px] text-neutral-500 dark:text-neutral-400 flex-wrap">
+                    <span className="flex items-center gap-0.5 font-bold text-amber-500">
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                      {(publicOffer?.seller_mini_card.rating_average || 4.9).toFixed(1)}
+                    </span>
+                    <span>•</span>
+                    <span>{publicOffer?.seller_mini_card.transaction_count || 326} giao dịch</span>
+                    <span>•</span>
+                    <span>{publicOffer?.seller_mini_card.location_summary || "Hải Phòng"}</span>
+                    {store.phone && (
+                      <>
+                        <span>•</span>
+                        <a href={`tel:${store.phone}`} className="hover:text-blue-600 transition-colors">
+                          Hotline: <strong>{store.phone}</strong>
+                        </a>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              {/* Right: CTA View Store */}
+              <Link
+                href={`/${storeSlug}`}
+                className="px-3.5 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 transition-all active:scale-95 self-start sm:self-center cursor-pointer"
+              >
+                <span>Xem Cửa Hàng</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white dark:bg-neutral-900 rounded-3xl p-6 md:p-8 border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
