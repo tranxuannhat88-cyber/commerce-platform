@@ -14,13 +14,14 @@ import {
   Phone,
   ArrowRight,
   Shield,
+  CreditCard,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { UserRole } from "@/types";
 import { MediaUploadDropzone } from "@/components/shared/media-upload-dropzone";
 
 export default function SettingsPage() {
-  const { organization, updateOrganization } = useCommerceStore();
+  const { organization, updateOrganization, subscription } = useCommerceStore();
   const [orgName, setOrgName] = useState(organization.name);
   const [taxCode, setTaxCode] = useState(organization.tax_code || "");
   const [phone, setPhone] = useState(organization.phone || "");
@@ -63,33 +64,56 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Account Security & Passkey Banner */}
-      <Link
-        href="/settings/security"
-        className="block p-5 rounded-3xl bg-linear-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white shadow-lg transition-all group"
-      >
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-xs text-white shrink-0 group-hover:scale-110 transition-transform">
-              <Fingerprint className="w-6 h-6" />
+      {/* Quick Navigation Cards: Billing & Security */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Billing & Subscription */}
+        <Link
+          href="/settings/billing"
+          className="p-5 rounded-3xl bg-linear-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white shadow-lg transition-all group flex flex-col justify-between"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-xs text-white shrink-0 group-hover:scale-110 transition-transform">
+              <CreditCard className="w-5 h-5" />
             </div>
-            <div className="space-y-0.5">
-              <h3 className="text-sm font-black flex items-center gap-2">
-                <span>Tài Khoản & Bảo Mật Xác Thực (Passkey & Phone OTP)</span>
-                <span className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-bold">Mới</span>
-              </h3>
-              <p className="text-xs text-blue-100 leading-relaxed">
-                Quản lý số điện thoại đăng nhập, Passkeys (Face ID / Vân tay), bảo vệ thao tác nhạy cảm và phiên làm việc.
-              </p>
-            </div>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-400 text-emerald-950 text-[10px] font-black">
+              Gói {subscription.plan_code}
+            </span>
           </div>
+          <div className="space-y-1 mt-4">
+            <h3 className="text-sm font-black flex items-center gap-1.5">
+              <span>Gói Dịch Vụ & Hạn Mức</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </h3>
+            <p className="text-[11px] text-blue-100 leading-relaxed">
+              Theo dõi 5 chỉ số tài nguyên, nâng cấp gói, mua Add-on và xem hóa đơn.
+            </p>
+          </div>
+        </Link>
 
-          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/20 font-bold text-xs shrink-0 group-hover:bg-white group-hover:text-blue-700 transition-all">
-            <span>Cài đặt bảo mật</span>
-            <ArrowRight className="w-4 h-4" />
+        {/* Account Security & Passkey */}
+        <Link
+          href="/settings/security"
+          className="p-5 rounded-3xl bg-linear-to-r from-neutral-900 to-neutral-800 hover:from-black hover:to-neutral-900 dark:from-neutral-800 dark:to-neutral-700 text-white shadow-lg transition-all group flex flex-col justify-between"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-xs text-white shrink-0 group-hover:scale-110 transition-transform">
+              <Fingerprint className="w-5 h-5" />
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-bold">
+              Passkey & OTP
+            </span>
           </div>
-        </div>
-      </Link>
+          <div className="space-y-1 mt-4">
+            <h3 className="text-sm font-black flex items-center gap-1.5">
+              <span>Bảo Mật & Xác Thực</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </h3>
+            <p className="text-[11px] text-neutral-300 leading-relaxed">
+              Face ID, Touch ID, Windows Hello, số điện thoại và phiên đăng nhập.
+            </p>
+          </div>
+        </Link>
+      </div>
 
       {/* RLS Security Status Badge */}
       <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 flex items-center gap-3">

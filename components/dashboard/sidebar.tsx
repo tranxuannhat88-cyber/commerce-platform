@@ -19,6 +19,7 @@ import {
   Sparkles,
   ShieldCheck,
   KeyRound,
+  CreditCard,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 
@@ -73,6 +74,7 @@ export function DashboardSidebar() {
       title: "HỆ THỐNG",
       items: [
         { href: "/store", label: "Cửa hàng & Kênh bán", icon: StoreIcon },
+        { href: "/settings/billing", label: "Gói Dịch Vụ & Hạn Mức", icon: CreditCard },
         { href: "/settings/security", label: "Tài khoản & Passkey", icon: KeyRound },
         { href: "/settings", label: "Thiết lập Doanh nghiệp", icon: Settings },
       ],

@@ -63,9 +63,22 @@ import {
   INITIAL_USER_IDENTITY,
   INITIAL_PASSKEYS,
   INITIAL_AUTH_SESSION,
+  INITIAL_SUBSCRIPTION,
+  INITIAL_BILLING_ORDERS,
+  INITIAL_BILLING_INVOICES,
 } from "./mock-data";
 import { UserIdentity, PasskeyCredential, AuthSession, AuthMethodType } from "@/lib/auth/types";
 import { PhoneNormalizationService } from "@/lib/auth/phone";
+import {
+  Subscription,
+  BillingOrder,
+  BillingInvoice,
+  BillingPlanCode,
+  BillingPeriod,
+  BillingOrderType,
+} from "@/lib/billing/types";
+import { BillingService } from "@/lib/billing/billing-service";
+import { EntitlementService } from "@/lib/billing/entitlement-service";
 
 import { ShippingCalculationService } from "@/lib/shipping/engine";
 
@@ -108,6 +121,9 @@ const STORAGE_KEYS = {
   USER: "commerce_user",
   PASSKEYS: "commerce_passkeys",
   SESSION: "commerce_session",
+  SUBSCRIPTION: "commerce_subscription",
+  BILLING_ORDERS: "commerce_billing_orders",
+  BILLING_INVOICES: "commerce_billing_invoices",
 };
 
 function sanitizeForStorage(obj: any): any {
@@ -220,6 +236,9 @@ export function useCommerceStore() {
   const [currentUser, setCurrentUserState] = useState<UserIdentity | null>(INITIAL_USER_IDENTITY);
   const [currentSession, setCurrentSessionState] = useState<AuthSession | null>(INITIAL_AUTH_SESSION);
   const [passkeys, setPasskeysState] = useState<PasskeyCredential[]>(INITIAL_PASSKEYS);
+  const [subscription, setSubscriptionState] = useState<Subscription>(INITIAL_SUBSCRIPTION);
+  const [billingOrders, setBillingOrdersState] = useState<BillingOrder[]>(INITIAL_BILLING_ORDERS);
+  const [billingInvoices, setBillingInvoicesState] = useState<BillingInvoice[]>(INITIAL_BILLING_INVOICES);
 
   useEffect(() => {
     // Proactively clean bloated storage on first load
@@ -252,6 +271,9 @@ export function useCommerceStore() {
     setCurrentUserState(getStored(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY));
     setCurrentSessionState(getStored(STORAGE_KEYS.SESSION, INITIAL_AUTH_SESSION));
     setPasskeysState(getStored(STORAGE_KEYS.PASSKEYS, INITIAL_PASSKEYS));
+    setSubscriptionState(getStored(STORAGE_KEYS.SUBSCRIPTION, INITIAL_SUBSCRIPTION));
+    setBillingOrdersState(getStored(STORAGE_KEYS.BILLING_ORDERS, INITIAL_BILLING_ORDERS));
+    setBillingInvoicesState(getStored(STORAGE_KEYS.BILLING_INVOICES, INITIAL_BILLING_INVOICES));
     setIsLoaded(true);
 
     const handleStorageUpdate = () => {
@@ -282,6 +304,9 @@ export function useCommerceStore() {
       setCurrentUserState(getStored(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY));
       setCurrentSessionState(getStored(STORAGE_KEYS.SESSION, INITIAL_AUTH_SESSION));
       setPasskeysState(getStored(STORAGE_KEYS.PASSKEYS, INITIAL_PASSKEYS));
+      setSubscriptionState(getStored(STORAGE_KEYS.SUBSCRIPTION, INITIAL_SUBSCRIPTION));
+      setBillingOrdersState(getStored(STORAGE_KEYS.BILLING_ORDERS, INITIAL_BILLING_ORDERS));
+      setBillingInvoicesState(getStored(STORAGE_KEYS.BILLING_INVOICES, INITIAL_BILLING_INVOICES));
     };
 
     window.addEventListener("commerce_storage_update", handleStorageUpdate);
@@ -1742,6 +1767,99 @@ export function useCommerceStore() {
     logout();
   };
 
+  // ==========================================
+  // BILLING & SUBSCRIPTION ACTIONS
+  // ==========================================
+
+  const createBillingOrder = (params: {
+    actorId?: string;
+    actorType?: "PERSONAL" | "ORGANIZATION";
+    actorName?: string;
+    orderType: BillingOrderType;
+    planCode?: BillingPlanCode;
+    billingPeriod?: BillingPeriod;
+    addonSelections?: { addonCode: string; quantity: number }[];
+    promoCode?: string;
+  }): BillingOrder => {
+    const order = BillingService.createBillingOrder({
+      actorId: params.actorId || organization.id,
+      actorType: params.actorType || "ORGANIZATION",
+      actorName: params.actorName || organization.name,
+      orderType: params.orderType,
+      planCode: params.planCode,
+      billingPeriod: params.billingPeriod || "MONTHLY",
+      addonSelections: params.addonSelections,
+      promoCode: params.promoCode,
+    });
+
+    const updatedOrders = [order, ...billingOrders];
+    setBillingOrdersState(updatedOrders);
+    setStored(STORAGE_KEYS.BILLING_ORDERS, updatedOrders);
+
+    // If total amount is 0 (e.g. FREE plan or 100% coupon), auto-confirm immediately
+    if (order.total_amount === 0) {
+      confirmBillingOrder(order.id);
+    }
+
+    return order;
+  };
+
+  const confirmBillingOrder = (orderId: string) => {
+    const targetOrder = billingOrders.find((o) => o.id === orderId);
+    if (!targetOrder) return;
+
+    const { updatedOrder, updatedSubscription, invoice } =
+      BillingService.processPaymentWebhook(targetOrder, subscription);
+
+    // Update orders list
+    const updatedOrders = billingOrders.map((o) => (o.id === orderId ? updatedOrder : o));
+    setBillingOrdersState(updatedOrders);
+    setStored(STORAGE_KEYS.BILLING_ORDERS, updatedOrders);
+
+    // Update active subscription
+    setSubscriptionState(updatedSubscription);
+    setStored(STORAGE_KEYS.SUBSCRIPTION, updatedSubscription);
+
+    // Add invoice
+    const updatedInvoices = [invoice, ...billingInvoices];
+    setBillingInvoicesState(updatedInvoices);
+    setStored(STORAGE_KEYS.BILLING_INVOICES, updatedInvoices);
+
+    // Add notification
+    const newNotif: AppNotification = {
+      id: `notif-bill-${Date.now()}`,
+      organization_id: organization.id,
+      title: "Gói Dịch Vụ Đã Kích Hoạt",
+      message: `Thanh toán ${updatedOrder.order_number} thành công! Gói ${updatedSubscription.plan_code} đã được kích hoạt.`,
+      type: "ORDER",
+      is_read: false,
+      created_at: new Date().toISOString(),
+    };
+    const updatedNotifs = [newNotif, ...notifications];
+    setNotificationsState(updatedNotifs);
+    setStored(STORAGE_KEYS.NOTIFICATIONS, updatedNotifs);
+
+    return { updatedOrder, updatedSubscription, invoice };
+  };
+
+  const cancelSubscription = () => {
+    const updated = BillingService.cancelSubscription(subscription);
+    setSubscriptionState(updated);
+    setStored(STORAGE_KEYS.SUBSCRIPTION, updated);
+  };
+
+  const schedulePlanDowngrade = (targetPlanCode: BillingPlanCode) => {
+    const updated = BillingService.scheduleDowngrade(subscription, targetPlanCode);
+    setSubscriptionState(updated);
+    setStored(STORAGE_KEYS.SUBSCRIPTION, updated);
+  };
+
+  const reactivateSubscription = () => {
+    const updated = BillingService.reactivateSubscription(subscription);
+    setSubscriptionState(updated);
+    setStored(STORAGE_KEYS.SUBSCRIPTION, updated);
+  };
+
   const totalSales = orders.reduce((acc, o) => (o.order_status !== "CANCELLED" ? acc + o.total_amount : acc), 0);
   const totalCashReceived = orders.reduce(
     (acc, o) => (o.payment?.payment_status === "PAID" ? acc + o.total_amount : acc),
@@ -1786,6 +1904,9 @@ export function useCommerceStore() {
     currentUser,
     currentSession,
     passkeys,
+    subscription,
+    billingOrders,
+    billingInvoices,
     // Actions
     updateOrganization,
     updateStore,
@@ -1833,6 +1954,12 @@ export function useCommerceStore() {
     isStepUpValid,
     logout,
     logoutAllSessions,
+    // Billing Actions
+    createBillingOrder,
+    confirmBillingOrder,
+    cancelSubscription,
+    schedulePlanDowngrade,
+    reactivateSubscription,
     // Financials
     financials: {
       totalSales,

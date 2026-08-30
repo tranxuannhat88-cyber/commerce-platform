@@ -18,7 +18,7 @@ import { AppUrlService } from "@/lib/services/url";
 import { MobileDashboardDrawer } from "./sidebar";
 
 export function DashboardHeader() {
-  const { notifications, markNotificationRead, store, currentUser, passkeys } = useCommerceStore();
+  const { notifications, markNotificationRead, store, currentUser, passkeys, subscription } = useCommerceStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showStoreQR, setShowStoreQR] = useState(false);
   const [showMobileDrawer, setShowMobileDrawer] = useState(false);
@@ -124,6 +124,16 @@ export function DashboardHeader() {
             </div>
           )}
         </div>
+
+        {/* Subscription Pill */}
+        <Link
+          href="/settings/billing"
+          className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-black hover:bg-blue-100 transition-colors"
+          title="Xem hạn mức và gói dịch vụ"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>{subscription.plan_code}</span>
+        </Link>
 
         {/* User Account & Security Link */}
         <Link

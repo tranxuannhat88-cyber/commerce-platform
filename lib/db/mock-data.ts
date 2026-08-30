@@ -25,6 +25,7 @@ import {
   ShippingZone
 } from "@/types";
 import { UserIdentity, PasskeyCredential, AuthSession } from "@/lib/auth/types";
+import { Subscription, BillingOrder, BillingInvoice } from "@/lib/billing/types";
 
 export const INITIAL_ORGANIZATION: Organization = {
   id: "org-2k-tech",
@@ -921,4 +922,90 @@ export const INITIAL_AUTH_SESSION: AuthSession = {
   step_up_authenticated_at: new Date(Date.now() - 5 * 60000).toISOString(), // 5 mins ago
   expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
 };
+
+export const INITIAL_SUBSCRIPTION: Subscription = {
+  id: "sub-org-2k-tech-01",
+  actor_id: "org-2k-tech",
+  actor_type: "ORGANIZATION",
+  actor_name: "CÔNG TY TNHH KỸ THUẬT & THƯƠNG MẠI 2K",
+  plan_id: "plan-pro",
+  plan_code: "PRO",
+  status: "ACTIVE",
+  billing_period: "MONTHLY",
+  current_period_start: new Date(Date.now() - 15 * 86400000).toISOString(),
+  current_period_end: new Date(Date.now() + 15 * 86400000).toISOString(),
+  cancel_at_period_end: false,
+  scheduled_downgrade_plan_id: null,
+  items: [
+    {
+      id: "sub-item-base-pro",
+      subscription_id: "sub-org-2k-tech-01",
+      item_type: "BASE_PLAN",
+      quantity: 1,
+      unit_price: 249000,
+      total_amount: 249000,
+      effective_from: new Date(Date.now() - 15 * 86400000).toISOString(),
+    },
+  ],
+  activated_at: new Date(Date.now() - 45 * 86400000).toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
+export const INITIAL_BILLING_ORDERS: BillingOrder[] = [
+  {
+    id: "order-bill-prev-01",
+    order_number: "BILL260815-1029",
+    actor_id: "org-2k-tech",
+    actor_type: "ORGANIZATION",
+    actor_name: "CÔNG TY TNHH KỸ THUẬT & THƯƠNG MẠI 2K",
+    subscription_id: "sub-org-2k-tech-01",
+    order_type: "NEW_SUBSCRIPTION",
+    plan_code: "PRO",
+    billing_period: "MONTHLY",
+    items: [
+      {
+        id: "item-plan-pro",
+        billing_order_id: "order-bill-prev-01",
+        item_type: "PLAN",
+        reference_id: "plan-pro",
+        description: "Gói PRO (Hàng Tháng)",
+        quantity: 1,
+        unit_price: 249000,
+        amount: 249000,
+      },
+    ],
+    subtotal: 249000,
+    discount_amount: 0,
+    tax_amount: 0,
+    total_amount: 249000,
+    currency: "VND",
+    payment_method: "VIETQR",
+    payment_reference: "COMMERCE BILL260815-1029",
+    account_number: "0988123456888",
+    account_name: "CONG TY CONG NGHE COMMERCE PLATFORM",
+    bank_name: "MBBank (Ngân Hàng Quân Đội)",
+    bank_bin: "970422",
+    status: "PAID",
+    created_at: new Date(Date.now() - 15 * 86400000).toISOString(),
+    paid_at: new Date(Date.now() - 15 * 86400000).toISOString(),
+  },
+];
+
+export const INITIAL_BILLING_INVOICES: BillingInvoice[] = [
+  {
+    id: "inv-prev-01",
+    invoice_number: "INV-BILL260815-1029",
+    billing_order_id: "order-bill-prev-01",
+    actor_id: "org-2k-tech",
+    actor_name: "CÔNG TY TNHH KỸ THUẬT & THƯƠNG MẠI 2K",
+    tax_code: "0109988776",
+    amount: 249000,
+    tax_amount: 0,
+    total_amount: 249000,
+    status: "PAID",
+    issued_at: new Date(Date.now() - 15 * 86400000).toISOString(),
+    description: "Thanh toán Gói PRO (Hàng tháng)",
+  },
+];
+
 
