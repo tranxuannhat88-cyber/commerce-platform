@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Settings,
   Building,
@@ -9,6 +10,10 @@ import {
   Save,
   Lock,
   Sparkles,
+  Fingerprint,
+  Phone,
+  ArrowRight,
+  Shield,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { UserRole } from "@/types";
@@ -57,6 +62,34 @@ export default function SettingsPage() {
           ✓ Đã lưu thông tin Doanh nghiệp thành công!
         </div>
       )}
+
+      {/* Account Security & Passkey Banner */}
+      <Link
+        href="/settings/security"
+        className="block p-5 rounded-3xl bg-linear-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white shadow-lg transition-all group"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-xs text-white shrink-0 group-hover:scale-110 transition-transform">
+              <Fingerprint className="w-6 h-6" />
+            </div>
+            <div className="space-y-0.5">
+              <h3 className="text-sm font-black flex items-center gap-2">
+                <span>Tài Khoản & Bảo Mật Xác Thực (Passkey & Phone OTP)</span>
+                <span className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-bold">Mới</span>
+              </h3>
+              <p className="text-xs text-blue-100 leading-relaxed">
+                Quản lý số điện thoại đăng nhập, Passkeys (Face ID / Vân tay), bảo vệ thao tác nhạy cảm và phiên làm việc.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/20 font-bold text-xs shrink-0 group-hover:bg-white group-hover:text-blue-700 transition-all">
+            <span>Cài đặt bảo mật</span>
+            <ArrowRight className="w-4 h-4" />
+          </div>
+        </div>
+      </Link>
 
       {/* RLS Security Status Badge */}
       <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 flex items-center gap-3">

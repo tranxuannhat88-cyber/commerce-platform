@@ -60,7 +60,12 @@ import {
   INITIAL_TRANSACTIONS,
   INITIAL_SHIPPING_METHODS,
   INITIAL_SHIPPING_ZONES,
+  INITIAL_USER_IDENTITY,
+  INITIAL_PASSKEYS,
+  INITIAL_AUTH_SESSION,
 } from "./mock-data";
+import { UserIdentity, PasskeyCredential, AuthSession, AuthMethodType } from "@/lib/auth/types";
+import { PhoneNormalizationService } from "@/lib/auth/phone";
 
 import { ShippingCalculationService } from "@/lib/shipping/engine";
 
@@ -100,6 +105,9 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: "commerce_notifications",
   SHIPPING_METHODS: "commerce_shipping_methods",
   SHIPPING_ZONES: "commerce_shipping_zones",
+  USER: "commerce_user",
+  PASSKEYS: "commerce_passkeys",
+  SESSION: "commerce_session",
 };
 
 function sanitizeForStorage(obj: any): any {
@@ -209,6 +217,9 @@ export function useCommerceStore() {
   const [notifications, setNotificationsState] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
   const [shippingMethods, setShippingMethodsState] = useState<ShippingMethod[]>(INITIAL_SHIPPING_METHODS);
   const [shippingZones, setShippingZonesState] = useState<ShippingZone[]>(INITIAL_SHIPPING_ZONES);
+  const [currentUser, setCurrentUserState] = useState<UserIdentity | null>(INITIAL_USER_IDENTITY);
+  const [currentSession, setCurrentSessionState] = useState<AuthSession | null>(INITIAL_AUTH_SESSION);
+  const [passkeys, setPasskeysState] = useState<PasskeyCredential[]>(INITIAL_PASSKEYS);
 
   useEffect(() => {
     // Proactively clean bloated storage on first load
@@ -238,6 +249,9 @@ export function useCommerceStore() {
     setNotificationsState(getStored(STORAGE_KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS));
     setShippingMethodsState(getStored(STORAGE_KEYS.SHIPPING_METHODS, INITIAL_SHIPPING_METHODS));
     setShippingZonesState(getStored(STORAGE_KEYS.SHIPPING_ZONES, INITIAL_SHIPPING_ZONES));
+    setCurrentUserState(getStored(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY));
+    setCurrentSessionState(getStored(STORAGE_KEYS.SESSION, INITIAL_AUTH_SESSION));
+    setPasskeysState(getStored(STORAGE_KEYS.PASSKEYS, INITIAL_PASSKEYS));
     setIsLoaded(true);
 
     const handleStorageUpdate = () => {
@@ -265,6 +279,9 @@ export function useCommerceStore() {
       setNotificationsState(getStored(STORAGE_KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS));
       setShippingMethodsState(getStored(STORAGE_KEYS.SHIPPING_METHODS, INITIAL_SHIPPING_METHODS));
       setShippingZonesState(getStored(STORAGE_KEYS.SHIPPING_ZONES, INITIAL_SHIPPING_ZONES));
+      setCurrentUserState(getStored(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY));
+      setCurrentSessionState(getStored(STORAGE_KEYS.SESSION, INITIAL_AUTH_SESSION));
+      setPasskeysState(getStored(STORAGE_KEYS.PASSKEYS, INITIAL_PASSKEYS));
     };
 
     window.addEventListener("commerce_storage_update", handleStorageUpdate);
@@ -1581,6 +1598,150 @@ export function useCommerceStore() {
     setStored(STORAGE_KEYS.LEDGER, updatedLedger);
   };
 
+  // =========================================================================
+  // AUTH & IDENTITY ACTIONS (PHONE OTP, PASSKEY, STEP-UP, SESSIONS)
+  // =========================================================================
+  const loginWithPhone = (rawPhone: string, fullName?: string) => {
+    const normalized = PhoneNormalizationService.normalize(rawPhone);
+    let user = currentUser;
+    if (!user || user.primary_phone !== normalized) {
+      user = {
+        id: `usr_${Date.now().toString(36)}`,
+        user_code: `usr_${Math.floor(100000 + Math.random() * 900000)}`,
+        full_name: fullName || "Người Dùng Mới",
+        primary_phone: normalized,
+        status: "ACTIVE",
+        is_phone_verified: true,
+        is_email_verified: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    } else if (fullName && fullName.trim()) {
+      user = { ...user, full_name: fullName.trim(), updated_at: new Date().toISOString() };
+    }
+
+    const session: AuthSession = {
+      id: `sess_${Date.now()}`,
+      user_id: user.id,
+      user,
+      device_name: typeof navigator !== "undefined" ? navigator.userAgent.substring(0, 30) : "Thiết bị hiện tại",
+      session_token: `tok_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+      last_active_at: new Date().toISOString(),
+      step_up_authenticated_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+    };
+
+    setCurrentUserState(user);
+    setCurrentSessionState(session);
+    setStored(STORAGE_KEYS.USER, user);
+    setStored(STORAGE_KEYS.SESSION, session);
+    return { user, session };
+  };
+
+  const loginWithPasskey = (credentialId: string) => {
+    const matched = passkeys.find((p) => p.credential_id === credentialId);
+    let user = currentUser;
+    if (!user) {
+      user = INITIAL_USER_IDENTITY;
+    }
+    const updatedPasskeys = passkeys.map((p) =>
+      p.credential_id === credentialId
+        ? { ...p, counter: p.counter + 1, last_used_at: new Date().toISOString() }
+        : p
+    );
+    setPasskeysState(updatedPasskeys);
+    setStored(STORAGE_KEYS.PASSKEYS, updatedPasskeys);
+
+    const session: AuthSession = {
+      id: `sess_${Date.now()}`,
+      user_id: user.id,
+      user,
+      device_name: matched?.device_name || "Thiết bị Passkey",
+      session_token: `tok_passkey_${Date.now()}`,
+      last_active_at: new Date().toISOString(),
+      step_up_authenticated_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+    };
+    setCurrentUserState(user);
+    setCurrentSessionState(session);
+    setStored(STORAGE_KEYS.USER, user);
+    setStored(STORAGE_KEYS.SESSION, session);
+    return { user, session };
+  };
+
+  const addPasskey = (passkey: PasskeyCredential) => {
+    const updated = [passkey, ...passkeys.filter((p) => p.credential_id !== passkey.credential_id)];
+    setPasskeysState(updated);
+    setStored(STORAGE_KEYS.PASSKEYS, updated);
+  };
+
+  const removePasskey = (passkeyId: string) => {
+    const updated = passkeys.filter((p) => p.id !== passkeyId);
+    setPasskeysState(updated);
+    setStored(STORAGE_KEYS.PASSKEYS, updated);
+  };
+
+  const renamePasskey = (passkeyId: string, newName: string) => {
+    const updated = passkeys.map((p) =>
+      p.id === passkeyId ? { ...p, device_name: newName.trim() } : p
+    );
+    setPasskeysState(updated);
+    setStored(STORAGE_KEYS.PASSKEYS, updated);
+  };
+
+  const updatePrimaryPhone = (newPhone: string) => {
+    if (!currentUser) return;
+    const normalized = PhoneNormalizationService.normalize(newPhone);
+    const updated: UserIdentity = {
+      ...currentUser,
+      primary_phone: normalized,
+      is_phone_verified: true,
+      updated_at: new Date().toISOString(),
+    };
+    setCurrentUserState(updated);
+    setStored(STORAGE_KEYS.USER, updated);
+  };
+
+  const updateUserProfile = (profile: Partial<UserIdentity>) => {
+    if (!currentUser) return;
+    const updated: UserIdentity = {
+      ...currentUser,
+      ...profile,
+      updated_at: new Date().toISOString(),
+    };
+    setCurrentUserState(updated);
+    setStored(STORAGE_KEYS.USER, updated);
+  };
+
+  const performStepUpAuth = (method: AuthMethodType = "PASSKEY") => {
+    if (!currentSession) return false;
+    const now = new Date().toISOString();
+    const updatedSession = { ...currentSession, step_up_authenticated_at: now };
+    setCurrentSessionState(updatedSession);
+    setStored(STORAGE_KEYS.SESSION, updatedSession);
+    return true;
+  };
+
+  const isStepUpValid = (maxAgeMinutes: number = 15): boolean => {
+    if (!currentSession || !currentSession.step_up_authenticated_at) return false;
+    const lastStepUp = new Date(currentSession.step_up_authenticated_at).getTime();
+    const now = Date.now();
+    return now - lastStepUp <= maxAgeMinutes * 60 * 1000;
+  };
+
+  const logout = () => {
+    setCurrentUserState(null);
+    setCurrentSessionState(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(STORAGE_KEYS.USER);
+      localStorage.removeItem(STORAGE_KEYS.SESSION);
+    }
+  };
+
+  const logoutAllSessions = () => {
+    logout();
+  };
+
   const totalSales = orders.reduce((acc, o) => (o.order_status !== "CANCELLED" ? acc + o.total_amount : acc), 0);
   const totalCashReceived = orders.reduce(
     (acc, o) => (o.payment?.payment_status === "PAID" ? acc + o.total_amount : acc),
@@ -1622,6 +1783,9 @@ export function useCommerceStore() {
     notifications,
     shippingMethods,
     shippingZones,
+    currentUser,
+    currentSession,
+    passkeys,
     // Actions
     updateOrganization,
     updateStore,
@@ -1658,6 +1822,17 @@ export function useCommerceStore() {
     generateVietQRUrl,
     anchorPendingBatch,
     recordVerificationEvent,
+    loginWithPhone,
+    loginWithPasskey,
+    addPasskey,
+    removePasskey,
+    renamePasskey,
+    updatePrimaryPhone,
+    updateUserProfile,
+    performStepUpAuth,
+    isStepUpValid,
+    logout,
+    logoutAllSessions,
     // Financials
     financials: {
       totalSales,

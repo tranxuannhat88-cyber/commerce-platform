@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND, formatDateTime, isValidVietnamesePhone, getPhoneValidationError, cleanPhoneNumber } from "@/lib/utils";
+import { GuestClaimCard } from "@/components/auth/guest-claim-card";
 import confetti from "canvas-confetti";
 
 export default function OrderStatusPage() {
@@ -446,46 +447,15 @@ export default function OrderStatusPage() {
         {/* ========================================================================= */}
         {/* PROGRESSIVE IDENTITY: GUEST SAVE ORDER ACTION BOX                         */}
         {/* ========================================================================= */}
-        <div className="p-6 bg-linear-to-r from-blue-50 via-indigo-50 to-blue-100/60 dark:from-blue-950/40 dark:via-indigo-950/40 dark:to-blue-900/30 rounded-3xl border border-blue-200 dark:border-blue-800/80 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="space-y-1 text-center sm:text-left">
-            <div className="flex items-center justify-center sm:justify-start gap-2">
-              <span className="p-1.5 rounded-lg bg-blue-600 text-white">
-                <Bookmark className="w-4 h-4" />
-              </span>
-              <h3 className="text-sm font-black text-blue-950 dark:text-blue-200">
-                {isOrderSaved ? "✓ Đã Lưu Thông Tin Đặt Hàng" : "Lưu Thông Tin Đặt Hàng"}
-              </h3>
-            </div>
-            <p className="text-xs text-blue-800/80 dark:text-blue-300/80 max-w-md leading-relaxed">
-              {isOrderSaved
-                ? `Đơn hàng #${order.order_number} đã được gắn vào tài khoản của ${regName || "bạn"}. Bạn có thể tra cứu bất kỳ lúc nào!`
-                : "Tạo tài khoản nhanh để lưu lại đơn hàng, tra cứu tiến độ vận chuyển và bảo hành mà không cần ghi nhớ mã đơn."}
-            </p>
-          </div>
-
-          <div>
-            {isOrderSaved ? (
-              <Link
-                href="/sell/orders"
-                className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5 whitespace-nowrap"
-              >
-                <Check className="w-4 h-4" />
-                <span>Xem Trong Quản Lý Đơn</span>
-              </Link>
-            ) : (
-              <button
-                onClick={() => {
-                  setModalStep("FORM");
-                  setShowSaveOrderModal(true);
-                }}
-                className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-lg shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap active:scale-95"
-              >
-                <Bookmark className="w-4 h-4" />
-                <span>Lưu thông tin đặt hàng</span>
-              </button>
-            )}
-          </div>
-        </div>
+        <GuestClaimCard
+          type="ORDER"
+          order={order}
+          initialPhone={order.customer_phone}
+          onClaimSuccess={(user) => {
+            setIsOrderSaved(true);
+            setRegName(user.full_name);
+          }}
+        />
       </main>
 
       {/* ========================================================================= */}

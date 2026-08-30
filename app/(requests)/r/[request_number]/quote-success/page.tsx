@@ -13,6 +13,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { CopyButton } from "@/components/shared/copy-button";
+import { GuestClaimCard } from "@/components/auth/guest-claim-card";
 import confetti from "canvas-confetti";
 
 function QuoteSuccessContent() {
@@ -51,31 +52,17 @@ function QuoteSuccessContent() {
         </div>
 
         {/* Growth Loop: Claim Token & Account Linking */}
-        <div className="p-4 rounded-2xl bg-linear-to-b from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200/80 dark:border-blue-900/60 text-left space-y-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-500" />
-            <span className="text-xs font-bold text-blue-950 dark:text-blue-200">
-              Quản lý báo giá & Nhận thông báo Realtime
-            </span>
-          </div>
-
-          <p className="text-[11px] text-blue-800 dark:text-blue-300 leading-relaxed">
-            Mã định danh báo giá của bạn (Claim Token):
-          </p>
-          <div className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-neutral-900 border border-blue-200 dark:border-blue-800 font-mono text-[11px] text-neutral-700 dark:text-neutral-300">
-            <span className="truncate max-w-[220px]">{claimToken}</span>
-            <CopyButton text={claimToken} label="Copy" className="text-[10px] py-1" />
-          </div>
-
-          <p className="text-[10px] text-neutral-500">
-            Tạo tài khoản hoặc đăng nhập vào Workspace để nhận thông báo ngay khi Khách hàng mở xem hoặc duyệt đơn!
-          </p>
-        </div>
+        <GuestClaimCard
+          type="QUOTATION"
+          onClaimSuccess={() => {
+            console.log("Quotation claimed successfully");
+          }}
+        />
 
         <div className="space-y-2 pt-2">
           <Link
             href="/sell/quotations"
-            className="w-full py-3 rounded-2xl bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-white text-white dark:text-neutral-900 font-bold text-xs shadow-md flex items-center justify-center gap-2 transition-all"
+            className="w-full py-3 rounded-2xl bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-white text-white dark:text-neutral-900 font-bold text-xs shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             <span>Vào Workspace Quản Lý Báo Giá</span>
             <ArrowRight className="w-4 h-4" />

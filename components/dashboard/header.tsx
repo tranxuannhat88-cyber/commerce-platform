@@ -18,7 +18,7 @@ import { AppUrlService } from "@/lib/services/url";
 import { MobileDashboardDrawer } from "./sidebar";
 
 export function DashboardHeader() {
-  const { notifications, markNotificationRead, store } = useCommerceStore();
+  const { notifications, markNotificationRead, store, currentUser, passkeys } = useCommerceStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showStoreQR, setShowStoreQR] = useState(false);
   const [showMobileDrawer, setShowMobileDrawer] = useState(false);
@@ -124,6 +124,25 @@ export function DashboardHeader() {
             </div>
           )}
         </div>
+
+        {/* User Account & Security Link */}
+        <Link
+          href="/settings/security"
+          className="flex items-center gap-2 pl-2 border-l border-neutral-200 dark:border-neutral-800 hover:opacity-80 transition-opacity"
+          title="Tài khoản & Cài đặt bảo mật"
+        >
+          <div className="w-8 h-8 rounded-xl bg-linear-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+            {currentUser?.full_name?.charAt(0) || "U"}
+          </div>
+          <div className="hidden xl:block text-left">
+            <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate max-w-[110px]">
+              {currentUser?.full_name || "Thành viên"}
+            </p>
+            <p className="text-[10px] text-neutral-400 font-mono">
+              {passkeys.length > 0 ? "🔑 Passkey On" : "📱 Phone OTP"}
+            </p>
+          </div>
+        </Link>
       </div>
       </header>
 

@@ -1,33 +1,49 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, useRef } from "react";
 import {
-  Sparkles,
-  ArrowRight,
+  X,
+  Phone,
+  KeyRound,
   Fingerprint,
+  ArrowRight,
   Loader2,
-  CheckCircle2,
   AlertCircle,
+  CheckCircle2,
+  Sparkles,
   ShieldCheck,
-  Store,
 } from "lucide-react";
 import { PhoneNormalizationService } from "@/lib/auth/phone";
 import { OTPService } from "@/lib/auth/otp-service";
 import { PasskeyClientService } from "@/lib/auth/passkey-client";
 import { WebAuthnHelper } from "@/lib/auth/webauthn";
 import { useCommerceStore } from "@/lib/db/store";
-import { PasskeyPromptModal } from "@/components/auth/passkey-prompt-modal";
-import { WelcomeNameModal } from "@/components/auth/welcome-name-modal";
 import { UserIdentity } from "@/lib/auth/types";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const { loginWithPhone, loginWithPasskey, passkeys, currentUser } = useCommerceStore();
+interface UnifiedAuthModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: (user: UserIdentity, isNewUser: boolean) => void;
+  initialPhone?: string;
+  initialMode?: "phone" | "passkey";
+  title?: string;
+  subtitle?: string;
+}
 
+export function UnifiedAuthModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialPhone = "",
+  initialMode = "phone",
+  title = "Đăng Nhập / Đăng Ký",
+  subtitle = "Tiếp tục với số điện thoại hoặc Face ID / Vân tay của thiết bị",
+}: UnifiedAuthModalProps) {
+  const { loginWithPhone, loginWithPasskey, passkeys } = useCommerceStore();
+
+  const [mode, setMode] = useState<"phone" | "passkey">(initialMode);
   const [step, setStep] = useState<"PHONE_INPUT" | "OTP_INPUT">("PHONE_INPUT");
-  const [phone, setPhone] = useState("0988123456");
+  const [phone, setPhone] = useState(initialPhone);
   const [otpDigits, setOtpDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [cooldown, setCooldown] = useState(0);
   const [demoCode, setDemoCode] = useState<string | null>(null);
@@ -37,20 +53,26 @@ export default function LoginPage() {
   const [isPasskeySupported, setIsPasskeySupported] = useState(false);
   const [deviceBiometricLabel, setDeviceBiometricLabel] = useState("Face ID / Vân tay");
 
-  const [loggedUser, setLoggedUser] = useState<UserIdentity | null>(null);
-  const [showWelcomeName, setShowWelcomeName] = useState(false);
-  const [showPasskeyPrompt, setShowPasskeyPrompt] = useState(false);
-
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
-    WebAuthnHelper.isPasskeySupported().then((supported) => {
-      setIsPasskeySupported(supported);
-      const caps = WebAuthnHelper.detectDeviceCapabilities();
-      setDeviceBiometricLabel(caps.biometricName);
-    });
-  }, []);
+    if (isOpen) {
+      setStep("PHONE_INPUT");
+      setPhone(initialPhone);
+      setOtpDigits(["", "", "", "", "", ""]);
+      setErrorMessage(null);
+      setDemoCode(null);
 
+      // Check Passkey capability
+      WebAuthnHelper.isPasskeySupported().then((supported) => {
+        setIsPasskeySupported(supported);
+        const caps = WebAuthnHelper.detectDeviceCapabilities();
+        setDeviceBiometricLabel(caps.biometricName);
+      });
+    }
+  }, [isOpen, initialPhone]);
+
+  // Cooldown countdown timer
   useEffect(() => {
     if (cooldown <= 0) return;
     const timer = setInterval(() => {
@@ -59,6 +81,9 @@ export default function LoginPage() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
+  if (!isOpen) return null;
+
+  // 1. Request OTP
   const handleRequestOTP = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMessage(null);
@@ -79,22 +104,25 @@ export default function LoginPage() {
       }
 
       setCooldown(res.cooldown_seconds || 60);
-      if (res.demo_code) setDemoCode(res.demo_code);
+      if (res.demo_code) {
+        setDemoCode(res.demo_code);
+      }
       setStep("OTP_INPUT");
       setTimeout(() => {
         inputRefs.current[0]?.focus();
       }, 150);
     } catch (err) {
-      setErrorMessage("Lỗi kết nối. Vui lòng thử lại.");
+      setErrorMessage("Đã có lỗi kết nối. Vui lòng thử lại.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // 2. Verify OTP
   const handleVerifyOTP = async (codeToVerify?: string) => {
     const fullCode = codeToVerify || otpDigits.join("");
     if (fullCode.length < 6) {
-      setErrorMessage("Vui lòng nhập đủ 6 chữ số.");
+      setErrorMessage("Vui lòng nhập đủ 6 chữ số mã xác minh.");
       return;
     }
 
@@ -109,33 +137,38 @@ export default function LoginPage() {
         return;
       }
 
+      // Xác minh thành công -> Đăng nhập / Tạo tài khoản
       const normalized = PhoneNormalizationService.normalize(phone);
       const { user } = loginWithPhone(normalized);
-      setLoggedUser(user);
 
+      // Nếu tài khoản mới (chưa có tên đầy đủ)
       const isNew = !user.full_name || user.full_name === "Người Dùng Mới";
 
-      if (isNew) {
-        setShowWelcomeName(true);
-      } else {
-        router.push("/store");
+      if (onSuccess) {
+        onSuccess(user, isNew);
       }
+      onClose();
     } catch (err) {
-      setErrorMessage("Xác minh không thành công.");
+      setErrorMessage("Xác minh không thành công. Vui lòng thử lại.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // 3. Handle OTP digit input & paste
   const handleOtpChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
+
     const newDigits = [...otpDigits];
     newDigits[index] = value.substring(value.length - 1);
     setOtpDigits(newDigits);
 
+    // Auto-focus next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
+
+    // Auto-submit when all 6 digits entered
     if (newDigits.every((d) => d !== "")) {
       handleVerifyOTP(newDigits.join(""));
     }
@@ -164,6 +197,7 @@ export default function LoginPage() {
     }
   };
 
+  // 4. Passkey Authentication
   const handlePasskeyLogin = async () => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -177,8 +211,11 @@ export default function LoginPage() {
       }
 
       if (res.credential_id) {
-        loginWithPasskey(res.credential_id);
-        router.push("/store");
+        const { user } = loginWithPasskey(res.credential_id);
+        if (onSuccess) {
+          onSuccess(user, false);
+        }
+        onClose();
       }
     } catch (err) {
       setErrorMessage("Xác thực Passkey thất bại. Vui lòng dùng số điện thoại.");
@@ -188,20 +225,35 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 font-sans flex items-center justify-center p-4 text-neutral-900 dark:text-neutral-100">
-      <div className="max-w-md w-full bg-white dark:bg-neutral-900 rounded-3xl p-6 sm:p-8 border border-neutral-200 dark:border-neutral-800 shadow-xl space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+      <div
+        className="relative w-full max-w-md bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 space-y-6 animate-in zoom-in-95"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-5 right-5 p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Modal Header */}
         <div className="text-center space-y-2">
           <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-bold mx-auto shadow-md shadow-blue-500/20">
-            <ShieldCheck className="w-6 h-6" />
+            {mode === "passkey" ? <Fingerprint className="w-6 h-6" /> : <ShieldCheck className="w-6 h-6" />}
           </div>
-          <h2 className="text-xl font-black tracking-tight">Đăng Nhập / Tiếp Tục</h2>
-          <p className="text-xs text-neutral-500">
-            Đăng nhập tức thì bằng Số điện thoại hoặc Face ID / Vân tay không cần mật khẩu
+          <h2 className="text-xl font-black text-neutral-900 dark:text-neutral-100 tracking-tight">
+            {title}
+          </h2>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-xs mx-auto">
+            {subtitle}
           </p>
         </div>
 
+        {/* Error Alert */}
         {errorMessage && (
-          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5">
+          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5 animate-in shake">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <p className="flex-1 font-medium leading-relaxed">{errorMessage}</p>
           </div>
@@ -230,6 +282,9 @@ export default function LoginPage() {
                     className="w-full pl-20 pr-4 py-3 text-base sm:text-sm font-semibold rounded-2xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-hidden transition-all"
                   />
                 </div>
+                <p className="text-[11px] text-neutral-400 mt-1.5">
+                  Hệ thống sẽ gửi mã OTP 6 số để xác thực nhanh không cần mật khẩu.
+                </p>
               </div>
 
               <button
@@ -244,13 +299,14 @@ export default function LoginPage() {
                   </>
                 ) : (
                   <>
-                    <span>TIẾP TỤC VỚI SỐ ĐIỆN THOẠI</span>
+                    <span>TIẾP TỤC</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </button>
             </form>
 
+            {/* Fast Passkey Login Option */}
             {isPasskeySupported && passkeys.length > 0 && (
               <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 text-center space-y-2">
                 <p className="text-[11px] text-neutral-400">hoặc đăng nhập nhanh bằng</p>
@@ -278,6 +334,7 @@ export default function LoginPage() {
               </p>
             </div>
 
+            {/* Demo Hint Helper */}
             {demoCode && (
               <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 text-[11px] text-amber-800 dark:text-amber-300 text-center flex items-center justify-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-600" />
@@ -285,6 +342,7 @@ export default function LoginPage() {
               </div>
             )}
 
+            {/* 6 OTP Boxes */}
             <div className="flex items-center justify-center gap-2 sm:gap-2.5" onPaste={handleOtpPaste}>
               {otpDigits.map((digit, idx) => (
                 <input
@@ -304,6 +362,7 @@ export default function LoginPage() {
               ))}
             </div>
 
+            {/* Verify Button */}
             <button
               type="button"
               disabled={isLoading || otpDigits.some((d) => !d)}
@@ -323,6 +382,7 @@ export default function LoginPage() {
               )}
             </button>
 
+            {/* Resend OTP & Back */}
             <div className="flex items-center justify-between text-xs pt-1 border-t border-neutral-100 dark:border-neutral-800">
               <button
                 type="button"
@@ -348,31 +408,6 @@ export default function LoginPage() {
           </div>
         )}
       </div>
-
-      {/* Name Onboarding Modal */}
-      {loggedUser && (
-        <WelcomeNameModal
-          isOpen={showWelcomeName}
-          onClose={() => setShowWelcomeName(false)}
-          onFinish={() => {
-            setShowWelcomeName(false);
-            setShowPasskeyPrompt(true);
-          }}
-          user={loggedUser}
-        />
-      )}
-
-      {/* Passkey Setup Prompt */}
-      {loggedUser && (
-        <PasskeyPromptModal
-          isOpen={showPasskeyPrompt}
-          onClose={() => {
-            setShowPasskeyPrompt(false);
-            router.push("/store");
-          }}
-          user={loggedUser}
-        />
-      )}
     </div>
   );
 }

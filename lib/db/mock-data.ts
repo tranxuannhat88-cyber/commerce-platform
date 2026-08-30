@@ -24,6 +24,7 @@ import {
   ShippingMethod,
   ShippingZone
 } from "@/types";
+import { UserIdentity, PasskeyCredential, AuthSession } from "@/lib/auth/types";
 
 export const INITIAL_ORGANIZATION: Organization = {
   id: "org-2k-tech",
@@ -867,3 +868,57 @@ export const INITIAL_SHIPPING_ZONES: ShippingZone[] = [
     updated_at: new Date().toISOString(),
   },
 ];
+
+export const INITIAL_USER_IDENTITY: UserIdentity = {
+  id: "usr_2k_admin",
+  user_code: "usr_998877",
+  full_name: "Trần Xuân Nhật",
+  primary_phone: "+84988123456",
+  primary_email: "nhat.tx@invamax.com",
+  avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+  status: "ACTIVE",
+  is_phone_verified: true,
+  is_email_verified: true,
+  created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
+export const INITIAL_PASSKEYS: PasskeyCredential[] = [
+  {
+    id: "pk_iphone_main",
+    user_id: "usr_2k_admin",
+    credential_id: "cred_apple_faceid_sample_12345",
+    public_key: "pub_key_es256_sample_abc123",
+    counter: 14,
+    device_name: "iPhone 15 Pro (Face ID)",
+    device_type: "apple",
+    authenticator_type: "platform",
+    created_at: new Date(Date.now() - 15 * 86400000).toISOString(),
+    last_used_at: new Date(Date.now() - 2 * 3600000).toISOString(),
+  },
+  {
+    id: "pk_windows_work",
+    user_id: "usr_2k_admin",
+    credential_id: "cred_windows_hello_sample_67890",
+    public_key: "pub_key_rs256_sample_def456",
+    counter: 6,
+    device_name: "Laptop Dell XPS (Windows Hello)",
+    device_type: "windows",
+    authenticator_type: "platform",
+    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+    last_used_at: new Date(Date.now() - 24 * 3600000).toISOString(),
+  },
+];
+
+export const INITIAL_AUTH_SESSION: AuthSession = {
+  id: "sess_current_active",
+  user_id: "usr_2k_admin",
+  user: INITIAL_USER_IDENTITY,
+  device_name: "Chrome on Windows",
+  ip_address: "14.232.208.12",
+  session_token: "tok_secure_sess_998877",
+  last_active_at: new Date().toISOString(),
+  step_up_authenticated_at: new Date(Date.now() - 5 * 60000).toISOString(), // 5 mins ago
+  expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+};
+

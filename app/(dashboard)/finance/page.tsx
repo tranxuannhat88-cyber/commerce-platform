@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND, formatDate, formatDateTime } from "@/lib/utils";
-import { ExpenseCategory } from "@/types";
+import { Expense, ExpenseCategory } from "@/types";
 
 export default function FinancePage() {
   const { ledger, expenses, createExpense, financials } = useCommerceStore();
