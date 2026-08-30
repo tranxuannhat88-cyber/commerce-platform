@@ -685,6 +685,21 @@ export function useCommerceStore() {
     setStored(STORAGE_KEYS.STORE, updatedStore);
   };
 
+  const updateStorePublicSettings = (
+    publicSettings: import("@/types").StorePublicSettings,
+    policySettings?: import("@/types").StorePolicySettings
+  ) => {
+    const updatedStore: Store = {
+      ...store,
+      public_settings: publicSettings,
+      ...(policySettings ? { policy_settings: policySettings } : {}),
+      updated_at: new Date().toISOString(),
+    };
+    setStoreState(updatedStore);
+    setStored(STORAGE_KEYS.STORE, updatedStore);
+    return updatedStore;
+  };
+
   // REQUEST & RFQ ACTIONS
   const createRequest = (newReq: Omit<RequestRFQ, "id" | "request_number" | "created_at" | "updated_at">) => {
     const reqId = `req-${Date.now()}`;
@@ -1929,6 +1944,7 @@ export function useCommerceStore() {
     updateManualAvailability,
     restockProduct,
     updateStoreVisibilitySettings,
+    updateStorePublicSettings,
     createRequest,
     deleteRequest,
     submitQuotation,

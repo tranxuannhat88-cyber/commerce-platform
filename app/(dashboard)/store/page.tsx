@@ -136,6 +136,30 @@ export default function StoreSettingsPage() {
         </div>
       )}
 
+      {/* Public Settings Card Banner */}
+      <div className="p-4 rounded-3xl bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/30 border border-blue-200/80 dark:border-blue-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-500/20 shrink-0">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="font-bold text-xs sm:text-sm text-neutral-900 dark:text-neutral-100">
+              Cấu Hình Hiển Thị & Bảo Mật Công Khai
+            </h4>
+            <p className="text-xs text-neutral-500">
+              Quản lý cờ bật/tắt hiển thị SĐT, email công khai, chính sách bán hàng và độ tin cậy.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          href="/store/public-settings"
+          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs whitespace-nowrap text-center shadow-md transition-all self-start sm:self-auto cursor-pointer"
+        >
+          Cấu Hình Công Khai →
+        </Link>
+      </div>
+
       <form onSubmit={handleSave} className="space-y-6">
         {/* Store Profile */}
         <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4">

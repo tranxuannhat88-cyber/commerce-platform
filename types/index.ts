@@ -63,9 +63,91 @@ export interface Store {
     show_low_stock_badge?: boolean;
     low_stock_threshold?: number;
   };
+  public_settings?: StorePublicSettings;
+  policy_settings?: StorePolicySettings;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export type OfferVisibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
+
+export interface StorePublicSettings {
+  show_logo: boolean;
+  show_description: boolean;
+  show_region: boolean;
+  show_full_address: boolean;
+  show_business_phone: boolean;
+  public_contact_phone?: string;
+  show_business_email: boolean;
+  public_business_email?: string;
+  show_website: boolean;
+  website_url?: string;
+  show_products: boolean;
+  show_services: boolean;
+  show_active_offers: boolean;
+  show_policies: boolean;
+  show_reputation: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface StorePolicySettings {
+  shipping_policy?: string;
+  return_policy?: string;
+  warranty_policy?: string;
+  payment_terms?: string;
+  processing_time?: string;
+  service_area?: string;
+}
+
+export interface SellerReputationMetrics {
+  actor_id: string;
+  rating_average: number;
+  rating_count: number;
+  trust_score: number;
+  completed_transactions: number;
+  completion_rate: number;
+  on_time_delivery_rate: number;
+  response_rate?: number;
+  dispute_rate?: number;
+  verified_transaction_count: number;
+  platform_member_since: string;
+  is_verified_business: boolean;
+  is_phone_verified: boolean;
+}
+
+export interface SellerPublicProfileDTO {
+  actor_id: string;
+  actor_type: 'PERSONAL' | 'ORGANIZATION';
+  display_name: string;
+  legal_name?: string;
+  slug: string;
+  logo_url?: string;
+  cover_image_url?: string;
+  description?: string;
+  region?: string;
+  full_address?: string;
+  public_contact_phone?: string;
+  public_business_email?: string;
+  website_url?: string;
+  reputation: SellerReputationMetrics;
+  public_stores: Array<{
+    id: string;
+    store_name: string;
+    slug: string;
+    logo_url?: string;
+    product_count: number;
+  }>;
+  active_offers: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    price: number;
+    compare_at_price?: number;
+    image_url?: string;
+    store_slug: string;
+  }>;
 }
 
 export type ProductStatus = 'DRAFT' | 'ACTIVE' | 'DISCONTINUED' | 'HIDDEN' | 'ARCHIVED';
@@ -226,6 +308,7 @@ export interface Offer {
   compare_at_price?: number;
   cost_price?: number;
   status: OfferStatus;
+  visibility?: OfferVisibility;
   product_status?: ProductStatus;
   availability_status?: AvailabilityStatus;
   low_stock_threshold?: number;

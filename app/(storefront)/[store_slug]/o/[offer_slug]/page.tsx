@@ -31,6 +31,7 @@ import {
   Globe,
   Phone,
   Store as StoreIcon,
+  RotateCcw,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND, getPhoneValidationError } from "@/lib/utils";
@@ -40,6 +41,12 @@ import { CopyButton } from "@/components/shared/copy-button";
 import { Offer, OfferVariant, OfferItem } from "@/types";
 import { ShippingCalculationService } from "@/lib/shipping/engine";
 import { ProductAvailabilityService } from "@/lib/inventory/availability";
+import { SellerMiniCard } from "@/components/storefront/seller-mini-card";
+import { SellerTrustSummary } from "@/components/storefront/seller-trust-summary";
+import { StorePoliciesModal } from "@/components/storefront/store-policies-modal";
+import { RelatedProducts } from "@/components/storefront/related-products";
+import { OtherActiveOffers } from "@/components/storefront/other-active-offers";
+import { OfferPublicService } from "@/lib/storefront/offer-public-service";
 import confetti from "canvas-confetti";
 
 function DirectOfferContent() {
@@ -48,10 +55,17 @@ function DirectOfferContent() {
   const storeSlug = (params?.store_slug as string) || "2k-store";
   const offerSlug = params?.offer_slug as string;
 
-  const { offers, store, createOrder, shippingMethods, shippingZones } = useCommerceStore();
+  const { offers, store, organization, products, createOrder, shippingMethods, shippingZones } = useCommerceStore();
   const { addToCart } = useCart();
 
   const offer = offers.find((o) => o.slug === offerSlug);
+  const publicOffer = OfferPublicService.getPublicOffer({
+    offerSlug,
+    offers,
+    store,
+    organization,
+    products,
+  });
 
   const [activeDisplayImage, setActiveDisplayImage] = useState<string | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<OfferVariant | undefined>(
@@ -59,6 +73,8 @@ function DirectOfferContent() {
   );
   const [quantity, setQuantity] = useState(1);
   const [showQR, setShowQR] = useState(false);
+  const [showPoliciesModal, setShowPoliciesModal] = useState(false);
+  const [policyInitialTab, setPolicyInitialTab] = useState<"shipping" | "returns" | "warranty" | "payment">("shipping");
 
   const allDisplayImages = offer
     ? [offer.image_url, ...(offer.gallery || [])].filter((img): img is string => Boolean(img))
@@ -317,7 +333,12 @@ function DirectOfferContent() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 pt-6 space-y-6">
+      <main className="max-w-4xl mx-auto px-4 pt-4 sm:pt-6 space-y-6">
+        {/* Seller Mini Card */}
+        {publicOffer?.seller_mini_card && (
+          <SellerMiniCard seller={publicOffer.seller_mini_card} />
+        )}
+
         {/* ========================================================================= */}
         {/* MODE A: MULTI-ITEM CATALOG / PRICE-LIST OFFER                            */}
         {/* ========================================================================= */}
@@ -828,6 +849,85 @@ function DirectOfferContent() {
         </div>
       )}
 
+        {/* Store Policy Quick Badges */}
+        <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/90 dark:border-neutral-800 flex flex-wrap items-center justify-around gap-2 text-xs shadow-2xs">
+          <button
+            type="button"
+            onClick={() => {
+              setPolicyInitialTab("shipping");
+              setShowPoliciesModal(true);
+            }}
+            className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 font-bold transition-colors cursor-pointer"
+          >
+            <Truck className="w-4 h-4 text-blue-600" />
+            <span>Vận chuyển toàn quốc</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPolicyInitialTab("returns");
+              setShowPoliciesModal(true);
+            }}
+            className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300 hover:text-emerald-600 font-bold transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-4 h-4 text-emerald-600" />
+            <span>Đổi trả 7 ngày</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPolicyInitialTab("warranty");
+              setShowPoliciesModal(true);
+            }}
+            className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300 hover:text-purple-600 font-bold transition-colors cursor-pointer"
+          >
+            <ShieldCheck className="w-4 h-4 text-purple-600" />
+            <span>Bảo hành chính hãng</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPolicyInitialTab("payment");
+              setShowPoliciesModal(true);
+            }}
+            className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300 hover:text-amber-600 font-bold transition-colors cursor-pointer"
+          >
+            <CreditCard className="w-4 h-4 text-amber-600" />
+            <span>VietQR & COD</span>
+          </button>
+        </div>
+
+        {/* Seller Trust Summary Block */}
+        {publicOffer?.trust_summary && (
+          <SellerTrustSummary
+            sellerDisplayName={publicOffer.seller_mini_card.seller_display_name}
+            sellerSlug={publicOffer.seller_mini_card.seller_slug}
+            trustScore={publicOffer.trust_summary.trust_score}
+            completionRate={publicOffer.trust_summary.completion_rate}
+            onTimeRate={publicOffer.trust_summary.on_time_delivery_rate}
+            completedTransactions={publicOffer.trust_summary.completed_transactions}
+            memberSince={publicOffer.trust_summary.member_since}
+          />
+        )}
+
+        {/* Related Products (Cross-Sell) */}
+        {publicOffer?.related_products && publicOffer.related_products.length > 0 && (
+          <RelatedProducts
+            products={publicOffer.related_products}
+            storeSlug={store.slug}
+            storeName={store.store_name}
+          />
+        )}
+
+        {/* Other Active Offers from Same Store */}
+        {publicOffer?.other_active_offers && publicOffer.other_active_offers.length > 0 && (
+          <OtherActiveOffers
+            offers={publicOffer.other_active_offers}
+            storeName={store.store_name}
+          />
+        )}
+      </main>
+
       {/* Sticky Mobile Bottom Buy Bar (Single Product Offer) */}
       {!isMenuMode && (
         <div className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-800 p-3 z-40 flex items-center justify-between gap-3 shadow-2xl pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
@@ -858,7 +958,15 @@ function DirectOfferContent() {
           </div>
         </div>
       )}
-      </main>
+
+      {/* Policies Details Modal */}
+      <StorePoliciesModal
+        isOpen={showPoliciesModal}
+        onClose={() => setShowPoliciesModal(false)}
+        policies={publicOffer?.policies || {}}
+        storeName={store.store_name}
+        initialTab={policyInitialTab}
+      />
 
       {/* ========================================================================= */}
       {/* INSTANT CHECKOUT MODAL WITH GEOLOCATION GPS                               */}
