@@ -415,12 +415,32 @@ export function useCommerceStore() {
         case STORAGE_KEYS.NOTIFICATIONS:
           setNotificationsState(getStored(STORAGE_KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS));
           break;
+        case STORAGE_KEYS.ORDERS:
+          setOrdersState(getStored(STORAGE_KEYS.ORDERS, INITIAL_ORDERS));
+          break;
         default:
           break;
       }
     };
 
+    const handleNativeStorage = (e: StorageEvent) => {
+      if (!e.key) return;
+      if (e.key === STORAGE_KEYS.ORDERS) {
+        setOrdersState(getStored(STORAGE_KEYS.ORDERS, INITIAL_ORDERS));
+      }
+      if (e.key === STORAGE_KEYS.NOTIFICATIONS) {
+        setNotificationsState(getStored(STORAGE_KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS));
+      }
+      if (e.key === STORAGE_KEYS.OFFERS) {
+        setOffersState(getStored(STORAGE_KEYS.OFFERS, INITIAL_OFFERS));
+      }
+      if (e.key === STORAGE_KEYS.STORE) {
+        setStoreState(getStored(STORAGE_KEYS.STORE, INITIAL_STORE));
+      }
+    };
+
     window.addEventListener("commerce_storage_update", handleStorageUpdate);
+    window.addEventListener("storage", handleNativeStorage);
 
     // Initial background sync to Server Database
     const initialOffers = getStored<Offer[]>(STORAGE_KEYS.OFFERS, INITIAL_OFFERS);
@@ -434,23 +454,54 @@ export function useCommerceStore() {
       SyncBridgeService.syncStoreToServer(initialStore, initialAccounts);
     }
 
-    // Pull any new orders placed by public visitors
-    SyncBridgeService.pullServerOrders(initialStore?.id).then((serverOrders) => {
-      if (serverOrders && serverOrders.length > 0) {
-        setOrdersState((prev) => {
-          const existingIds = new Set(prev.map((o) => o.id));
-          const newOrders = serverOrders.filter((o) => !existingIds.has(o.id));
-          if (newOrders.length > 0) {
-            const merged = [...newOrders, ...prev];
-            setStored(STORAGE_KEYS.ORDERS, merged);
-            return merged;
-          }
-          return prev;
-        });
-      }
-    });
+    const checkServerOrders = () => {
+      SyncBridgeService.pullServerOrders(initialStore?.id).then((serverOrders) => {
+        if (serverOrders && serverOrders.length > 0) {
+          setOrdersState((prev) => {
+            const existingIds = new Set(prev.map((o) => o.id));
+            const newOrders = serverOrders.filter((o) => !existingIds.has(o.id));
+            if (newOrders.length > 0) {
+              const merged = [...newOrders, ...prev];
+              setStored(STORAGE_KEYS.ORDERS, merged);
 
-    return () => window.removeEventListener("commerce_storage_update", handleStorageUpdate);
+              // Add notification for newly arrived orders
+              newOrders.forEach((no) => {
+                const newNotif: AppNotification = {
+                  id: `notif-order-${Date.now()}-${no.id}`,
+                  organization_id: no.organization_id || "org-2k-tech",
+                  type: "NEW_ORDER",
+                  title: `Đơn hàng mới: ${no.order_number}`,
+                  message: `Khách hàng ${no.customer_name} vừa đặt đơn ${new Intl.NumberFormat("vi-VN").format(no.total_amount)}đ.`,
+                  link: `/sell/orders`,
+                  is_read: false,
+                  created_at: new Date().toISOString(),
+                };
+                setNotificationsState((prevNotifs) => {
+                  const updatedNotifs = [newNotif, ...prevNotifs.filter((n) => n.id !== newNotif.id)];
+                  setStored(STORAGE_KEYS.NOTIFICATIONS, updatedNotifs);
+                  return updatedNotifs;
+                });
+              });
+
+              return merged;
+            }
+            return prev;
+          });
+        }
+      });
+    };
+
+    // Initial Pull
+    checkServerOrders();
+
+    // Periodic interval pull every 4 seconds for realtime sync across tabs/devices
+    const pollTimer = setInterval(checkServerOrders, 4000);
+
+    return () => {
+      window.removeEventListener("commerce_storage_update", handleStorageUpdate);
+      window.removeEventListener("storage", handleNativeStorage);
+      clearInterval(pollTimer);
+    };
   }, []);
 
   const switchContext = (actorId: string) => {
@@ -1592,7 +1643,10 @@ export function useCommerceStore() {
       };
     });
 
-    // Server-side Shipping Calculation
+    const primaryOffer = orderData.items[0]?.offer;
+    const customBankSettings = primaryOffer?.payment_settings;
+
+    // Server-side Shipping Calculation with Offer Fulfillment Override
     const calcInput = {
       store,
       items: orderData.items.map((i) => ({
@@ -1607,20 +1661,36 @@ export function useCommerceStore() {
       selected_method_id: (orderData as any).shipping_method_id,
       shipping_methods: shippingMethods,
       shipping_zones: shippingZones,
+      offer_fulfillment_override: primaryOffer?.fulfillment_override,
     };
 
-    const shippingResult = ShippingCalculationService.calculate(calcInput);
-    const isQuoteLater = shippingResult.selected_option?.is_quote_later === true;
-    const shippingFee = isQuoteLater ? 0 : shippingResult.final_shipping_fee;
+    let shippingFee = 0;
+    let isQuoteLater = false;
+    let shippingSnapshot: import("@/types").OrderShippingSnapshot;
+
+    if (orderData.fulfillment_method_type === "STORE_PICKUP") {
+      shippingFee = 0;
+      isQuoteLater = false;
+      shippingSnapshot = {
+        method_name: "Nhận tại Cửa hàng / Showroom",
+        method_type: "PICKUP",
+        fulfillment_type: "PICKUP",
+        shipping_fee: 0,
+        shipping_fee_original: 0,
+        shipping_discount: 0,
+        shipping_status: "NOT_REQUIRED",
+        quote_notes: primaryOffer?.fulfillment_override?.pickup_instructions_override || store.fulfillment_settings?.pickup_config?.instructions || "Khách tự đến lấy hàng tại cửa hàng",
+      };
+    } else {
+      const shippingResult = ShippingCalculationService.calculate(calcInput);
+      isQuoteLater = shippingResult.selected_option?.is_quote_later === true || orderData.fulfillment_method_type === "SHIPPING_QUOTE_LATER";
+      shippingFee = isQuoteLater ? 0 : shippingResult.final_shipping_fee;
+      shippingSnapshot = ShippingCalculationService.createSnapshot(
+        shippingResult.selected_option,
+        shippingResult.requires_shipping
+      );
+    }
     const totalAmount = subtotal + shippingFee;
-
-    const shippingSnapshot = ShippingCalculationService.createSnapshot(
-      shippingResult.selected_option,
-      shippingResult.requires_shipping
-    );
-
-    const primaryOffer = orderData.items[0]?.offer;
-    const customBankSettings = primaryOffer?.payment_settings;
 
     // Resolve Payment Method Type
     const chosenMethod = (orderData.payment_method === "BANK_TRANSFER" ? "VIETQR" : orderData.payment_method) as PaymentMethodType;
@@ -1693,6 +1763,9 @@ export function useCommerceStore() {
     const updatedOrders = [newOrder, ...orders];
     setOrdersState(updatedOrders);
     setStored(STORAGE_KEYS.ORDERS, updatedOrders);
+
+    // Sync order to server database for cross-device / multi-user access
+    SyncBridgeService.submitOrderToServer(newOrder);
 
     // Reserve stock
     orderData.items.forEach((it) => {
@@ -1769,6 +1842,11 @@ export function useCommerceStore() {
       message: `Khách hàng ${orderData.customer_name} vừa đặt đơn ${new Intl.NumberFormat("vi-VN").format(totalAmount)}đ.`,
       link: `/sell/orders`,
     });
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key: STORAGE_KEYS.ORDERS } }));
+      window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key: STORAGE_KEYS.NOTIFICATIONS } }));
+    }
 
     return newOrder;
   };

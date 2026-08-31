@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ShoppingBag,
   Search,
@@ -37,6 +37,17 @@ export default function SalesOrdersPage() {
   const [quoteFeeInput, setQuoteFeeInput] = useState<number>(0);
   const [quoteNotesInput, setQuoteNotesInput] = useState<string>("");
   const [quoteSuccessMsg, setQuoteSuccessMsg] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/sync/orders")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.success && data?.orders?.length > 0) {
+          window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key: "commerce_orders" } }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const filteredOrders = orders.filter((o) => {
     const matchStatus = activeStatus === "ALL" || o.order_status === activeStatus;

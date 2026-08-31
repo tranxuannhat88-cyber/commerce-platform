@@ -30,6 +30,7 @@ import {
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND, formatDateTime, isValidVietnamesePhone, getPhoneValidationError, cleanPhoneNumber } from "@/lib/utils";
 import { GuestClaimCard } from "@/components/auth/guest-claim-card";
+import { Order, OrderItem } from "@/types";
 import confetti from "canvas-confetti";
 
 export default function OrderStatusPage() {
@@ -61,8 +62,26 @@ export default function OrderStatusPage() {
   const [otpCountdown, setOtpCountdown] = useState(60);
   const [canResendOtp, setCanResendOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [serverOrder, setServerOrder] = useState<Order | null>(null);
 
-  const order = orders.find((o) => o.order_number === orderNumber) || orders[0];
+  const localOrder = orders.find((o) => o.order_number === orderNumber || o.id === orderNumber);
+  const order = localOrder || serverOrder;
+
+  useEffect(() => {
+    if (!localOrder && orderNumber) {
+      fetch(`/api/sync/orders`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && data.success && data.orders) {
+            const found = data.orders.find((o: Order) => o.order_number === orderNumber || o.id === orderNumber);
+            if (found) {
+              setServerOrder(found);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [localOrder, orderNumber]);
 
   useEffect(() => {
     if (order) {
@@ -417,7 +436,7 @@ export default function OrderStatusPage() {
           </h3>
 
           <div className="divide-y divide-neutral-100 dark:divide-neutral-800 text-xs">
-            {order.items?.map((item) => (
+            {order.items?.map((item: OrderItem) => (
               <div key={item.id} className="py-2.5 flex items-center justify-between">
                 <div>
                   <p className="font-bold text-neutral-900 dark:text-neutral-100">{item.item_name}</p>
