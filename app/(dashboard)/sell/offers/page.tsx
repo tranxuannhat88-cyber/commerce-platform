@@ -37,6 +37,7 @@ import {
   ChevronUp,
   Settings2,
   Coins,
+  ShieldCheck,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND, slugify, formatThousands, parseThousands, compressImageFile } from "@/lib/utils";
@@ -1996,6 +1997,64 @@ function OffersContent() {
                     </label>
                   </div>
 
+                  {/* READ-ONLY SUMMARY WHEN STORE_DEFAULT */}
+                  {paymentOverrideMode === "STORE_DEFAULT" && (
+                    <div className="p-3.5 rounded-xl bg-white/90 dark:bg-neutral-900 border border-blue-200 dark:border-blue-800/80 space-y-2.5 text-xs animate-in fade-in">
+                      <div className="flex items-center justify-between pb-1.5 border-b border-neutral-100 dark:border-neutral-800">
+                        <span className="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                          <ShieldCheck className="w-4 h-4 text-blue-600" />
+                          <span>Chi tiết thiết lập thanh toán mặc định của Cửa hàng:</span>
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold text-[10px]">
+                          Đang áp dụng
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
+                        <div className="space-y-0.5">
+                          <p className="text-[11px] text-neutral-500 font-medium">Tài khoản nhận tiền VietQR:</p>
+                          <div className="font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                            <CreditCard className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                            <span className="truncate">
+                              {store.payment_settings?.bank_name || "MBBank"} • {store.payment_settings?.bank_account_no || "098812345688"}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-neutral-400">
+                            Chủ TK: {store.payment_settings?.bank_account_name || "NGUYEN VAN A"}
+                          </p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-[11px] text-neutral-500 font-medium">Phương thức thanh toán được hỗ trợ:</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 font-bold text-[10px] text-emerald-700 dark:text-emerald-300">
+                              ✓ VietQR / Chuyển khoản
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 font-bold text-[10px] text-neutral-700 dark:text-neutral-300">
+                              ✓ Thu tiền COD
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 font-bold text-[10px] text-neutral-700 dark:text-neutral-300">
+                              ✓ Tại cửa hàng
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-1.5 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-[11px] text-neutral-500">
+                        <span>💡 Đang kế thừa chính sách thanh toán chung của cửa hàng.</span>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentOverrideMode("OFFER_OVERRIDE")}
+                          className="font-bold text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <span>Chỉnh sửa riêng cho Offer này</span>
+                          <span>→</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* INTERACTIVE CONTROLS WHEN OFFER_OVERRIDE */}
                   {paymentOverrideMode === "OFFER_OVERRIDE" && (
                     <div className="pt-3 border-t border-blue-200 dark:border-blue-900/60 space-y-3 animate-in fade-in text-xs">
                       {/* Choose Payment Account */}
@@ -2022,7 +2081,7 @@ function OffersContent() {
                       {/* Payment Methods Checkboxes */}
                       <div className="space-y-1.5">
                         <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300">
-                          Cho phép các phương thức:
+                          Cho phép các phương thức (Thêm / Bớt tùy chỉnh):
                         </label>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {[
@@ -2038,7 +2097,7 @@ function OffersContent() {
                                 key={pm.id}
                                 className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
                                   isChecked
-                                    ? "bg-white dark:bg-neutral-900 border-blue-400 font-bold text-blue-900 dark:text-blue-200"
+                                    ? "bg-white dark:bg-neutral-900 border-blue-400 font-bold text-blue-900 dark:text-blue-200 shadow-2xs"
                                     : "bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500"
                                 }`}
                               >
@@ -2136,10 +2195,102 @@ function OffersContent() {
                     </label>
                   </div>
 
+                  {/* READ-ONLY SUMMARY WHEN STORE_DEFAULT */}
+                  {fulfillmentOverrideMode === "STORE_DEFAULT" && (
+                    <div className="p-3.5 rounded-xl bg-white/90 dark:bg-neutral-900 border border-emerald-200 dark:border-emerald-800/80 space-y-2.5 text-xs animate-in fade-in">
+                      <div className="flex items-center justify-between pb-1.5 border-b border-neutral-100 dark:border-neutral-800">
+                        <span className="font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
+                          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                          <span>Chi tiết thiết lập vận chuyển mặc định của Cửa hàng:</span>
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-[10px]">
+                          Đang áp dụng
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
+                        <div className="space-y-0.5">
+                          <p className="text-[11px] text-neutral-500 font-medium">Chính sách phí giao hàng:</p>
+                          <div className="font-bold text-emerald-600 dark:text-emerald-400 text-xs">
+                            Phí cố định: {formatVND(store.shipping_settings?.default_fixed_fee ?? 30000)}
+                          </div>
+                          <p className="text-[10px] text-neutral-400">
+                            Miễn phí ship cho đơn từ: {formatVND(store.shipping_settings?.free_shipping_threshold ?? 500000)}
+                          </p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-[11px] text-neutral-500 font-medium">Hình thức giao nhận hỗ trợ:</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 font-bold text-[10px] text-emerald-700 dark:text-emerald-300">
+                              ✓ Giao hàng tận nơi (Toàn quốc)
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 font-bold text-[10px] text-neutral-700 dark:text-neutral-300">
+                              ✓ Nhận tại cửa hàng / kho
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-1.5 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-[11px] text-neutral-500">
+                        <span>💡 Đang kế thừa chính sách vận chuyển chung của cửa hàng.</span>
+                        <button
+                          type="button"
+                          onClick={() => setFulfillmentOverrideMode("OFFER_OVERRIDE")}
+                          className="font-bold text-emerald-600 hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <span>Chỉnh sửa riêng cho Offer này</span>
+                          <span>→</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* INTERACTIVE CONTROLS WHEN OFFER_OVERRIDE */}
                   {fulfillmentOverrideMode === "OFFER_OVERRIDE" && (
                     <div className="pt-3 border-t border-emerald-200 dark:border-emerald-900/60 space-y-3 animate-in fade-in text-xs">
+                      {/* Fulfillment Methods Checkboxes */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300">
+                          Hình thức giao nhận (Thêm / Bớt tùy chỉnh):
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {[
+                            { id: "DELIVERY", label: "Giao hàng tận nơi (Toàn quốc)" },
+                            { id: "STORE_PICKUP", label: "Nhận tại cửa hàng / kho" },
+                          ].map((fm) => {
+                            const isChecked = customFulfillmentMethods.includes(fm.id as FulfillmentMethodType);
+                            return (
+                              <label
+                                key={fm.id}
+                                className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                                  isChecked
+                                    ? "bg-white dark:bg-neutral-900 border-emerald-400 font-bold text-emerald-900 dark:text-emerald-200 shadow-2xs"
+                                    : "bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => {
+                                    if (isChecked) {
+                                      if (customFulfillmentMethods.length <= 1) return;
+                                      setCustomFulfillmentMethods(customFulfillmentMethods.filter((m) => m !== fm.id));
+                                    } else {
+                                      setCustomFulfillmentMethods([...customFulfillmentMethods, fm.id as FulfillmentMethodType]);
+                                    }
+                                  }}
+                                  className="rounded text-emerald-600"
+                                />
+                                <span className="text-[11px]">{fm.label}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+
                       {/* Fee Rule Type */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-emerald-100 dark:border-emerald-900/40">
                         <div>
                           <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300 mb-1">
                             Quy tắc phí giao hàng:
