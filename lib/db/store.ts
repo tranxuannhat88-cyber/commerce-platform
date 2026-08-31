@@ -714,19 +714,24 @@ export function useCommerceStore() {
   };
 
   const updateStore = (newStore: Partial<Store>) => {
-    const storeId = store.id || `store_${Date.now()}`;
+    const current = getStored<Store>(STORAGE_KEYS.STORE, store) || store;
+    const storeId = newStore.id || current.id || store.id || `store_${Date.now()}`;
     const updated: Store = {
-      ...store,
-      id: storeId,
-      owner_actor_id: store.owner_actor_id || currentContext.actor_id,
-      owner_actor_type: store.owner_actor_type || currentContext.context_type,
-      organization_id: currentContext.context_type === "ORGANIZATION" ? currentContext.actor_id : undefined,
+      ...current,
       ...newStore,
+      id: storeId,
+      owner_actor_id: newStore.owner_actor_id || current.owner_actor_id || currentContext.actor_id,
+      owner_actor_type: newStore.owner_actor_type || current.owner_actor_type || currentContext.context_type,
+      organization_id: currentContext.context_type === "ORGANIZATION" ? currentContext.actor_id : newStore.organization_id || current.organization_id,
       updated_at: new Date().toISOString(),
     };
     setStoreState(updated);
     setStored(STORAGE_KEYS.STORE, updated);
     SyncBridgeService.syncStoreToServer(updated, paymentAccounts);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key: STORAGE_KEYS.STORE } }));
+    }
+    return updated;
   };
 
   // Helper to record verification proof
@@ -1260,24 +1265,35 @@ export function useCommerceStore() {
   };
 
   const updateStorePaymentSettings = (settings: StorePaymentSettings) => {
+    const current = getStored<Store>(STORAGE_KEYS.STORE, store) || store;
     const updatedStore: Store = {
-      ...store,
+      ...current,
       advanced_payment_settings: settings,
       updated_at: new Date().toISOString(),
     };
     setStoreState(updatedStore);
     setStored(STORAGE_KEYS.STORE, updatedStore);
+    SyncBridgeService.syncStoreToServer(updatedStore, paymentAccounts);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key: STORAGE_KEYS.STORE } }));
+    }
     return updatedStore;
   };
 
   const updateStoreFulfillmentSettings = (settings: StoreFulfillmentSettings) => {
+    const current = getStored<Store>(STORAGE_KEYS.STORE, store) || store;
     const updatedStore: Store = {
-      ...store,
+      ...current,
       advanced_fulfillment_settings: settings,
+      fulfillment_settings: settings,
       updated_at: new Date().toISOString(),
     };
     setStoreState(updatedStore);
     setStored(STORAGE_KEYS.STORE, updatedStore);
+    SyncBridgeService.syncStoreToServer(updatedStore, paymentAccounts);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key: STORAGE_KEYS.STORE } }));
+    }
     return updatedStore;
   };
 

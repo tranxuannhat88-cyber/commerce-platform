@@ -69,21 +69,26 @@ export default function StoreSettingsPage() {
     store.advanced_payment_settings || PaymentSettingsService.getStorePaymentSettings(store)
   );
 
-  // Synchronize with store updates
+  const [isLoadedOnce, setIsLoadedOnce] = useState(false);
+
+  // Synchronize with initial store load without overwriting active edits
   useEffect(() => {
-    setStoreName(store.store_name || "");
-    setSlug(store.slug || "");
-    setDescription(store.description || "");
-    setPhone(store.phone || "");
-    setEmail(store.email || "");
-    setAddress(store.address || "");
-    if (store.advanced_payment_settings) {
-      setPaymentSettings(store.advanced_payment_settings);
+    if (store) {
+      if (store.store_name) setStoreName(store.store_name);
+      if (store.slug) setSlug(store.slug);
+      if (store.description) setDescription(store.description);
+      if (store.phone) setPhone(store.phone);
+      if (store.email) setEmail(store.email);
+      if (store.address) setAddress(store.address);
+      if (store.advanced_payment_settings) {
+        setPaymentSettings(store.advanced_payment_settings);
+      }
+      if (store.advanced_fulfillment_settings) {
+        setFulfillmentSettings(store.advanced_fulfillment_settings);
+      }
+      setIsLoadedOnce(true);
     }
-    if (store.advanced_fulfillment_settings) {
-      setFulfillmentSettings(store.advanced_fulfillment_settings);
-    }
-  }, [store]);
+  }, [store.id]);
 
   const handleStoreNameChange = (val: string) => {
     setStoreName(val);
@@ -115,24 +120,24 @@ export default function StoreSettingsPage() {
   const handleSaveAll = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Update Basic Store Info
+    const cleanSlug = slug.trim() || storeName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "my-store";
+
+    // 1. Unified Atomic Store Update
     updateStore({
-      store_name: storeName,
-      slug: slug,
-      description,
-      phone,
-      email,
-      address,
+      store_name: storeName.trim(),
+      slug: cleanSlug,
+      description: description.trim(),
+      phone: phone.trim(),
+      email: email.trim(),
+      address: address.trim(),
+      advanced_payment_settings: paymentSettings,
+      advanced_fulfillment_settings: fulfillmentSettings,
+      fulfillment_settings: fulfillmentSettings,
     });
 
-    // 2. Update Advanced Payment Settings
-    updateStorePaymentSettings(paymentSettings);
-
-    // 3. Update Advanced Fulfillment Settings
-    updateStoreFulfillmentSettings(fulfillmentSettings);
-
+    setSlug(cleanSlug);
     setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+    setTimeout(() => setSavedSuccess(false), 3500);
   };
 
   const handleCreateAccount = (e: React.FormEvent) => {
