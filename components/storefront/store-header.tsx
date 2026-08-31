@@ -16,17 +16,22 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { PublicStorefrontDTO } from "@/lib/storefront/types";
+import { StoreCustomizationSettings } from "@/types";
 import { QRModal } from "@/components/shared/qr-modal";
 import { CopyButton } from "@/components/shared/copy-button";
 import { useCart } from "./cart-drawer";
 
 interface StoreHeaderProps {
   storefront: PublicStorefrontDTO;
+  customization?: StoreCustomizationSettings;
 }
 
-export function StoreHeader({ storefront }: StoreHeaderProps) {
+export function StoreHeader({ storefront, customization }: StoreHeaderProps) {
   const { setIsCartOpen, totalItems } = useCart();
   const [showQR, setShowQR] = useState(false);
+
+  const brandColor = customization?.brand_color || "#2563eb";
+  const accentColor = customization?.accent_color || "#3b82f6";
 
   const storeUrl = typeof window !== "undefined" ? window.location.href : `/${storefront.slug}`;
 
@@ -34,7 +39,12 @@ export function StoreHeader({ storefront }: StoreHeaderProps) {
     <>
       <div className="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
         {/* Cover Banner */}
-        <div className="h-32 sm:h-48 w-full bg-linear-to-r from-blue-700 via-indigo-700 to-purple-800 relative overflow-hidden">
+        <div
+          className="h-32 sm:h-48 w-full relative overflow-hidden transition-all duration-500"
+          style={{
+            background: `linear-gradient(135deg, ${brandColor}, ${accentColor || brandColor}dd)`,
+          }}
+        >
           {storefront.cover_image_url && (
             <img
               src={storefront.cover_image_url}
@@ -138,7 +148,8 @@ export function StoreHeader({ storefront }: StoreHeaderProps) {
               <button
                 type="button"
                 onClick={() => setIsCartOpen(true)}
-                className="relative px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-lg shadow-blue-600/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                className="relative px-4 py-2.5 rounded-2xl text-white text-xs font-bold shadow-lg flex items-center gap-1.5 transition-all cursor-pointer hover:opacity-90 active:scale-95"
+                style={{ backgroundColor: brandColor }}
               >
                 <ShoppingCart className="w-4 h-4" />
                 <span>Giỏ hàng</span>

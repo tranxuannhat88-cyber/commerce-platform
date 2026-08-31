@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Sparkles, Palette, Layout, Eye, Save, CheckCircle2, Sliders, ArrowRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Sparkles, Palette, Layout, Eye, Save, CheckCircle2, Sliders, ArrowRight, Check } from "lucide-react";
 import { Store, StoreTemplate, StoreCustomizationSettings, TemplateLicense, WorkContext } from "@/types";
 import { STORE_TEMPLATES, DEFAULT_TEMPLATE_ID } from "@/lib/templates/definitions";
 import { TemplateSelectorModal } from "./template-selector-modal";
@@ -61,12 +61,76 @@ export function StoreCustomizer({
 
   const [isSaved, setIsSaved] = useState(false);
 
+  // Synchronize whenever store changes (e.g. after applying template)
+  useEffect(() => {
+    if (store.customization?.brand_color) {
+      setBrandColor(store.customization.brand_color);
+    }
+    if (store.customization?.accent_color) {
+      setAccentColor(store.customization.accent_color);
+    }
+    if (store.customization?.hero_title !== undefined) {
+      setHeroTitle(store.customization.hero_title || store.store_name || "");
+    }
+    if (store.customization?.hero_subtitle !== undefined) {
+      setHeroSubtitle(store.customization.hero_subtitle || store.description || "");
+    }
+    if (store.customization?.visible_sections) {
+      setVisibleSections({
+        hero: store.customization.visible_sections.hero !== false,
+        trust_bar: store.customization.visible_sections.trust_bar !== false,
+        categories: store.customization.visible_sections.categories !== false,
+        featured_offers: store.customization.visible_sections.featured_offers !== false,
+        products: store.customization.visible_sections.products !== false,
+        services: store.customization.visible_sections.services !== false,
+        about: store.customization.visible_sections.about !== false,
+        contact: store.customization.visible_sections.contact !== false,
+      });
+    }
+  }, [store]);
+
   // Modals state
   const [showSelector, setShowSelector] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<StoreTemplate | null>(null);
   const [purchaseTemplate, setPurchaseTemplate] = useState<StoreTemplate | null>(null);
 
-  const handleSave = () => {
+  // Instant apply and save when clicking preset color
+  const handleSelectPresetColor = (preset: typeof PRESET_COLORS[0]) => {
+    setBrandColor(preset.primary);
+    setAccentColor(preset.accent);
+
+    // Instant save & persist
+    onUpdateCustomization({
+      brand_color: preset.primary,
+      accent_color: preset.accent,
+      hero_title: heroTitle.trim() || undefined,
+      hero_subtitle: heroSubtitle.trim() || undefined,
+      visible_sections: visibleSections,
+    });
+
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2500);
+  };
+
+  // Section toggle instant save
+  const handleToggleSection = (sectionKey: string, checked: boolean) => {
+    const updated = {
+      ...visibleSections,
+      [sectionKey]: checked,
+    };
+    setVisibleSections(updated);
+    onUpdateCustomization({
+      brand_color: brandColor,
+      accent_color: accentColor,
+      hero_title: heroTitle.trim() || undefined,
+      hero_subtitle: heroSubtitle.trim() || undefined,
+      visible_sections: updated,
+    });
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2000);
+  };
+
+  const handleManualSave = () => {
     onUpdateCustomization({
       brand_color: brandColor,
       accent_color: accentColor,
@@ -84,30 +148,40 @@ export function StoreCustomizer({
 
   return (
     <div className="space-y-8 animate-in fade-in">
-      {/* 1. CURRENT ACTIVE TEMPLATE CARD */}
-      <div className="p-6 bg-linear-to-r from-blue-900 to-indigo-900 text-white rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      {/* 1. CURRENT ACTIVE TEMPLATE HERO CARD (Reflects live brand color!) */}
+      <div
+        className="p-6 sm:p-8 text-white rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-all duration-500"
+        style={{
+          background: `linear-gradient(135deg, ${brandColor}, ${accentColor || brandColor}dd)`,
+        }}
+      >
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-white/20 backdrop-blur-md text-white">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-white/20 backdrop-blur-md text-white border border-white/20">
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
             <span>MẪU GIAO DIỆN HIỆN TẠI</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight">{currentTemplate.name}</h2>
-          <p className="text-xs text-blue-100 max-w-xl leading-relaxed">{currentTemplate.description}</p>
+          <div className="flex items-baseline gap-3 flex-wrap">
+            <h2 className="text-2xl sm:text-4xl font-black tracking-tight">{currentTemplate.name}</h2>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/20 font-bold uppercase">
+              {currentTemplate.category}
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-white/90 max-w-xl leading-relaxed">{currentTemplate.description}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setPreviewTemplate(currentTemplate)}
-            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2.5 rounded-2xl bg-white/15 hover:bg-white/25 backdrop-blur-md text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer border border-white/20 shadow-xs"
           >
             <Eye className="w-4 h-4" />
             <span>Xem Trước Live</span>
           </button>
           <button
             onClick={() => setShowSelector(true)}
-            className="px-5 py-2.5 rounded-xl bg-white hover:bg-neutral-100 text-neutral-900 font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+            className="px-5 py-2.5 rounded-2xl bg-white hover:bg-neutral-100 text-neutral-900 font-extrabold text-xs shadow-lg transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
           >
-            <Layout className="w-4 h-4 text-blue-600" />
+            <Layout className="w-4 h-4" style={{ color: brandColor }} />
             <span>Thay Đổi Mẫu Giao Diện</span>
           </button>
         </div>
@@ -115,7 +189,7 @@ export function StoreCustomizer({
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
         {/* 2. BRAND COLOR CUSTOMIZATION */}
-        <div className="lg:col-span-6 p-6 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 space-y-5">
+        <div className="lg:col-span-6 p-6 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 space-y-5 shadow-2xs">
           <div className="flex items-center gap-2.5 pb-2 border-b border-neutral-100 dark:border-neutral-800">
             <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center text-blue-600">
               <Palette className="w-4 h-4" />
@@ -128,44 +202,55 @@ export function StoreCustomizer({
 
           {/* Color Presets */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Bảng màu gợi ý:</label>
+            <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Bảng màu gợi ý (Bấm để áp dụng ngay):</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              {PRESET_COLORS.map((preset, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    setBrandColor(preset.primary);
-                    setAccentColor(preset.accent);
-                  }}
-                  className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                    brandColor === preset.primary
-                      ? "border-blue-600 ring-2 ring-blue-600/30 bg-blue-50/50 dark:bg-blue-950/30"
-                      : "border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                  }`}
-                >
-                  <div className="w-5 h-5 rounded-full shadow-inner shrink-0" style={{ backgroundColor: preset.primary }} />
-                  <span className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300 truncate">{preset.name}</span>
-                </button>
-              ))}
+              {PRESET_COLORS.map((preset, idx) => {
+                const isSelected = brandColor.toLowerCase() === preset.primary.toLowerCase();
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSelectPresetColor(preset)}
+                    className={`p-2.5 rounded-2xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+                      isSelected
+                        ? "border-blue-600 ring-2 ring-blue-600/30 bg-blue-50/50 dark:bg-blue-950/30 shadow-xs"
+                        : "border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                    }`}
+                  >
+                    <div
+                      className="w-5 h-5 rounded-full shadow-inner shrink-0 flex items-center justify-center text-white"
+                      style={{ backgroundColor: preset.primary }}
+                    >
+                      {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                    </div>
+                    <span className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 truncate">{preset.name}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Custom Hex Inputs */}
-          <div className="grid grid-cols-2 gap-4 pt-2">
+          <div className="grid grid-cols-2 gap-4 pt-2 border-t border-neutral-100 dark:border-neutral-800">
             <div>
               <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Màu chủ đạo (Primary):</label>
               <div className="flex items-center gap-2 mt-1.5">
                 <input
                   type="color"
                   value={brandColor}
-                  onChange={(e) => setBrandColor(e.target.value)}
-                  className="w-9 h-9 rounded-lg border border-neutral-300 dark:border-neutral-700 cursor-pointer p-0.5"
+                  onChange={(e) => {
+                    setBrandColor(e.target.value);
+                    onUpdateCustomization({ brand_color: e.target.value });
+                  }}
+                  className="w-10 h-10 rounded-xl border border-neutral-300 dark:border-neutral-700 cursor-pointer p-0.5 bg-white dark:bg-neutral-800"
                 />
                 <input
                   type="text"
                   value={brandColor}
-                  onChange={(e) => setBrandColor(e.target.value)}
+                  onChange={(e) => {
+                    setBrandColor(e.target.value);
+                    onUpdateCustomization({ brand_color: e.target.value });
+                  }}
                   className="flex-1 px-3 py-2 text-xs font-mono rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800"
                 />
               </div>
@@ -177,13 +262,19 @@ export function StoreCustomizer({
                 <input
                   type="color"
                   value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
-                  className="w-9 h-9 rounded-lg border border-neutral-300 dark:border-neutral-700 cursor-pointer p-0.5"
+                  onChange={(e) => {
+                    setAccentColor(e.target.value);
+                    onUpdateCustomization({ accent_color: e.target.value });
+                  }}
+                  className="w-10 h-10 rounded-xl border border-neutral-300 dark:border-neutral-700 cursor-pointer p-0.5 bg-white dark:bg-neutral-800"
                 />
                 <input
                   type="text"
                   value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
+                  onChange={(e) => {
+                    setAccentColor(e.target.value);
+                    onUpdateCustomization({ accent_color: e.target.value });
+                  }}
                   className="flex-1 px-3 py-2 text-xs font-mono rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800"
                 />
               </div>
@@ -192,7 +283,7 @@ export function StoreCustomizer({
         </div>
 
         {/* 3. SECTION VISIBILITY CONTROLS */}
-        <div className="lg:col-span-6 p-6 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 space-y-5">
+        <div className="lg:col-span-6 p-6 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 space-y-5 shadow-2xs">
           <div className="flex items-center gap-2.5 pb-2 border-b border-neutral-100 dark:border-neutral-800">
             <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600">
               <Sliders className="w-4 h-4" />
@@ -215,18 +306,13 @@ export function StoreCustomizer({
             ].map((sec) => (
               <label
                 key={sec.id}
-                className="flex items-center gap-3 p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer"
+                className="flex items-center gap-3 p-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer"
               >
                 <input
                   type="checkbox"
                   checked={visibleSections[sec.id as keyof typeof visibleSections] !== false}
-                  onChange={(e) =>
-                    setVisibleSections({
-                      ...visibleSections,
-                      [sec.id]: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4 text-blue-600 rounded-md border-neutral-300 focus:ring-blue-500"
+                  onChange={(e) => handleToggleSection(sec.id, e.target.checked)}
+                  className="w-4 h-4 text-blue-600 rounded-md border-neutral-300 focus:ring-blue-500 cursor-pointer"
                 />
                 <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">{sec.label}</span>
               </label>
@@ -236,30 +322,31 @@ export function StoreCustomizer({
       </div>
 
       {/* 4. SAVE ACTION BAR */}
-      <div className="p-4 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+      <div className="p-4 sm:p-5 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
         <div className="flex items-center gap-2 text-xs text-neutral-500">
           {isSaved ? (
-            <span className="text-emerald-600 font-bold flex items-center gap-1">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Đã lưu tùy biến thành công!</span>
+            <span className="text-emerald-600 font-bold flex items-center gap-1.5 animate-in fade-in">
+              <CheckCircle2 className="w-5 h-5" />
+              <span>Đã tự động lưu & áp dụng màu sắc thành công!</span>
             </span>
           ) : (
-            <span>Nhớ bấm Lưu Thiết Lập sau khi hoàn tất chỉnh sửa màu sắc và bố cục.</span>
+            <span>Mọi thay đổi màu sắc và bố cục đều được tự động lưu và đồng bộ tức thì.</span>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setPreviewTemplate(currentTemplate)}
-            className="px-4 py-2 text-xs font-bold rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer"
+            className="flex-1 sm:flex-initial px-5 py-2.5 text-xs font-bold rounded-2xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer"
           >
             Xem Trước
           </button>
           <button
             type="button"
-            onClick={handleSave}
-            className="px-6 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+            onClick={handleManualSave}
+            className="flex-1 sm:flex-initial px-6 py-2.5 rounded-2xl text-xs font-bold text-white transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+            style={{ backgroundColor: brandColor }}
           >
             <Save className="w-4 h-4" />
             <span>Lưu Tùy Biến</span>
