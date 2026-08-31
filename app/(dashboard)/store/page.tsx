@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Store as StoreIcon,
@@ -50,8 +50,8 @@ export default function StoreSettingsPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("INFO");
 
   // Tab 1: Info State
-  const [storeName, setStoreName] = useState(store.store_name);
-  const [slug, setSlug] = useState(store.slug);
+  const [storeName, setStoreName] = useState(store.store_name || "");
+  const [slug, setSlug] = useState(store.slug || "");
   const [description, setDescription] = useState(store.description || "");
   const [phone, setPhone] = useState(store.phone || "");
   const [email, setEmail] = useState(store.email || "");
@@ -61,6 +61,30 @@ export default function StoreSettingsPage() {
   const [paymentSettings, setPaymentSettings] = useState<StorePaymentSettings>(
     store.advanced_payment_settings || PaymentSettingsService.getStorePaymentSettings(store)
   );
+
+  // Synchronize with store updates
+  useEffect(() => {
+    setStoreName(store.store_name || "");
+    setSlug(store.slug || "");
+    setDescription(store.description || "");
+    setPhone(store.phone || "");
+    setEmail(store.email || "");
+    setAddress(store.address || "");
+    if (store.advanced_payment_settings) {
+      setPaymentSettings(store.advanced_payment_settings);
+    }
+    if (store.advanced_fulfillment_settings) {
+      setFulfillmentSettings(store.advanced_fulfillment_settings);
+    }
+  }, [store]);
+
+  const handleStoreNameChange = (val: string) => {
+    setStoreName(val);
+    const autoOldSlug = storeName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    if (!slug || slug === autoOldSlug) {
+      setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""));
+    }
+  };
 
   // Tab 3: Payment Accounts State & Add Modal
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
@@ -291,8 +315,9 @@ export default function StoreSettingsPage() {
                   <input
                     type="text"
                     required
+                    placeholder="VD: Cửa Hàng Thiết Bị 2K"
                     value={storeName}
-                    onChange={(e) => setStoreName(e.target.value)}
+                    onChange={(e) => handleStoreNameChange(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-bold"
                   />
                 </div>

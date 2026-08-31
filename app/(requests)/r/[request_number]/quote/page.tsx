@@ -25,7 +25,7 @@ export default function QuickQuotationPage() {
   const requestNumber = params?.request_number as string;
 
   const { requests, submitQuotation } = useCommerceStore();
-  const request = requests.find((r) => r.request_number === requestNumber) || requests[0];
+  const request = requests.find((r) => r.request_number === requestNumber);
 
   // Seller Guest Form state
   const [sellerName, setSellerName] = useState("");

@@ -277,6 +277,19 @@ export function useCommerceStore() {
   const [billingInvoices, setBillingInvoicesState] = useState<BillingInvoice[]>(INITIAL_BILLING_INVOICES);
 
   useEffect(() => {
+    // PURGE GUARD: Automatically clear stale mock data from previous sessions
+    const PURGE_VERSION_KEY = "commerce_data_purge_version";
+    const CURRENT_PURGE_VERSION = "2026_08_31_CLEAN_INTERNAL_TEST_V1";
+    if (typeof window !== "undefined") {
+      const storedPurgeVer = localStorage.getItem(PURGE_VERSION_KEY);
+      if (storedPurgeVer !== CURRENT_PURGE_VERSION) {
+        Object.values(STORAGE_KEYS).forEach((key) => {
+          localStorage.removeItem(key);
+        });
+        localStorage.setItem(PURGE_VERSION_KEY, CURRENT_PURGE_VERSION);
+      }
+    }
+
     // Proactively clean bloated storage on first load
     clearBloatedLocalStorage();
 
@@ -295,8 +308,8 @@ export function useCommerceStore() {
       setCurrentContextState(storedActiveContext);
       if (storedActiveContext.context_type === "ORGANIZATION" && storedActiveContext.organization_id) {
         const matchingOrg = storedOrgs.find((o) => o.id === storedActiveContext.organization_id) || storedOrgs[0];
-        setOrgState(matchingOrg);
-        const sub = storedSubs.find((s) => s.actor_id === matchingOrg.id);
+        if (matchingOrg) setOrgState(matchingOrg);
+        const sub = storedSubs.find((s) => s.actor_id === matchingOrg?.id);
         if (sub) setSubscriptionState(sub);
       } else {
         const sub = storedSubs.find((s) => s.actor_id === storedPersonal.id) || INITIAL_SUBSCRIPTION_PERSONAL;
@@ -598,7 +611,16 @@ export function useCommerceStore() {
   };
 
   const updateStore = (newStore: Partial<Store>) => {
-    const updated = { ...store, ...newStore, updated_at: new Date().toISOString() };
+    const storeId = store.id || `store_${Date.now()}`;
+    const updated: Store = {
+      ...store,
+      id: storeId,
+      owner_actor_id: store.owner_actor_id || currentContext.actor_id,
+      owner_actor_type: store.owner_actor_type || currentContext.context_type,
+      organization_id: currentContext.context_type === "ORGANIZATION" ? currentContext.actor_id : undefined,
+      ...newStore,
+      updated_at: new Date().toISOString(),
+    };
     setStoreState(updated);
     setStored(STORAGE_KEYS.STORE, updated);
   };
@@ -2056,6 +2078,66 @@ export function useCommerceStore() {
     setCurrentSessionState(session);
     setStored(STORAGE_KEYS.USER, user);
     setStored(STORAGE_KEYS.SESSION, session);
+
+    // Auto-create / Synchronize Personal Actor
+    const personalActorId = `actor_${user.id}`;
+    const newPersonalActor: PersonalActor = {
+      id: personalActorId,
+      user_id: user.id,
+      display_name: `${user.full_name} (Cá nhân)`,
+      phone: user.primary_phone,
+      email: user.primary_email,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setPersonalActorState(newPersonalActor);
+    setStored(STORAGE_KEYS.PERSONAL_ACTOR, newPersonalActor);
+
+    // Ensure Personal Subscription (FREE) exists
+    let existingSub = subscriptions.find((s) => s.actor_id === personalActorId);
+    if (!existingSub) {
+      existingSub = {
+        id: `sub_personal_${user.id}`,
+        actor_id: personalActorId,
+        actor_type: "PERSONAL",
+        actor_name: newPersonalActor.display_name,
+        plan_id: "plan-free",
+        plan_code: "FREE",
+        status: "ACTIVE",
+        billing_period: "MONTHLY",
+        current_period_start: new Date().toISOString(),
+        current_period_end: new Date(Date.now() + 365 * 86400000).toISOString(),
+        cancel_at_period_end: false,
+        items: [
+          {
+            id: `item_personal_base_${Date.now()}`,
+            subscription_id: `sub_personal_${user.id}`,
+            item_type: "BASE_PLAN",
+            quantity: 1,
+            unit_price: 0,
+            total_amount: 0,
+            effective_from: new Date().toISOString(),
+          },
+        ],
+        activated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      const updatedSubs = [...subscriptions.filter((s) => s.actor_id !== personalActorId), existingSub];
+      setSubscriptionsState(updatedSubs);
+      setStored(STORAGE_KEYS.SUBSCRIPTIONS, updatedSubs);
+    }
+
+    const personalCtx: WorkContext = {
+      actor_id: personalActorId,
+      context_type: "PERSONAL",
+      display_name: user.full_name,
+      plan_code: existingSub.plan_code || "FREE",
+      is_active: true,
+    };
+    setCurrentContextState(personalCtx);
+    setSubscriptionState(existingSub);
+    setStored(STORAGE_KEYS.ACTIVE_CONTEXT, personalCtx);
+
     return { user, session };
   };
 
@@ -2063,7 +2145,17 @@ export function useCommerceStore() {
     const matched = passkeys.find((p) => p.credential_id === credentialId);
     let user = currentUser;
     if (!user) {
-      user = INITIAL_USER_IDENTITY;
+      user = {
+        id: matched?.user_id || `usr_${Date.now().toString(36)}`,
+        user_code: `usr_${Math.floor(100000 + Math.random() * 900000)}`,
+        full_name: "Người Dùng Passkey",
+        primary_phone: "+84988000000",
+        status: "ACTIVE",
+        is_phone_verified: true,
+        is_email_verified: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
     }
     const updatedPasskeys = passkeys.map((p) =>
       p.credential_id === credentialId

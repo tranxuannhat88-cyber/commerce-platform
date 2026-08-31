@@ -27,7 +27,7 @@ export default function LoginPage() {
   const { loginWithPhone, loginWithPasskey, passkeys, currentUser } = useCommerceStore();
 
   const [step, setStep] = useState<"PHONE_INPUT" | "OTP_INPUT">("PHONE_INPUT");
-  const [phone, setPhone] = useState("0988123456");
+  const [phone, setPhone] = useState("");
   const [otpDigits, setOtpDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [cooldown, setCooldown] = useState(0);
   const [demoCode, setDemoCode] = useState<string | null>(null);

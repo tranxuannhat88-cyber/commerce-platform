@@ -3,6 +3,7 @@ import {
   OrganizationMember,
   PersonalActor,
   Store, 
+  Product,
   BusinessParty, 
   Category, 
   Collection, 
@@ -30,124 +31,61 @@ import {
 import { UserIdentity, PasskeyCredential, AuthSession } from "@/lib/auth/types";
 import { Subscription, BillingOrder, BillingInvoice } from "@/lib/billing/types";
 
-export const INITIAL_PAYMENT_ACCOUNTS: ActorPaymentAccount[] = [
-  {
-    id: "acc-mbb-org",
-    actor_id: "org-2k-tech",
-    actor_type: "ORGANIZATION",
-    bank_bin: "970422",
-    bank_name: "Ngân Hàng TMCP Quân Đội (MBBank)",
-    bank_short_name: "MBBank",
-    account_number: "098812345688",
-    account_name: "CONG TY TNHH KY THUAT 2K",
-    qr_template: "compact",
-    is_default: true,
-    verification_status: "VERIFIED",
-    created_at: new Date(Date.now() - 60 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "acc-vcb-org",
-    actor_id: "org-2k-tech",
-    actor_type: "ORGANIZATION",
-    bank_bin: "970436",
-    bank_name: "Ngân Hàng TMCP Ngoại Thương Việt Nam (Vietcombank)",
-    bank_short_name: "Vietcombank",
-    account_number: "0071001234567",
-    account_name: "CONG TY TNHH KY THUAT 2K",
-    qr_template: "compact",
-    is_default: false,
-    verification_status: "VERIFIED",
-    created_at: new Date(Date.now() - 45 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "acc-tcb-personal",
-    actor_id: "user-2k-master",
-    actor_type: "PERSONAL",
-    bank_bin: "970407",
-    bank_name: "Ngân Hàng TMCP Kỹ Thương Việt Nam (Techcombank)",
-    bank_short_name: "Techcombank",
-    account_number: "19034567890012",
-    account_name: "NGUYEN VAN QUAN TRI",
-    qr_template: "compact",
-    is_default: true,
-    verification_status: "VERIFIED",
-    created_at: new Date(Date.now() - 90 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
+// =========================================================================
+// CLEAN INTERNAL TEST STATE — PURGE ALL MOCK / DEMO DATA
+// Target: go.invamax.com
+// All business records start empty ([] or clean baseline).
+// System definitions remain intact.
+// =========================================================================
 
+export const IS_CLEAN_INTERNAL_TEST_STATE = true;
+
+// 1. Payment Accounts (Empty initial state)
+export const INITIAL_PAYMENT_ACCOUNTS: ActorPaymentAccount[] = [];
+
+// 2. Personal Actor (Clean baseline before registration)
 export const INITIAL_PERSONAL_ACTOR: PersonalActor = {
-  id: "actor_usr_2k_admin",
-  user_id: "usr_2k_admin",
-  display_name: "Trần Xuân Nhật (Cá nhân)",
-  phone: "+84988123456",
-  email: "nhat.tx@invamax.com",
-  avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-  created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+  id: "actor_empty",
+  user_id: "",
+  display_name: "Chưa đăng nhập",
+  phone: "",
+  email: "",
+  avatar_url: "",
+  created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
 
+// 3. Organizations (Empty initial list)
 export const INITIAL_ORGANIZATION: Organization = {
-  id: "org-2k-tech",
-  name: "CÔNG TY TNHH KỸ THUẬT & THƯƠNG MẠI 2K",
-  short_name: "2K TECH",
-  slug: "cong-ty-2k",
+  id: "",
+  name: "Chưa có tổ chức",
+  slug: "",
   org_type: "COMPANY",
-  tax_code: "0109988776",
-  phone: "0988.123.456",
-  email: "contact@2k-tech.vn",
-  address: "Tòa nhà TechHub, Số 12 Khu Công Nghệ Cao, Q.9, TP.HCM",
-  logo_url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80",
-  created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+  created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
 
-export const INITIAL_ORGANIZATIONS: Organization[] = [
-  INITIAL_ORGANIZATION,
-];
+export const INITIAL_ORGANIZATIONS: Organization[] = [];
+export const INITIAL_ORGANIZATION_MEMBERS: OrganizationMember[] = [];
 
-export const INITIAL_ORGANIZATION_MEMBERS: OrganizationMember[] = [
-  {
-    id: "mem_2k_owner",
-    organization_id: "org-2k-tech",
-    user_id: "usr_2k_admin",
-    role: "OWNER",
-    status: "ACTIVE",
-    joined_at: new Date(Date.now() - 30 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
-  },
-];
-
+// 4. Store (Empty initial store)
 export const INITIAL_STORE: Store = {
-  id: "store-2k-official",
-  organization_id: "org-2k-tech",
-  owner_actor_id: "org-2k-tech",
-  owner_actor_type: "ORGANIZATION",
-  store_name: "2K Smart Commerce & Industrial Solutions",
-  slug: "2k-store",
-  logo_url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80",
-  cover_image_url: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200&auto=format&fit=crop&q=80",
-  description: "Cung cấp vật tư công nghiệp, gia công cơ khí chính xác & giải pháp bảo trì kỹ thuật.",
-  phone: "0988.123.456",
-  email: "sales@2k-store.vn",
-  address: "Tòa nhà TechHub, Số 12 Khu Công Nghệ Cao, Q.9, TP.HCM",
-  social_links: {
-    zalo: "https://zalo.me/0988123456",
-    facebook: "https://facebook.com/2kstorevn",
-    website: "https://2k-tech.vn",
-  },
-  business_hours: {
-    weekdays: "08:00 - 18:00",
-    saturday: "08:00 - 12:00",
-    sunday: "Nghỉ",
-  },
+  id: "",
+  organization_id: "",
+  owner_actor_id: "",
+  owner_actor_type: "PERSONAL",
+  store_name: "",
+  slug: "",
+  logo_url: "",
+  cover_image_url: "",
+  description: "",
+  phone: "",
+  email: "",
+  address: "",
+  business_hours: {},
+  social_links: {},
+  is_active: true,
   payment_settings: {
-    bank_bin: "970422",
-    bank_name: "MBBank (Ngân Hàng Quân Đội)",
-    bank_account_no: "098812345688",
-    bank_account_name: "CONG TY TNHH KY THUAT 2K",
     enable_cod: true,
     enable_bank_transfer: true,
   },
@@ -157,1067 +95,75 @@ export const INITIAL_STORE: Store = {
     free_shipping_threshold: 500000,
     enable_store_pickup: true,
     enable_quote_later: true,
-    pickup_address: "Tòa nhà TechHub, Số 12 Khu Công Nghệ Cao, Q.9, TP.HCM",
-    pickup_instructions: "Liên hệ Hotline 0988.123.456 trước 30 phút khi đến nhận hàng.",
   },
-  advanced_payment_settings: {
-    store_id: "store-2k-official",
-    default_payment_account_id: "acc-mbb-org",
-    enabled_methods: ["VIETQR", "COD", "PAY_AT_STORE", "DEPOSIT", "PAY_LATER"],
-    method_configs: {
-      VIETQR: { id: "spm-vietqr", method_type: "VIETQR", name: "Chuyển khoản / VietQR Tự Động", is_enabled: true, display_order: 1 },
-      BANK_TRANSFER: { id: "spm-bank", method_type: "BANK_TRANSFER", name: "Chuyển khoản ngân hàng thủ công", is_enabled: true, display_order: 2 },
-      COD: { id: "spm-cod", method_type: "COD", name: "Thanh toán khi nhận hàng (COD)", is_enabled: true, display_order: 3 },
-      PAY_AT_STORE: { id: "spm-store", method_type: "PAY_AT_STORE", name: "Thanh toán tại cửa hàng", is_enabled: true, display_order: 4 },
-      DEPOSIT: { id: "spm-deposit", method_type: "DEPOSIT", name: "Đặt cọc trước 30%", is_enabled: true, display_order: 5, deposit_percentage: 30 },
-      PAY_LATER: { id: "spm-pay-later", method_type: "PAY_LATER", name: "Thanh toán sau (NET 30)", is_enabled: true, display_order: 6, pay_later_terms: "NET_30", pay_later_days: 30 },
-      ONLINE_GATEWAY: { id: "spm-gateway", method_type: "ONLINE_GATEWAY", name: "Cổng thanh toán trực tuyến", is_enabled: false, display_order: 7 },
-      OTHER: { id: "spm-other", method_type: "OTHER", name: "Khác", is_enabled: false, display_order: 8 },
-    },
-    allow_offer_override: true,
-  },
-  advanced_fulfillment_settings: {
-    store_id: "store-2k-official",
-    enabled_methods: ["DELIVERY", "STORE_PICKUP", "SHIPPING_QUOTE_LATER"],
-    default_method: "DELIVERY",
-    fee_rule_type: "FIXED",
-    fixed_fee: 30000,
-    free_shipping_threshold: 500000,
-    pickup_config: {
-      store_name: "Showroom 2K TechHub",
-      address: "Tòa nhà TechHub, Số 12 Khu Công Nghệ Cao, Q.9, TP.HCM",
-      business_hours: "08:00 - 18:00 (T2 - T7)",
-      instructions: "Vui lòng xuất trình Mã Đơn Hàng tại quầy dịch vụ khách hàng.",
-    },
-    zones: [
-      {
-        id: "zone-hcm",
-        organization_id: "org-2k-tech",
-        store_id: "store-2k-official",
-        name: "Nội thành TP.HCM",
-        provinces: ["Hồ Chí Minh", "TP.HCM"],
-        shipping_fee: 25000,
-        free_shipping_threshold: 400000,
-        estimated_days: "1 ngày",
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        id: "zone-hn",
-        organization_id: "org-2k-tech",
-        store_id: "store-2k-official",
-        name: "Hà Nội & Hải Phòng",
-        provinces: ["Hà Nội", "Hải Phòng"],
-        shipping_fee: 35000,
-        free_shipping_threshold: 600000,
-        estimated_days: "2 ngày",
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        id: "zone-other",
-        organization_id: "org-2k-tech",
-        store_id: "store-2k-official",
-        name: "Toàn quốc",
-        provinces: ["Tỉnh khác", "Toàn quốc"],
-        shipping_fee: 45000,
-        free_shipping_threshold: 800000,
-        estimated_days: "2-4 ngày",
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ],
-  },
-  product_visibility_settings: {
-    show_out_of_stock_products: true,
-    show_low_stock_badge: true,
-    low_stock_threshold: 5,
-  },
-  public_settings: {
-    show_logo: true,
-    show_description: true,
-    show_region: true,
-    show_full_address: false,
-    show_business_phone: true,
-    public_contact_phone: "0988.123.456",
-    show_business_email: true,
-    public_business_email: "contact@2k-tech.vn",
-    show_website: true,
-    website_url: "https://invamax.com",
-    show_products: true,
-    show_services: true,
-    show_active_offers: true,
-    show_policies: true,
-    show_reputation: true,
-  },
-  policy_settings: {
-    shipping_policy: "Giao hàng toàn quốc. Miễn phí vận chuyển cho đơn hàng từ 5.000.000đ. Thời gian giao hàng tiêu chuẩn 1-3 ngày làm việc.",
-    return_policy: "Đổi mới trong vòng 7 ngày nếu có lỗi từ nhà sản xuất. Hỗ trợ kiểm tra hàng trước khi thanh toán.",
-    warranty_policy: "Bảo hành chính hãng 12 - 24 tháng theo tiêu chuẩn nhà sản xuất. Hỗ trợ bảo trì trọn đời.",
-    payment_terms: "Chấp nhận thanh toán chuyển khoản tự động VietQR, thanh toán khi nhận hàng (COD) và hóa đơn GTGT điện tử.",
-    processing_time: "Đóng gói và xử lý xuất kho trong vòng 2-4 giờ sau khi xác nhận đơn.",
-    service_area: "Toàn quốc (63 tỉnh thành)",
-  },
-  is_active: true,
-  created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+  created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
 
-export const INITIAL_CATEGORIES: Category[] = [
-  { id: "cat-1", organization_id: "org-2k-tech", name: "Sản phẩm công nghiệp", slug: "san-pham-cong-nghiep", display_order: 1, created_at: new Date().toISOString() },
-  { id: "cat-2", organization_id: "org-2k-tech", name: "Dịch vụ kỹ thuật & Bảo trì", slug: "dich-vu-ky-thuat", display_order: 2, created_at: new Date().toISOString() },
-  { id: "cat-3", organization_id: "org-2k-tech", name: "Hóa chất & Tẩy rửa chuyên dụng", slug: "hoa-chat-tay-rua", display_order: 3, created_at: new Date().toISOString() },
-];
+// 5. Catalog, Offers, Products, Warehouse, Inventory (Empty)
+export const INITIAL_CATEGORIES: Category[] = [];
+export const INITIAL_COLLECTIONS: Collection[] = [];
+export const INITIAL_OFFERS: Offer[] = [];
+export const INITIAL_PRODUCTS: Product[] = [];
+export const INITIAL_WAREHOUSES: Warehouse[] = [];
+export const INITIAL_INVENTORY: InventoryItem[] = [];
+export const INITIAL_MOVEMENTS: InventoryMovement[] = [];
 
-export const INITIAL_COLLECTIONS: Collection[] = [
-  { id: "col-1", organization_id: "org-2k-tech", store_id: "store-2k-official", name: "Ưu đãi Doanh nghiệp", slug: "uu-dai-doanh-nghiep", description: "Các gói giải pháp và vật tư chuyên dụng cho xưởng", is_active: true, created_at: new Date().toISOString() },
-  { id: "col-2", organization_id: "org-2k-tech", store_id: "store-2k-official", name: "Gói Dịch Vụ Định Kỳ", slug: "goi-dich-vu-dinh-ky", description: "Bảo dưỡng xưởng & máy móc định kỳ", is_active: true, created_at: new Date().toISOString() },
-];
+// 6. Commerce & RFQ Transactions (Empty)
+export const INITIAL_REQUESTS: RequestRFQ[] = [];
+export const INITIAL_QUOTATIONS: Quotation[] = [];
+export const INITIAL_QUOTATION_VERSIONS: QuotationVersion[] = [];
+export const INITIAL_ORDERS: Order[] = [];
+export const INITIAL_PARTIES: BusinessParty[] = [];
+export const INITIAL_LEDGER: LedgerEntry[] = [];
+export const INITIAL_EXPENSES: Expense[] = [];
+export const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
-export const INITIAL_OFFERS: Offer[] = [
-  {
-    id: "offer-wash-pro",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    offer_type: "PRODUCT",
-    name: "Nước Rửa Công Nghiệp Đa Năng EcoWash Pro",
-    slug: "nuoc-rua-cong-nghiep-ecowash-pro",
-    short_description: "Dung dịch tẩy rửa dầu mỡ công nghiệp gốc sinh học an toàn cho nhà xưởng.",
-    description: `### Ưu điểm vượt trội của EcoWash Pro:
-- Tẩy sạch dầu mỡ bám dính lâu ngày trên máy móc, bề mặt kim loại, sàn xưởng.
-- Không ăn mòn kim loại, không hại da tay, tự phân hủy sinh học 100%.
-- Tiết kiệm 40% chi phí so với hóa chất dung môi truyền thống.
-- **Quy cách đóng gói**: Can 5 Lít hoặc Thùng 20 Lít.`,
-    price: 450000,
-    compare_at_price: 520000,
-    cost_price: 260000,
-    status: "ACTIVE",
-    product_status: "ACTIVE",
-    availability_status: "IN_STOCK",
-    available_quantity: 45,
-    low_stock_threshold: 5,
-    out_of_stock_visibility: "HIDE",
-    category_id: "cat-3",
-    collection_id: "col-1",
-    image_url: "https://images.unsplash.com/photo-1585670270608-b4be4fbcf05d?w=600&auto=format&fit=crop&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1585670270608-b4be4fbcf05d?w=600&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1584744982491-665216d95f8b?w=600&auto=format&fit=crop&q=80",
-    ],
-    inventory_tracking: true,
-    attributes: { "Xuất xứ": "Việt Nam", "Độ pH": "7.5 trung tính", "Hạn sử dụng": "24 tháng" },
-    variants: [
-      { id: "var-5l", offer_id: "offer-wash-pro", sku: "EW-5L", name: "Can 5 Lít", price: 450000, cost_price: 260000, barcode: "893850123451", weight: 5.2, created_at: new Date().toISOString() },
-      { id: "var-20l", offer_id: "offer-wash-pro", sku: "EW-20L", name: "Thùng 20 Lít", price: 1650000, cost_price: 980000, barcode: "893850123452", weight: 21.0, created_at: new Date().toISOString() },
-    ],
-    created_at: new Date(Date.now() - 15 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "offer-ac-service",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    offer_type: "SERVICE",
-    name: "Gói Bảo Dưỡng & Vệ Sinh Điều Hòa Trung Tâm VRV/VRF",
-    slug: "bao-duong-dieu-hoa-trung-tam",
-    short_description: "Dich vụ kỹ thuật kiểm tra áp suất ga, khử khuẩn dàn lạnh và tối ưu hiệu suất điện năng.",
-    description: `### Quy trình thực hiện tiêu chuẩn kỹ thuật:
-1. Đo kiểm dòng điện, áp suất gas nạp R410A/R32.
-2. Vệ sinh dàn trao đổi nhiệt bằng máy xịt áp lực chuyên dụng.
-3. Diệt khuẩn khử mùi đường ống gió & kiểm tra van tiết lưu điện tử.
-4. Lập biên bản nghiệm thu kỹ thuật và cam kết tiết kiệm 15-20% điện năng.`,
-    price: 650000,
-    compare_at_price: 800000,
-    cost_price: 250000,
-    status: "ACTIVE",
-    product_status: "ACTIVE",
-    availability_status: "UNLIMITED",
-    category_id: "cat-2",
-    collection_id: "col-2",
-    image_url: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80",
-    ],
-    inventory_tracking: false,
-    service_duration_minutes: 90,
-    service_unit: "tổ máy / lần",
-    attributes: { "Bảo hành": "3 tháng sau bảo trì", "Khu vực phục vụ": "Toàn quốc" },
-    created_at: new Date(Date.now() - 10 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "offer-bearing-skf",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    offer_type: "PRODUCT",
-    name: "Vòng Bi Bạc Đạn Công Nghiệp SKF 6205-2RSH",
-    slug: "vong-bi-bac-dan-skf-6205",
-    short_description: "Vòng bi chịu tải tốc độ cao có nắp chặn cao su chống bụi tuyệt đối.",
-    description: "Sản phẩm chính hãng SKF Thụy Điển, chuyên dùng cho motor điện và quạt công nghiệp.",
-    price: 185000,
-    compare_at_price: 210000,
-    cost_price: 110000,
-    status: "ACTIVE",
-    product_status: "ACTIVE",
-    availability_status: "LOW_STOCK",
-    available_quantity: 3,
-    low_stock_threshold: 5,
-    out_of_stock_visibility: "HIDE",
-    category_id: "cat-1",
-    collection_id: "col-1",
-    image_url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80",
-    inventory_tracking: true,
-    attributes: { "Đường kính trong": "25mm", "Đường kính ngoài": "52mm", "Bề dày": "15mm" },
-    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "offer-tu-do-nghe-het-hang",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    offer_type: "PRODUCT",
-    name: "Tủ đồ nghề 5 ngăn kéo khóa trung tâm (Tạm hết)",
-    slug: "tu-do-nghe-5-ngan-tam-het",
-    short_description: "Tủ đồ nghề cao cấp chuyên dụng cơ khí, tạm thời hết hàng trong kho.",
-    description: "Ngăn kéo ray trượt bi êm ái, khóa bảo mật trung tâm, chịu tải 35kg/ngăn.",
-    price: 4200000,
-    compare_at_price: 5200000,
-    cost_price: 2800000,
-    status: "ACTIVE",
-    product_status: "ACTIVE",
-    availability_status: "OUT_OF_STOCK",
-    available_quantity: 0,
-    low_stock_threshold: 5,
-    out_of_stock_visibility: "HIDE",
-    category_id: "cat-1",
-    collection_id: "col-1",
-    image_url: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop&q=80",
-    inventory_tracking: true,
-    created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "offer-coffee-menu",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    offer_type: "PRODUCT",
-    offer_structure: "MENU_CATALOG",
-    name: "Menu Đồ Uống & Trà Sữa 2K Signature",
-    slug: "menu-do-uong-2k-signature",
-    short_description: "Menu điện tử gọi món trực tiếp: Cà phê đặc sản, Trà hoa quả tươi & Trà sữa. Khách chọn món và gửi đơn tức thì!",
-    description: `### Menu Đồ Uống 2K Signature
-- Được pha chế từ nguyên liệu sạch, 100% trà hảo hạng và sữa tươi thanh trùng.
-- Tùy chọn đặt mang đi hoặc phục vụ tại bàn.
-- **Cách đặt**: Chọn số lượng từng món ngay bên dưới và bấm nút [Gửi đơn đặt hàng].`,
-    price: 35000,
-    cost_price: 15000,
-    status: "ACTIVE",
-    product_status: "ACTIVE",
-    availability_status: "IN_STOCK",
-    out_of_stock_visibility: "SHOW_DISABLED",
-    category_id: "cat-1",
-    collection_id: "col-1",
-    image_url: "https://images.unsplash.com/photo-1541167760496-1628856ab772?w=600&auto=format&fit=crop&q=80",
-    inventory_tracking: false,
-    items: [
-      { id: "mi-1", name: "Cà Phê Muối Kem Béo", price: 35000, cost_price: 12000, unit: "ly", category: "Cà phê", description: "Cà phê Robusta Đắk Lắk kết hợp lớp kem muối béo ngậy.", image_url: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=300", is_available: true, product_status: "ACTIVE", availability_status: "IN_STOCK" },
-      { id: "mi-2", name: "Cà Phê Sữa Tươi Sài Gòn", price: 32000, cost_price: 11000, unit: "ly", category: "Cà phê", description: "Đậm đà hương vị truyền thống cùng sữa đặc nguyên chất.", image_url: "https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=300", is_available: true, product_status: "ACTIVE", availability_status: "IN_STOCK" },
-      { id: "mi-3", name: "Trà Đào Cam Sả Tươi", price: 45000, cost_price: 16000, unit: "ly", category: "Trà hoa quả", description: "Trà Earl Grey hòa quyện cam vàng, sả cây và đào giòn.", image_url: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=300", is_available: true, product_status: "ACTIVE", availability_status: "IN_STOCK" },
-      { id: "mi-4", name: "Trà Sữa Trân Châu Đường Đen", price: 48000, cost_price: 18000, unit: "ly", category: "Trà sữa", description: "Trà đen Ceylon đậm vị cùng trân châu nấu đường đen mềm dẻo.", image_url: "https://images.unsplash.com/photo-1558857563-b371033873b8?w=300", is_available: true, product_status: "ACTIVE", availability_status: "IN_STOCK" },
-      { id: "mi-5", name: "Trà Vải Hoa Hồng Lệ Chi (Tạm hết)", price: 45000, cost_price: 15000, unit: "ly", category: "Trà hoa quả", description: "Vị ngọt thanh của vải nhiệt đới thơm thoang thoảng cánh hoa hồng.", image_url: "https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?w=300", is_available: false, product_status: "ACTIVE", availability_status: "OUT_OF_STOCK" },
-      { id: "mi-6", name: "Bánh Croissant Bơ Tỏi Nướng Giòn", price: 38000, cost_price: 14000, unit: "cái", category: "Bánh ngọt", description: "Bánh sừng bò ngàn lớp bơ Pháp thơm lừng.", image_url: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=300", is_available: true, product_status: "ACTIVE", availability_status: "IN_STOCK" },
-    ],
-    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
+// 7. Trust & Merkle Verification Entities (Empty)
+export const INITIAL_DOCUMENT_HASHES: DocumentHash[] = [];
+export const INITIAL_VERIFICATION_RECORDS: VerificationRecord[] = [];
+export const INITIAL_MERKLE_BATCHES: MerkleBatch[] = [];
+export const INITIAL_BLOCKCHAIN_ANCHORS: BlockchainAnchor[] = [];
+export const INITIAL_TRANSACTIONS: Transaction[] = [];
 
-export const INITIAL_WAREHOUSES: Warehouse[] = [
-  { id: "wh-main", organization_id: "org-2k-tech", name: "Kho Tổng TP.HCM", code: "KHO-HCM-01", address: "12 KCN Cao, Q9, TP.HCM", is_default: true, created_at: new Date().toISOString() },
-];
+// 8. Shipping & Logistics (Empty)
+export const INITIAL_SHIPPING_METHODS: ShippingMethod[] = [];
+export const INITIAL_SHIPPING_ZONES: ShippingZone[] = [];
 
-export const INITIAL_INVENTORY: InventoryItem[] = [
-  { id: "inv-1", organization_id: "org-2k-tech", offer_id: "offer-wash-pro", offer_name: "EcoWash Pro (Can 5L)", variant_id: "var-5l", variant_name: "Can 5 Lít", warehouse_id: "wh-main", on_hand: 50, reserved: 4, available: 46, minimum_stock: 10, updated_at: new Date().toISOString() },
-  { id: "inv-2", organization_id: "org-2k-tech", offer_id: "offer-wash-pro", offer_name: "EcoWash Pro (Thùng 20L)", variant_id: "var-20l", variant_name: "Thùng 20 Lít", warehouse_id: "wh-main", on_hand: 15, reserved: 2, available: 13, minimum_stock: 5, updated_at: new Date().toISOString() },
-  { id: "inv-3", organization_id: "org-2k-tech", offer_id: "offer-bearing-skf", offer_name: "Vòng Bi SKF 6205", warehouse_id: "wh-main", on_hand: 8, reserved: 0, available: 8, minimum_stock: 15, updated_at: new Date().toISOString() },
-];
+// 9. Auth & Identity (Empty)
+export const INITIAL_USER_IDENTITY: UserIdentity | null = null;
+export const INITIAL_PASSKEYS: PasskeyCredential[] = [];
+export const INITIAL_AUTH_SESSION: AuthSession | null = null;
 
-export const INITIAL_MOVEMENTS: InventoryMovement[] = [
-  { id: "mov-1", organization_id: "org-2k-tech", inventory_item_id: "inv-1", offer_name: "EcoWash Pro (Can 5L)", movement_type: "OPENING", quantity: 50, before_qty: 0, after_qty: 50, note: "Nhập tồn kho ban đầu", created_at: new Date(Date.now() - 15 * 86400000).toISOString() },
-  { id: "mov-2", organization_id: "org-2k-tech", inventory_item_id: "inv-2", offer_name: "EcoWash Pro (Thùng 20L)", movement_type: "OPENING", quantity: 15, before_qty: 0, after_qty: 15, note: "Nhập tồn kho ban đầu", created_at: new Date(Date.now() - 15 * 86400000).toISOString() },
-];
-
-export const INITIAL_REQUESTS: RequestRFQ[] = [
-  {
-    id: "req-cnc-200",
-    request_number: "RQ260829-00125",
-    buyer_user_id: "user-buyer-1",
-    buyer_name: "Nguyễn Văn Hùng (Cơ Khí An Phát)",
-    buyer_phone: "0909.888.777",
-    buyer_email: "hung.anphat@gmail.com",
-    request_type: "CUSTOM_MANUFACTURING",
-    visibility: "PUBLIC_LINK",
-    title: "Gia công tiện phay CNC 200 chi tiết trục Inox 304 theo bản vẽ kỹ thuật",
-    slug: "gia-cong-cnc-200-chi-tiet-inox-304",
-    description: `Cần tìm xưởng gia công chính xác 200 chi tiết trục dẫn hướng Inox 304 theo dung sai ±0.01mm.
-- Yêu cầu xử lý bề mặt đánh bóng cấp độ Ra 0.4.
-- Đính kèm file bản vẽ 2D (PDF) và 3D (STEP) chi tiết.
-- Cần giao hàng tại Khu Chế Xuất Tân Thuận, Quận 7.`,
-    target_budget: 35000000,
-    delivery_location: "KCX Tân Thuận, Quận 7, TP.HCM",
-    required_date: new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0],
-    quotation_deadline: new Date(Date.now() + 5 * 86400000).toISOString(),
-    status: "OPEN",
-    allow_partial_quote: false,
-    items: [
-      { id: "req-item-1", request_id: "req-cnc-200", name: "Trục Inox 304 D25x180mm", description: "Tiện ren M16x1.5 hai đầu, phay rãnh then 6mm", quantity: 200, unit: "chi tiết", specification: "Inox 304 chuẩn Nhật, dung sai ±0.01mm", target_price: 175000, created_at: new Date().toISOString() },
-    ],
-    attachments: [
-      { id: "att-1", request_id: "req-cnc-200", file_name: "Ban-ve-truc-inox-304-DWG-0012.pdf", file_url: "https://example.com/drawings/dwg-0012.pdf", file_size: 2450000, mime_type: "application/pdf", created_at: new Date().toISOString() },
-    ],
-    quotations_count: 2,
-    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-export const INITIAL_QUOTATIONS: Quotation[] = [
-  {
-    id: "quote-1",
-    quotation_number: "QT260829-00882",
-    request_id: "req-cnc-200",
-    request_title: "Gia công tiện phay CNC 200 chi tiết trục Inox 304",
-    seller_organization_id: "org-2k-tech",
-    seller_user_id: "user-seller-2k",
-    currency: "VND",
-    subtotal: 32000000,
-    discount: 0,
-    tax: 2560000,
-    shipping_fee: 400000,
-    total: 34960000,
-    lead_time: "5-7 ngày làm việc",
-    payment_terms: "Tạm ứng 30% khi ký hợp đồng, 70% sau khi nghiệm thu giao hàng",
-    delivery_terms: "Giao tận xưởng khách hàng, đóng gói bọc chống xước từng chi tiết",
-    warranty: "Cam kết 1 đổi 1 nếu sai lệch kích thước theo bản vẽ",
-    valid_until: new Date(Date.now() + 10 * 86400000).toISOString().split("T")[0],
-    note: "Xưởng sử dụng máy CNC Mazak Nhật Bản đảm bảo đúng dung sai.",
-    version: 3,
-    status: "VIEWED",
-    items: [
-      { id: "qi-1", quotation_id: "quote-1", request_item_id: "req-item-1", item_name: "Gia công trục Inox 304 D25x180mm", specification: "Inox 304, tiện ren 2 đầu, mài tinh", quantity: 200, unit: "chi tiết", unit_price: 160000, total_price: 32000000, note: "Đã bao gồm phôi Inox 304 chuẩn" },
-    ],
-    submitted_at: new Date(Date.now() - 24 * 3600000).toISOString(),
-    viewed_at: new Date(Date.now() - 12 * 3600000).toISOString(),
-    created_at: new Date(Date.now() - 24 * 3600000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-export const INITIAL_ORDERS: Order[] = [
-  {
-    id: "order-1",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    order_number: "DH260829-00125",
-    source_type: "SOURCE_OFFER",
-    source_id: "offer-wash-pro",
-    customer_id: "party-1",
-    customer_name: "Công Ty Cơ Khí Hùng Vương",
-    customer_phone: "0903.111.222",
-    customer_email: "ketoan@hungvuong.vn",
-    shipping_address: {
-      province: "TP. Hồ Chí Minh",
-      district: "Quận Bình Tân",
-      ward: "Phường An Lạc",
-      street: "Số 88 Đường Kinh Dương Vương",
-      full_address: "Số 88 Đường Kinh Dương Vương, Phường An Lạc, Quận Bình Tân, TP. Hồ Chí Minh",
-    },
-    has_physical_items: true,
-    order_status: "PREPARING",
-    subtotal: 2550000,
-    discount_amount: 50000,
-    shipping_fee: 60000,
-    total_amount: 2560000,
-    customer_notes: "Giao giờ hành chính, gọi trước 30 phút.",
-    items: [
-      { id: "oi-1", order_id: "order-1", offer_id: "offer-wash-pro", variant_id: "var-5l", offer_type: "PRODUCT", item_name: "Nước Rửa Công Nghiệp EcoWash Pro", variant_name: "Can 5 Lít", unit_price: 450000, cost_price: 260000, quantity: 2, total_price: 900000 },
-      { id: "oi-2", order_id: "order-1", offer_id: "offer-wash-pro", variant_id: "var-20l", offer_type: "PRODUCT", item_name: "Nước Rửa Công Nghiệp EcoWash Pro", variant_name: "Thùng 20 Lít", unit_price: 1650000, cost_price: 980000, quantity: 1, total_price: 1650000 },
-    ],
-    payment: {
-      id: "pay-1",
-      organization_id: "org-2k-tech",
-      order_id: "order-1",
-      payment_method: "BANK_TRANSFER",
-      payment_status: "PAID",
-      amount: 2560000,
-      currency: "VND",
-      provider: "VIETQR",
-      provider_reference: "MB-TX-889921",
-      paid_at: new Date(Date.now() - 4 * 3600000).toISOString(),
-      created_at: new Date(Date.now() - 5 * 3600000).toISOString(),
-      updated_at: new Date(Date.now() - 4 * 3600000).toISOString(),
-    },
-    created_at: new Date(Date.now() - 5 * 3600000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-export const INITIAL_PARTIES: BusinessParty[] = [
-  {
-    id: "party-1",
-    organization_id: "org-2k-tech",
-    type: "CUSTOMER",
-    name: "Nguyễn Hùng Vương",
-    company_name: "Công Ty Cơ Khí Hùng Vương",
-    phone: "0903.111.222",
-    email: "ketoan@hungvuong.vn",
-    tax_code: "0312345678",
-    addresses: [
-      { id: "addr-1", label: "Xưởng sản xuất", full_address: "88 Kinh Dương Vương, Q.Bình Tân, TP.HCM", is_default: true },
-    ],
-    total_orders: 1,
-    total_spent: 2560000,
-    total_quotations: 0,
-    last_interacted_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-export const INITIAL_LEDGER: LedgerEntry[] = [
-  { id: "led-1", organization_id: "org-2k-tech", entry_type: "PAYMENT_RECEIVED", direction: "CREDIT", amount: 2560000, reference_type: "ORDER", reference_id: "order-1", description: "Thu tiền đơn hàng DH260829-00125 (VietQR MBBank)", created_at: new Date(Date.now() - 4 * 3600000).toISOString() },
-  { id: "led-2", organization_id: "org-2k-tech", entry_type: "EXPENSE_LOGGED", direction: "DEBIT", amount: 350000, reference_type: "EXPENSE", reference_id: "exp-1", description: "Chi cước xe tải giao hàng nội thành", created_at: new Date(Date.now() - 2 * 86400000).toISOString() },
-];
-
-export const INITIAL_EXPENSES: Expense[] = [
-  { id: "exp-1", organization_id: "org-2k-tech", category: "DELIVERY", amount: 350000, paid_at: new Date(Date.now() - 2 * 86400000).toISOString().split("T")[0], description: "Thuê xe tải giao can hóa chất cho khách Bình Tân", created_at: new Date(Date.now() - 2 * 86400000).toISOString() },
-  { id: "exp-2", organization_id: "org-2k-tech", category: "UTILITIES", amount: 1200000, paid_at: new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0], description: "Tiền điện văn phòng & xưởng tháng 08/2026", created_at: new Date(Date.now() - 7 * 86400000).toISOString() },
-];
-
-export const INITIAL_NOTIFICATIONS: AppNotification[] = [
-  { id: "notif-1", organization_id: "org-2k-tech", type: "NEW_ORDER", title: "Đơn hàng mới đã thanh toán!", message: "Đơn hàng DH260829-00125 giá trị 2.560.000đ đã nhận tiền qua VietQR.", link: "/sell/orders", is_read: false, created_at: new Date(Date.now() - 4 * 3600000).toISOString() },
-  { id: "notif-2", organization_id: "org-2k-tech", type: "NEW_QUOTATION", title: "Báo giá mới cho Yêu cầu RQ260829-00125", message: "Xưởng Cơ Khí Chính Xác Tân Bình vừa gửi báo giá 32.000.000đ.", link: "/buy/requests", is_read: false, created_at: new Date(Date.now() - 6 * 3600000).toISOString() },
-  { id: "notif-3", organization_id: "org-2k-tech", type: "LOW_STOCK", title: "Cảnh báo sắp hết hàng", message: "Vòng Bi SKF 6205 chỉ còn 8 sản phẩm (dưới mức tối thiểu 15).", link: "/inventory", is_read: true, created_at: new Date(Date.now() - 1 * 86400000).toISOString() },
-];
-
-// ==============================================================================
-// INITIAL BLOCKCHAIN VERIFICATION & TRUST LAYER SEED DATA
-// ==============================================================================
-
-export const INITIAL_DOCUMENT_HASHES: DocumentHash[] = [
-  {
-    id: "dochash-1",
-    organization_id: "org-2k-tech",
-    entity_type: "REQUEST",
-    entity_id: "req-cnc-200",
-    file_name: "Ban-ve-truc-inox-304-DWG-0012.pdf",
-    file_version: 1,
-    file_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    file_size: 2450000,
-    mime_type: "application/pdf",
-    storage_path: "drawings/dwg-0012.pdf",
-    uploaded_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-  },
-];
-
-export const INITIAL_QUOTATION_VERSIONS: QuotationVersion[] = [
-  {
-    id: "qv-1",
-    quotation_id: "quote-1",
-    version_number: 1,
-    payload_snapshot: { total: 38000000, lead_time: "10 ngày" },
-    document_hashes: ["e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"],
-    canonical_hash: "7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
-    created_at: new Date(Date.now() - 28 * 3600000).toISOString(),
-    submitted_at: new Date(Date.now() - 28 * 3600000).toISOString(),
-  },
-  {
-    id: "qv-2",
-    quotation_id: "quote-1",
-    version_number: 2,
-    payload_snapshot: { total: 36000000, lead_time: "7 ngày" },
-    document_hashes: ["e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"],
-    canonical_hash: "9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca72",
-    created_at: new Date(Date.now() - 26 * 3600000).toISOString(),
-    submitted_at: new Date(Date.now() - 26 * 3600000).toISOString(),
-  },
-  {
-    id: "qv-3",
-    quotation_id: "quote-1",
-    version_number: 3,
-    payload_snapshot: { total: 34960000, lead_time: "5-7 ngày làm việc", note: "Giá ưu đãi chốt đơn" },
-    document_hashes: ["e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"],
-    canonical_hash: "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
-    created_at: new Date(Date.now() - 24 * 3600000).toISOString(),
-    submitted_at: new Date(Date.now() - 24 * 3600000).toISOString(),
-  },
-];
-
-export const INITIAL_VERIFICATION_RECORDS: VerificationRecord[] = [
-  {
-    id: "vr-1",
-    organization_id: "org-2k-tech",
-    transaction_id: "tx-260829-001",
-    entity_type: "request",
-    entity_id: "req-cnc-200",
-    entity_version: 1,
-    event_id: "evt-req-pub-1",
-    event_type: "REQUEST_PUBLISHED",
-    canonical_payload_hash: "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
-    hash_algorithm: "SHA-256",
-    merkle_batch_id: "batch-101",
-    merkle_leaf_index: 0,
-    verification_status: "ANCHORED",
-    blockchain_anchor_id: "anchor-101",
-    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-  },
-  {
-    id: "vr-2",
-    organization_id: "org-2k-tech",
-    transaction_id: "tx-260829-001",
-    entity_type: "quotation",
-    entity_id: "quote-1",
-    entity_version: 3,
-    event_id: "evt-quote-sub-3",
-    event_type: "QUOTATION_SUBMITTED",
-    canonical_payload_hash: "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
-    hash_algorithm: "SHA-256",
-    merkle_batch_id: "batch-101",
-    merkle_leaf_index: 1,
-    verification_status: "ANCHORED",
-    blockchain_anchor_id: "anchor-101",
-    created_at: new Date(Date.now() - 24 * 3600000).toISOString(),
-  },
-  {
-    id: "vr-3",
-    organization_id: "org-2k-tech",
-    transaction_id: "tx-260829-001",
-    entity_type: "quotation",
-    entity_id: "quote-1",
-    entity_version: 3,
-    event_id: "evt-quote-acc-1",
-    event_type: "QUOTATION_ACCEPTED",
-    canonical_payload_hash: "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
-    hash_algorithm: "SHA-256",
-    merkle_batch_id: "batch-101",
-    merkle_leaf_index: 2,
-    verification_status: "ANCHORED",
-    blockchain_anchor_id: "anchor-101",
-    created_at: new Date(Date.now() - 6 * 3600000).toISOString(),
-  },
-  {
-    id: "vr-4",
-    organization_id: "org-2k-tech",
-    transaction_id: "tx-260829-001",
-    entity_type: "order",
-    entity_id: "order-1",
-    entity_version: 1,
-    event_id: "evt-ord-cre-1",
-    event_type: "ORDER_CREATED",
-    canonical_payload_hash: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
-    hash_algorithm: "SHA-256",
-    merkle_batch_id: "batch-101",
-    merkle_leaf_index: 3,
-    verification_status: "ANCHORED",
-    blockchain_anchor_id: "anchor-101",
-    created_at: new Date(Date.now() - 5 * 3600000).toISOString(),
-  },
-  {
-    id: "vr-5",
-    organization_id: "org-2k-tech",
-    transaction_id: "tx-260829-001",
-    entity_type: "payment",
-    entity_id: "pay-1",
-    entity_version: 1,
-    event_id: "evt-pay-cnf-1",
-    event_type: "PAYMENT_CONFIRMED",
-    canonical_payload_hash: "4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a",
-    hash_algorithm: "SHA-256",
-    merkle_batch_id: "batch-101",
-    merkle_leaf_index: 4,
-    verification_status: "ANCHORED",
-    blockchain_anchor_id: "anchor-101",
-    created_at: new Date(Date.now() - 4 * 3600000).toISOString(),
-  },
-  {
-    id: "vr-6",
-    organization_id: "org-2k-tech",
-    transaction_id: "tx-260829-001",
-    entity_type: "delivery",
-    entity_id: "order-1",
-    entity_version: 1,
-    event_id: "evt-del-cmp-1",
-    event_type: "TRANSACTION_COMPLETED",
-    canonical_payload_hash: "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
-    hash_algorithm: "SHA-256",
-    merkle_batch_id: "batch-101",
-    merkle_leaf_index: 5,
-    verification_status: "ANCHORED",
-    blockchain_anchor_id: "anchor-101",
-    created_at: new Date(Date.now() - 1 * 3600000).toISOString(),
-  },
-];
-
-export const INITIAL_MERKLE_BATCHES: MerkleBatch[] = [
-  {
-    id: "batch-101",
-    batch_number: 101,
-    record_count: 6,
-    merkle_root: "0x3f5b7d9a1c2e4f6a8b0d2e4f6a8b0d2e4f6a8b0d2e4f6a8b0d2e4f6a8b0d2e4f",
-    status: "ANCHORED",
-    created_at: new Date(Date.now() - 2 * 3600000).toISOString(),
-    anchored_at: new Date(Date.now() - 1 * 3600000).toISOString(),
-    blockchain_anchor_id: "anchor-101",
-  },
-];
-
-export const INITIAL_BLOCKCHAIN_ANCHORS: BlockchainAnchor[] = [
-  {
-    id: "anchor-101",
-    provider: "EVM_ANCHOR_ENGINE",
-    network: "Polygon Mainnet (Public Trust Rail)",
-    chain_id: 137,
-    batch_id: "batch-101",
-    merkle_root: "0x3f5b7d9a1c2e4f6a8b0d2e4f6a8b0d2e4f6a8b0d2e4f6a8b0d2e4f6a8b0d2e4f",
-    transaction_hash: "0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e74f6a8b0d2e4f6a8b0d2e4f6a",
-    block_number: 62458921,
-    contract_address: "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7",
-    status: "CONFIRMED",
-    retry_count: 0,
-    submitted_at: new Date(Date.now() - 1 * 3600000).toISOString(),
-    confirmed_at: new Date(Date.now() - 1 * 3600000 + 2000).toISOString(),
-    created_at: new Date(Date.now() - 1 * 3600000).toISOString(),
-  },
-];
-
-export const INITIAL_TRANSACTIONS: Transaction[] = [
-  {
-    id: "tx-260829-001",
-    organization_id: "org-2k-tech",
-    transaction_code: "TX260829-005821",
-    order_id: "order-1",
-    order_number: "DH260829-00125",
-    request_id: "req-cnc-200",
-    request_number: "RQ260829-00125",
-    quotation_id: "quote-1",
-    quotation_number: "QT260829-00882",
-    quotation_version: 3,
-    buyer_party_id: "party-1",
-    buyer_name: "Công Ty Cơ Khí Hùng Vương",
-    seller_party_id: "org-2k-tech",
-    seller_name: "CÔNG TY TNHH KỸ THUẬT & THƯƠNG MẠI 2K",
-    total_amount: 34960000,
-    status: "COMPLETED",
-    verification_completeness_score: 100,
-    is_fully_verified: true,
-    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    completed_at: new Date(Date.now() - 1 * 3600000).toISOString(),
-  },
-];
-
-export const INITIAL_PRODUCTS: import("@/types").Product[] = [
-  {
-    id: "prod-ban-thao-tac",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    name: "Bàn thao tác cơ khí chuyên dụng",
-    sku: "BTT-CK-1200",
-    price: 3500000,
-    compare_at_price: 4500000,
-    cost_price: 2200000,
-    unit: "bàn",
-    category: "Thiết bị xưởng",
-    description: "Khung thép hộp sơn tĩnh điện, mặt bàn chịu tải 500kg, kèm thanh treo dụng cụ.",
-    image_url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500",
-    gallery: [
-      "https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?w=500",
-      "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=500",
-    ],
-    variants: [
-      { id: "var-btt-1", name: "Kích thước 1200x600mm", price: 3500000, compare_at_price: 4500000, created_at: new Date().toISOString() },
-      { id: "var-btt-2", name: "Kích thước 1600x800mm (Mặt Inox)", price: 4800000, compare_at_price: 5800000, created_at: new Date().toISOString() },
-    ],
-    product_status: "ACTIVE",
-    inventory_tracking: true,
-    availability_status: "IN_STOCK",
-    available_quantity: 12,
-    low_stock_threshold: 5,
-    is_available: true,
-    created_at: new Date(Date.now() - 10 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "prod-xe-day-dung-cu",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    name: "Xe đẩy dụng cụ 3 tầng công nghiệp",
-    sku: "XD-3T-PRO",
-    price: 1850000,
-    compare_at_price: 2200000,
-    cost_price: 1100000,
-    unit: "chiếc",
-    category: "Dụng cụ",
-    description: "Bánh xe chịu lực xoay 360 độ kèm khóa an toàn, sơn tĩnh điện chống xước.",
-    image_url: "https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?w=500",
-    product_status: "ACTIVE",
-    inventory_tracking: true,
-    availability_status: "LOW_STOCK",
-    available_quantity: 3,
-    low_stock_threshold: 5,
-    is_available: true,
-    created_at: new Date(Date.now() - 8 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "prod-tu-do-nghe-5-ngan",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    name: "Tủ đồ nghề 5 ngăn kéo khóa trung tâm",
-    sku: "TDN-5N-RED",
-    price: 4200000,
-    compare_at_price: 5200000,
-    cost_price: 2800000,
-    unit: "chiếc",
-    category: "Thiết bị xưởng",
-    description: "Ngăn kéo ray trượt bi êm ái, khóa bảo mật trung tâm, chịu tải 35kg/ngăn.",
-    image_url: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=500",
-    product_status: "ACTIVE",
-    inventory_tracking: true,
-    availability_status: "OUT_OF_STOCK",
-    available_quantity: 0,
-    low_stock_threshold: 5,
-    is_available: false,
-    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "prod-nuoc-rua-ecowash",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    name: "Nước Rửa Công Nghiệp Đa Năng EcoWash Pro",
-    sku: "ECO-WASH-20L",
-    price: 450000,
-    compare_at_price: 520000,
-    cost_price: 250000,
-    unit: "can 20L",
-    category: "Hóa chất",
-    description: "Dung dịch tẩy rửa dầu mỡ công nghiệp gốc sinh học an toàn cho nhà xưởng.",
-    image_url: "https://images.unsplash.com/photo-1585670270608-b4be4fbcf05d?w=500",
-    product_status: "ACTIVE",
-    inventory_tracking: true,
-    availability_status: "IN_STOCK",
-    available_quantity: 45,
-    low_stock_threshold: 5,
-    is_available: true,
-    created_at: new Date(Date.now() - 15 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "prod-vong-bi-skf",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    name: "Vòng Bi Bạc Đạn Công Nghiệp SKF 6205-2RSH",
-    sku: "SKF-6205-2RSH",
-    price: 185000,
-    compare_at_price: 210000,
-    cost_price: 120000,
-    unit: "cái",
-    category: "Vật tư thay thế",
-    description: "Vòng bi chịu tải tốc độ cao có nắp chặn cao su chống bụi tuyệt đối.",
-    image_url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500",
-    product_status: "ACTIVE",
-    inventory_tracking: true,
-    availability_status: "IN_STOCK",
-    available_quantity: 28,
-    low_stock_threshold: 5,
-    is_available: true,
-    created_at: new Date(Date.now() - 20 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "prod-may-do-rung-cu",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    name: "Máy đo độ rung & tiếng ồn cơ khí thế hệ cũ (Model 2021)",
-    sku: "VIBRO-OLD-2021",
-    price: 12500000,
-    compare_at_price: 15000000,
-    cost_price: 8000000,
-    unit: "bộ",
-    category: "Thiết bị xưởng",
-    description: "Model này đã ngừng sản xuất từ quý 4/2023, chuyển giao công nghệ mới.",
-    image_url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500",
-    product_status: "DISCONTINUED",
-    inventory_tracking: false,
-    availability_status: "OUT_OF_STOCK",
-    available_quantity: 0,
-    is_available: false,
-    created_at: new Date(Date.now() - 60 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  }
-];
-
-export const INITIAL_SHIPPING_METHODS: ShippingMethod[] = [
-  {
-    id: "sm-standard-01",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    name: "Giao Hàng Tiêu Chuẩn (Toàn Quốc)",
-    method_type: "FREE_THRESHOLD",
-    fixed_fee: 30000,
-    free_shipping_threshold: 500000,
-    estimated_days: "2 - 3 ngày",
-    description: "Miễn phí vận chuyển toàn quốc cho đơn hàng từ 500.000đ",
-    priority: 1,
-    active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "sm-express-02",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    name: "Giao Hỏa Tốc (Trong Ngày / Nội Thành)",
-    method_type: "FIXED",
-    fixed_fee: 50000,
-    estimated_days: "Trong ngày (2 - 4 giờ)",
-    description: "Áp dụng đơn giao ngay trong nội thành",
-    priority: 2,
-    active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "sm-pickup-03",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    name: "Nhận Trực Tiếp Tại Cửa Hàng / Xưởng 2K",
-    method_type: "PICKUP",
-    fixed_fee: 0,
-    estimated_days: "Nhận trong giờ hành chính",
-    description: "Tòa nhà TechHub, Số 12 Khu Công Nghệ Cao, Q.9, TP.HCM",
-    priority: 3,
-    active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "sm-quote-later-04",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    name: "Báo Phí Vận Chuyển Sau (Máy móc & B2B tải trọng lớn)",
-    method_type: "QUOTE_LATER",
-    fixed_fee: 0,
-    estimated_days: "Liên hệ xác nhận",
-    description: "Cửa hàng sẽ liên hệ báo giá cước xe tải / container chi tiết trước khi xuất kho",
-    priority: 4,
-    active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-export const INITIAL_SHIPPING_ZONES: ShippingZone[] = [
-  {
-    id: "zone-hcm",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    name: "TP. Hồ Chí Minh & Bình Dương",
-    provinces: ["Hồ Chí Minh", "TP. Hồ Chí Minh", "TP Hồ Chí Minh", "Bình Dương", "Đồng Nai"],
-    shipping_fee: 20000,
-    free_shipping_threshold: 400000,
-    estimated_days: "1 - 2 ngày",
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "zone-nationwide",
-    organization_id: "org-2k-tech",
-    store_id: "store-2k-official",
-    name: "Các Tỉnh Thành Khác",
-    provinces: ["Hà Nội", "Đà Nẵng", "Hải Phòng", "Cần Thơ", "Khác"],
-    shipping_fee: 35000,
-    free_shipping_threshold: 600000,
-    estimated_days: "2 - 4 ngày",
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-export const INITIAL_USER_IDENTITY: UserIdentity = {
-  id: "usr_2k_admin",
-  user_code: "usr_998877",
-  full_name: "Trần Xuân Nhật",
-  primary_phone: "+84988123456",
-  primary_email: "nhat.tx@invamax.com",
-  avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-  status: "ACTIVE",
-  is_phone_verified: true,
-  is_email_verified: true,
-  created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
-export const INITIAL_PASSKEYS: PasskeyCredential[] = [
-  {
-    id: "pk_iphone_main",
-    user_id: "usr_2k_admin",
-    credential_id: "cred_apple_faceid_sample_12345",
-    public_key: "pub_key_es256_sample_abc123",
-    counter: 14,
-    device_name: "iPhone 15 Pro (Face ID)",
-    device_type: "apple",
-    authenticator_type: "platform",
-    created_at: new Date(Date.now() - 15 * 86400000).toISOString(),
-    last_used_at: new Date(Date.now() - 2 * 3600000).toISOString(),
-  },
-  {
-    id: "pk_windows_work",
-    user_id: "usr_2k_admin",
-    credential_id: "cred_windows_hello_sample_67890",
-    public_key: "pub_key_rs256_sample_def456",
-    counter: 6,
-    device_name: "Laptop Dell XPS (Windows Hello)",
-    device_type: "windows",
-    authenticator_type: "platform",
-    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-    last_used_at: new Date(Date.now() - 24 * 3600000).toISOString(),
-  },
-];
-
-export const INITIAL_AUTH_SESSION: AuthSession = {
-  id: "sess_current_active",
-  user_id: "usr_2k_admin",
-  user: INITIAL_USER_IDENTITY,
-  device_name: "Chrome on Windows",
-  ip_address: "14.232.208.12",
-  session_token: "tok_secure_sess_998877",
-  last_active_at: new Date().toISOString(),
-  step_up_authenticated_at: new Date(Date.now() - 5 * 60000).toISOString(), // 5 mins ago
-  expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
-};
-
+// 10. Subscriptions & Billing Instances (Clean FREE baseline)
 export const INITIAL_SUBSCRIPTION_PERSONAL: Subscription = {
-  id: "sub-personal-usr-2k-admin",
-  actor_id: "actor_usr_2k_admin",
+  id: "sub_initial_free",
+  actor_id: "actor_empty",
   actor_type: "PERSONAL",
-  actor_name: "Trần Xuân Nhật (Cá nhân)",
+  actor_name: "Cá nhân",
   plan_id: "plan-free",
   plan_code: "FREE",
   status: "ACTIVE",
   billing_period: "MONTHLY",
-  current_period_start: new Date(Date.now() - 30 * 86400000).toISOString(),
-  current_period_end: new Date(Date.now() + 335 * 86400000).toISOString(),
+  current_period_start: new Date().toISOString(),
+  current_period_end: new Date(Date.now() + 365 * 86400000).toISOString(),
   cancel_at_period_end: false,
-  scheduled_downgrade_plan_id: null,
   items: [
     {
-      id: "sub-item-base-free",
-      subscription_id: "sub-personal-usr-2k-admin",
+      id: "item_initial_free_base",
+      subscription_id: "sub_initial_free",
       item_type: "BASE_PLAN",
       quantity: 1,
       unit_price: 0,
       total_amount: 0,
-      effective_from: new Date(Date.now() - 30 * 86400000).toISOString(),
+      effective_from: new Date().toISOString(),
     },
   ],
-  activated_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+  activated_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
 
-export const INITIAL_SUBSCRIPTION: Subscription = {
-  id: "sub-org-2k-tech-01",
-  actor_id: "org-2k-tech",
-  actor_type: "ORGANIZATION",
-  actor_name: "CÔNG TY TNHH KỸ THUẬT & THƯƠNG MẠI 2K",
-  plan_id: "plan-pro",
-  plan_code: "PRO",
-  status: "ACTIVE",
-  billing_period: "MONTHLY",
-  current_period_start: new Date(Date.now() - 15 * 86400000).toISOString(),
-  current_period_end: new Date(Date.now() + 15 * 86400000).toISOString(),
-  cancel_at_period_end: false,
-  scheduled_downgrade_plan_id: null,
-  items: [
-    {
-      id: "sub-item-base-pro",
-      subscription_id: "sub-org-2k-tech-01",
-      item_type: "BASE_PLAN",
-      quantity: 1,
-      unit_price: 249000,
-      total_amount: 249000,
-      effective_from: new Date(Date.now() - 15 * 86400000).toISOString(),
-    },
-  ],
-  activated_at: new Date(Date.now() - 45 * 86400000).toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
-export const INITIAL_SUBSCRIPTIONS: Subscription[] = [
-  INITIAL_SUBSCRIPTION_PERSONAL,
-  INITIAL_SUBSCRIPTION,
-];
-
-export const INITIAL_BILLING_ORDERS: BillingOrder[] = [
-  {
-    id: "order-bill-prev-01",
-    order_number: "BILL260815-1029",
-    actor_id: "org-2k-tech",
-    actor_type: "ORGANIZATION",
-    actor_name: "CÔNG TY TNHH KỸ THUẬT & THƯƠNG MẠI 2K",
-    subscription_id: "sub-org-2k-tech-01",
-    order_type: "NEW_SUBSCRIPTION",
-    plan_code: "PRO",
-    billing_period: "MONTHLY",
-    items: [
-      {
-        id: "item-plan-pro",
-        billing_order_id: "order-bill-prev-01",
-        item_type: "PLAN",
-        reference_id: "plan-pro",
-        description: "Gói PRO (Hàng Tháng)",
-        quantity: 1,
-        unit_price: 249000,
-        amount: 249000,
-      },
-    ],
-    subtotal: 249000,
-    discount_amount: 0,
-    tax_amount: 0,
-    total_amount: 249000,
-    currency: "VND",
-    payment_method: "VIETQR",
-    payment_reference: "COMMERCE BILL260815-1029",
-    account_number: "0988123456888",
-    account_name: "CONG TY CONG NGHE COMMERCE PLATFORM",
-    bank_name: "MBBank (Ngân Hàng Quân Đội)",
-    bank_bin: "970422",
-    status: "PAID",
-    created_at: new Date(Date.now() - 15 * 86400000).toISOString(),
-    paid_at: new Date(Date.now() - 15 * 86400000).toISOString(),
-  },
-];
-
-export const INITIAL_BILLING_INVOICES: BillingInvoice[] = [
-  {
-    id: "inv-prev-01",
-    invoice_number: "INV-BILL260815-1029",
-    billing_order_id: "order-bill-prev-01",
-    actor_id: "org-2k-tech",
-    actor_name: "CÔNG TY TNHH KỸ THUẬT & THƯƠNG MẠI 2K",
-    tax_code: "0109988776",
-    amount: 249000,
-    tax_amount: 0,
-    total_amount: 249000,
-    status: "PAID",
-    issued_at: new Date(Date.now() - 15 * 86400000).toISOString(),
-    description: "Thanh toán Gói PRO (Hàng tháng)",
-  },
-];
-
-
+export const INITIAL_SUBSCRIPTION: Subscription = INITIAL_SUBSCRIPTION_PERSONAL;
+export const INITIAL_SUBSCRIPTIONS: Subscription[] = [];
+export const INITIAL_BILLING_ORDERS: BillingOrder[] = [];
+export const INITIAL_BILLING_INVOICES: BillingInvoice[] = [];

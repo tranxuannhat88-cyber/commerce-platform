@@ -30,7 +30,7 @@ export default function PublicRequestPage() {
   const { requests } = useCommerceStore();
   const [showQR, setShowQR] = useState(false);
 
-  const request = requests.find((r) => r.request_number === requestNumber) || requests[0];
+  const request = requests.find((r) => r.request_number === requestNumber);
 
   if (!request) {
     return (

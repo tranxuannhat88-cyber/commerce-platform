@@ -212,7 +212,7 @@ export function UnifiedAuthModal({
 
       if (res.credential_id) {
         const { user } = loginWithPasskey(res.credential_id);
-        if (onSuccess) {
+        if (onSuccess && user) {
           onSuccess(user, false);
         }
         onClose();

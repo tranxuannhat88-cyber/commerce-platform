@@ -49,7 +49,7 @@ export default function DashboardPage() {
   const activeRequests = requests.filter((r) => r.status === "OPEN" || r.status === "QUOTING");
   const receivedQuotations = quotations.filter((q) => q.status === "SUBMITTED" || q.status === "VIEWED");
 
-  const storeUrl = AppUrlService.getStoreUrl(store.slug);
+  const storeUrl = store.slug ? AppUrlService.getStoreUrl(store.slug) : "";
 
   // Interactive Webhook Simulator for Testing Acceptance Flow
   const handleSimulateWebhook = (orderId: string) => {
@@ -73,10 +73,10 @@ export default function DashboardPage() {
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-medium backdrop-blur-md">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Dual-Sided Commerce Platform V1</span>
+              <span>Dual-Sided Commerce Platform</span>
             </div>
             <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-              {organization.name}
+              {organization.name || "Không Gian Thương Mại Cá Nhân"}
             </h2>
             <p className="text-sm text-neutral-300">
               Mô hình: <span className="font-semibold text-white">CREATE AN OFFER</span> hoặc <span className="font-semibold text-white">CREATE A REQUEST</span> → Gửi link → Giao dịch & Sổ cái tài chính.
@@ -84,14 +84,26 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => setSelectedQR({ url: storeUrl, title: "QR Cửa Hàng", subtitle: store.store_name })}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-medium backdrop-blur-md transition-all border border-white/10"
-            >
-              <QrCode className="w-4 h-4 text-blue-400" />
-              <span>QR Cửa Hàng</span>
-            </button>
-            <CopyButton text={storeUrl} label="Copy Link Cửa Hàng" className="py-2.5 px-4 text-xs font-semibold bg-white text-neutral-900 border-none hover:bg-neutral-100" />
+            {store.slug ? (
+              <>
+                <button
+                  onClick={() => setSelectedQR({ url: storeUrl, title: "QR Cửa Hàng", subtitle: store.store_name })}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-medium backdrop-blur-md transition-all border border-white/10 cursor-pointer"
+                >
+                  <QrCode className="w-4 h-4 text-blue-400" />
+                  <span>QR Cửa Hàng</span>
+                </button>
+                <CopyButton text={storeUrl} label="Copy Link Cửa Hàng" className="py-2.5 px-4 text-xs font-semibold bg-white text-neutral-900 border-none hover:bg-neutral-100" />
+              </>
+            ) : (
+              <Link
+                href="/store"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
+              >
+                <span>+ Tạo Cửa Hàng Đầu Tiên</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            )}
           </div>
         </div>
 
@@ -189,45 +201,57 @@ export default function DashboardPage() {
             <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
               Offers Đang Bán ({offers.length})
             </div>
-            {offers.slice(0, 3).map((offer) => {
-              const offerLink = AppUrlService.getOfferUrl(store.slug, offer.slug);
-              return (
-                <div
-                  key={offer.id}
-                  className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200/70 dark:border-neutral-700 flex items-center justify-between gap-4"
+            {offers.length === 0 ? (
+              <div className="p-6 text-center rounded-2xl bg-neutral-50 dark:bg-neutral-800/40 border border-dashed border-neutral-200 dark:border-neutral-700 space-y-2">
+                <p className="text-xs text-neutral-400 font-medium">Chưa có sản phẩm hoặc dịch vụ nào</p>
+                <Link
+                  href="/sell/offers"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors shadow-xs"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <img
-                      src={offer.image_url || "https://images.unsplash.com/photo-1585670270608-b4be4fbcf05d?w=100"}
-                      alt={offer.name}
-                      className="w-11 h-11 rounded-xl object-cover shrink-0 border"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100 truncate">
-                        {offer.name}
-                      </p>
-                      <p className="text-xs text-blue-600 font-semibold mt-0.5">
-                        {formatVND(offer.price)}
-                        <span className="ml-2 text-[10px] text-neutral-400 font-normal">
-                          [{offer.offer_type}]
-                        </span>
-                      </p>
+                  <span>+ Tạo Offer Đầu Tiên</span>
+                </Link>
+              </div>
+            ) : (
+              offers.slice(0, 3).map((offer) => {
+                const offerLink = AppUrlService.getOfferUrl(store.slug, offer.slug);
+                return (
+                  <div
+                    key={offer.id}
+                    className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200/70 dark:border-neutral-700 flex items-center justify-between gap-4"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img
+                        src={offer.image_url || "https://images.unsplash.com/photo-1585670270608-b4be4fbcf05d?w=100"}
+                        alt={offer.name}
+                        className="w-11 h-11 rounded-xl object-cover shrink-0 border"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100 truncate">
+                          {offer.name}
+                        </p>
+                        <p className="text-xs text-blue-600 font-semibold mt-0.5">
+                          {formatVND(offer.price)}
+                          <span className="ml-2 text-[10px] text-neutral-400 font-normal">
+                            [{offer.offer_type}]
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => setSelectedQR({ url: offerLink, title: offer.name, subtitle: formatVND(offer.price) })}
+                        className="p-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 rounded-lg hover:bg-neutral-200/50 transition-colors"
+                        title="Mã QR Offer"
+                      >
+                        <QrCode className="w-4 h-4" />
+                      </button>
+                      <CopyButton text={offerLink} label="Link" />
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => setSelectedQR({ url: offerLink, title: offer.name, subtitle: formatVND(offer.price) })}
-                      className="p-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 rounded-lg hover:bg-neutral-200/50 transition-colors"
-                      title="Mã QR Offer"
-                    >
-                      <QrCode className="w-4 h-4" />
-                    </button>
-                    <CopyButton text={offerLink} label="Link" />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
 
           {/* Pending Orders Action */}
@@ -303,40 +327,52 @@ export default function DashboardPage() {
             <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
               Yêu Cầu Đang Mở Báo Giá ({activeRequests.length})
             </div>
-            {activeRequests.slice(0, 3).map((req) => {
-              const reqLink = AppUrlService.getRequestUrl(req.request_number);
-              return (
-                <div
-                  key={req.id}
-                  className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200/70 dark:border-neutral-700 flex items-center justify-between gap-4"
+            {activeRequests.length === 0 ? (
+              <div className="p-6 text-center rounded-2xl bg-neutral-50 dark:bg-neutral-800/40 border border-dashed border-neutral-200 dark:border-neutral-700 space-y-2">
+                <p className="text-xs text-neutral-400 font-medium">Chưa có yêu cầu mua sắm hoặc báo giá nào</p>
+                <Link
+                  href="/buy/requests"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-xs"
                 >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
-                        {req.request_number}
-                      </span>
-                      <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100 truncate">
-                        {req.title}
-                      </span>
+                  <span>+ Tạo Yêu Cầu Đầu Tiên</span>
+                </Link>
+              </div>
+            ) : (
+              activeRequests.slice(0, 3).map((req) => {
+                const reqLink = AppUrlService.getRequestUrl(req.request_number);
+                return (
+                  <div
+                    key={req.id}
+                    className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200/70 dark:border-neutral-700 flex items-center justify-between gap-4"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
+                          {req.request_number}
+                        </span>
+                        <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100 truncate">
+                          {req.title}
+                        </span>
+                      </div>
+                      <p className="text-xs text-neutral-500 mt-1">
+                        Ngân sách: <span className="font-semibold text-neutral-800 dark:text-neutral-200">{req.target_budget ? formatVND(req.target_budget) : "Thỏa thuận"}</span> • Đã nhận <span className="font-bold text-emerald-600">{req.quotations_count || 0}</span> báo giá
+                      </p>
                     </div>
-                    <p className="text-xs text-neutral-500 mt-1">
-                      Ngân sách: <span className="font-semibold text-neutral-800 dark:text-neutral-200">{req.target_budget ? formatVND(req.target_budget) : "Thỏa thuận"}</span> • Đã nhận <span className="font-bold text-emerald-600">{req.quotations_count || 0}</span> báo giá
-                    </p>
-                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => setSelectedQR({ url: reqLink, title: req.request_number, subtitle: req.title })}
-                      className="p-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 rounded-lg hover:bg-neutral-200/50 transition-colors"
-                      title="Mã QR Request"
-                    >
-                      <QrCode className="w-4 h-4" />
-                    </button>
-                    <CopyButton text={reqLink} label="Link RFQ" />
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => setSelectedQR({ url: reqLink, title: req.request_number, subtitle: req.title })}
+                        className="p-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 rounded-lg hover:bg-neutral-200/50 transition-colors"
+                        title="Mã QR Request"
+                      >
+                        <QrCode className="w-4 h-4" />
+                      </button>
+                      <CopyButton text={reqLink} label="Link RFQ" />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
 
           {/* Quotations Comparison Prompt */}

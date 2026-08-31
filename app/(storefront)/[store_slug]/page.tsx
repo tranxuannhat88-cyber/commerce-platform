@@ -54,6 +54,26 @@ function StorefrontContent() {
     products,
   });
 
+  if (!store.slug || (store.slug !== storeSlug && storeSlug !== "preview")) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-neutral-50 dark:bg-neutral-950">
+        <div className="w-16 h-16 rounded-3xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-2xl mb-4">
+          🏬
+        </div>
+        <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Cửa hàng không tồn tại</h2>
+        <p className="text-xs text-neutral-500 max-w-sm mt-1 mb-6">
+          Đường dẫn cửa hàng này không tồn tại hoặc đã được thay đổi. Vui lòng kiểm tra lại đường link.
+        </p>
+        <Link
+          href="/"
+          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md"
+        >
+          Về Trang Chủ
+        </Link>
+      </div>
+    );
+  }
+
   const filteredProducts = storefrontData.products.filter((p) => {
     const matchCat =
       selectedCategory === "ALL" ||

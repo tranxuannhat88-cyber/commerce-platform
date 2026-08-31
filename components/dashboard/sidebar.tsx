@@ -118,12 +118,12 @@ export function DashboardSidebar() {
       {/* Quick View Public Store */}
       <div className="px-3 pt-2">
         <Link
-          href={`/${store.slug}`}
-          target="_blank"
-          title="Xem trang cửa hàng giống như khách hàng nhìn thấy."
+          href={store.slug ? `/${store.slug}` : "/store"}
+          target={store.slug ? "_blank" : undefined}
+          title={store.slug ? "Xem trang cửa hàng giống như khách hàng nhìn thấy." : "Tạo cửa hàng của bạn"}
           className="flex items-center justify-between px-3 py-2 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/60 rounded-xl transition-colors border border-blue-200 dark:border-blue-900/60"
         >
-          <span className="truncate">🏬 Xem cửa hàng</span>
+          <span className="truncate">{store.slug ? "🏬 Xem cửa hàng" : "🏬 + Tạo cửa hàng"}</span>
           <ExternalLink className="w-3.5 h-3.5 shrink-0" />
         </Link>
       </div>
@@ -263,13 +263,13 @@ export function MobileDashboardDrawer({
         {/* Quick View Public Store */}
         <div className="px-3 pt-3">
           <Link
-            href={`/${store.slug}`}
-            target="_blank"
+            href={store.slug ? `/${store.slug}` : "/store"}
+            target={store.slug ? "_blank" : undefined}
             onClick={onClose}
-            title="Xem trang cửa hàng giống như khách hàng nhìn thấy."
+            title={store.slug ? "Xem trang cửa hàng giống như khách hàng nhìn thấy." : "Tạo cửa hàng của bạn"}
             className="flex items-center justify-between px-3 py-2 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 rounded-xl border border-blue-200 dark:border-blue-900/60"
           >
-            <span>🏬 Xem cửa hàng</span>
+            <span>{store.slug ? "🏬 Xem cửa hàng" : "🏬 + Tạo cửa hàng"}</span>
             <ExternalLink className="w-3.5 h-3.5 shrink-0" />
           </Link>
         </div>
