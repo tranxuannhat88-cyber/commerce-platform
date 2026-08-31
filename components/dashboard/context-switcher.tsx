@@ -77,10 +77,10 @@ export function ContextSwitcher({ className = "", isCompact = false }: ContextSw
             </div>
 
             <div className="min-w-0 flex-1">
-              <div className="text-[10px] uppercase font-bold tracking-wider text-neutral-400 dark:text-neutral-500 truncate">
+              <div className="text-[10px] uppercase font-black tracking-wider text-blue-600 dark:text-blue-400 truncate">
                 {currentContext.context_type === "PERSONAL"
-                  ? "Đang làm việc: CÁ NHÂN"
-                  : "Đang làm việc tại:"}
+                  ? "CÁ NHÂN"
+                  : (currentContext.org_type === "HOUSEHOLD" ? "HỘ KINH DOANH" : "TỔ CHỨC")}
               </div>
               <div className="font-bold text-xs text-neutral-900 dark:text-neutral-100 truncate group-hover:text-blue-600 transition-colors">
                 {currentContext.display_name}
@@ -90,11 +90,11 @@ export function ContextSwitcher({ className = "", isCompact = false }: ContextSw
 
           <div className="flex items-center gap-1.5 shrink-0">
             {currentContext.role && currentContext.context_type === "ORGANIZATION" && (
-              <span className="hidden sm:inline-block px-1.5 py-0.2 rounded text-[10px] font-bold bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300">
+              <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300">
                 {currentContext.role}
               </span>
             )}
-            <span className={`px-1.5 py-0.2 rounded text-[10px] font-black ${getPlanBadgeClass(currentContext.plan_code)}`}>
+            <span className={`px-2 py-0.5 rounded-md text-[10px] font-black tracking-wide ${getPlanBadgeClass(currentContext.plan_code)}`}>
               {currentContext.plan_code || "FREE"}
             </span>
             <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
