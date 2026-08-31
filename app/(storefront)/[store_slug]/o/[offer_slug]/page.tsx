@@ -92,6 +92,8 @@ function DirectOfferContent() {
     offers,
     store,
     organization,
+    personalActor,
+    currentUser,
     products,
     orders,
     createOrder,
@@ -164,6 +166,8 @@ function DirectOfferContent() {
         offers: [offer, ...offers],
         store: currentStore,
         organization,
+        personalActor,
+        user: currentUser,
         products,
         orders,
       })
@@ -538,6 +542,8 @@ function DirectOfferContent() {
           offer={offer}
           store={currentStore}
           organization={organization}
+          personalActor={personalActor}
+          user={currentUser}
           sellerType={publicOffer?.seller_mini_card.actor_type}
           sellerDisplayName={publicOffer?.seller_mini_card.seller_display_name}
           sellerAvatarUrl={publicOffer?.seller_mini_card.logo_url}

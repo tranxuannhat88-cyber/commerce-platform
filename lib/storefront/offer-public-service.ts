@@ -2,10 +2,12 @@ import {
   Offer,
   Store,
   Organization,
+  PersonalActor,
   Product,
   Order,
   StorePolicySettings,
 } from "@/types";
+import { UserIdentity } from "@/lib/auth/types";
 import { PublicOfferDTO, SellerMiniCardDTO, PublicTrustSummaryDTO } from "./types";
 import { DEFAULT_STORE_POLICIES } from "./storefront-service";
 
@@ -19,24 +21,41 @@ export class OfferPublicService {
     offers: Offer[];
     store: Store;
     organization?: Organization | null;
+    personalActor?: PersonalActor | null;
+    user?: UserIdentity | null;
     products: Product[];
     orders?: Order[];
   }): PublicOfferDTO | null {
-    const { offerSlug, offers, store, organization, products, orders = [] } = params;
+    const { offerSlug, offers, store, organization, personalActor, user, products, orders = [] } = params;
 
     const offer = offers.find((o) => o.slug === offerSlug || o.id === offerSlug);
     if (!offer) return null;
 
     // 1. Resolve Seller Actor Type & Identity
-    const isOrg = store.owner_actor_type === "ORGANIZATION" || Boolean(organization?.name);
-    const actorId = isOrg ? (organization?.id || store.organization_id || "org_default") : (store.owner_actor_id || "usr_personal");
+    const accountName = (personalActor?.display_name || user?.full_name || "").trim();
+    const orgName = (organization?.name && organization.name !== "Chưa có tổ chức" ? organization.name : "").trim();
+    const storeName = (store.store_name && store.store_name !== "auto" && store.store_name !== "Cửa Hàng Trực Tuyến" ? store.store_name : "").trim();
+
+    const isOrg = Boolean(orgName) || store.owner_actor_type === "ORGANIZATION";
+    const actorId = isOrg ? (organization?.id || store.organization_id || "org_default") : (store.owner_actor_id || personalActor?.id || "usr_personal");
     const isVerified = isOrg ? organization?.verification_status === "VERIFIED" : store.verification_status === "VERIFIED";
 
-    const sellerDisplayName = isOrg
-      ? (organization?.name || store.store_name)
-      : (store.store_name || "Nhà Bán Hàng Cá Nhân");
+    let sellerDisplayName = "";
+    if (isOrg) {
+      if (orgName && storeName) {
+        sellerDisplayName = orgName.toLowerCase() === storeName.toLowerCase() ? orgName : `${orgName} / ${storeName}`;
+      } else {
+        sellerDisplayName = orgName || storeName || "Tổ chức bán hàng";
+      }
+    } else {
+      if (accountName && storeName) {
+        sellerDisplayName = accountName.toLowerCase() === storeName.toLowerCase() ? accountName : `${accountName} / ${storeName}`;
+      } else {
+        sellerDisplayName = accountName || storeName || "Nhà bán hàng cá nhân";
+      }
+    }
 
-    const logoUrl = store.logo_url || (isOrg ? organization?.logo_url : undefined);
+    const logoUrl = store.logo_url || (isOrg ? organization?.logo_url : (personalActor?.avatar_url || user?.avatar_url));
 
     // Location: only if seller allows and public location exists
     const showRegion = store.public_settings?.show_region !== false;
@@ -59,6 +78,8 @@ export class OfferPublicService {
         })
       : undefined;
 
+    const hasStore = Boolean(store.slug && store.slug !== "auto" && store.store_name);
+
     const miniCard: SellerMiniCardDTO = {
       actor_id: actorId,
       actor_type: isOrg ? "ORGANIZATION" : "PERSONAL",
@@ -71,7 +92,7 @@ export class OfferPublicService {
       transaction_count: completedCount,
       location_summary: locationSummary,
       trust_score: null, // Only real reputation engine scores
-      has_store: Boolean(store.slug),
+      has_store: hasStore,
       store_slug: store.slug || "auto",
       seller_slug: isOrg && organization?.slug ? organization.slug : store.slug || "auto",
     };

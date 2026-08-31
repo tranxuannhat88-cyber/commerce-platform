@@ -48,7 +48,7 @@ export const INITIAL_PAYMENT_ACCOUNTS: ActorPaymentAccount[] = [];
 export const INITIAL_PERSONAL_ACTOR: PersonalActor = {
   id: "actor_empty",
   user_id: "",
-  display_name: "Chưa đăng nhập",
+  display_name: "",
   phone: "",
   email: "",
   avatar_url: "",
@@ -59,7 +59,7 @@ export const INITIAL_PERSONAL_ACTOR: PersonalActor = {
 // 3. Organizations (Empty initial list)
 export const INITIAL_ORGANIZATION: Organization = {
   id: "",
-  name: "Chưa có tổ chức",
+  name: "",
   slug: "",
   org_type: "COMPANY",
   created_at: new Date().toISOString(),

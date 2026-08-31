@@ -16,14 +16,19 @@ import {
   Layers,
   Calendar,
   AlertCircle,
+  ExternalLink,
 } from "lucide-react";
-import { Offer, Store, Organization, StoreCustomizationSettings } from "@/types";
+import { Offer, Store, Organization, PersonalActor, StoreCustomizationSettings } from "@/types";
+import { UserIdentity } from "@/lib/auth/types";
+import { STORE_TEMPLATES, DEFAULT_TEMPLATE_ID } from "@/lib/templates/definitions";
 import { formatVND } from "@/lib/utils";
 
 interface OfferHeaderProps {
   offer: Offer;
   store: Store;
   organization?: Organization | null;
+  personalActor?: PersonalActor | null;
+  user?: UserIdentity | null;
   sellerType?: "PERSONAL" | "ORGANIZATION";
   sellerDisplayName?: string;
   sellerAvatarUrl?: string;
@@ -38,7 +43,9 @@ export function OfferHeader({
   offer,
   store,
   organization,
-  sellerType = "ORGANIZATION",
+  personalActor,
+  user,
+  sellerType,
   sellerDisplayName,
   sellerAvatarUrl,
   isVerified = false,
@@ -47,20 +54,65 @@ export function OfferHeader({
   customization,
   className = "",
 }: OfferHeaderProps) {
-  // Resolve Seller Identity
-  const isOrg = sellerType === "ORGANIZATION" || Boolean(organization?.name);
-  const resolvedDisplayName =
-    sellerDisplayName ||
-    (isOrg ? (organization?.name || store.store_name) : (store.store_name || "Nhà bán hàng cá nhân"));
+  // 1. Resolve Active Template & Theme Styling
+  const activeTemplateId = store.active_template_id || DEFAULT_TEMPLATE_ID;
+  const activeTemplate = STORE_TEMPLATES.find((t) => t.id === activeTemplateId) || STORE_TEMPLATES[0];
 
-  const resolvedLogoUrl =
+  const brandColor =
+    customization?.brand_color ||
+    store.customization?.brand_color ||
+    activeTemplate?.design_tokens.color_palette_default.primary ||
+    "#2563eb";
+
+  const accentColor =
+    customization?.accent_color ||
+    store.customization?.accent_color ||
+    activeTemplate?.design_tokens.color_palette_default.accent ||
+    "#f59e0b";
+
+  const templateCode = activeTemplate?.code || "FREE_MODERN";
+  const isLuxury = templateCode === "PREMIUM_FLAGSHIP_LUXURY";
+  const isDarkTech = templateCode === "PREMIUM_DARK_TECH";
+  const isMinimal = templateCode === "FREE_MINIMAL";
+
+  // 2. Resolve Seller Identity (Account Name / Org Name / Store Name)
+  const accountName = (personalActor?.display_name || user?.full_name || "").trim();
+  const orgName = (organization?.name && organization.name !== "Chưa có tổ chức" ? organization.name : "").trim();
+  const storeName = (store.store_name && store.store_name !== "auto" && store.store_name !== "Cửa Hàng Trực Tuyến" ? store.store_name : "").trim();
+
+  const isOrg = sellerType === "ORGANIZATION" || Boolean(orgName) || store.owner_actor_type === "ORGANIZATION";
+
+  // Build the formatted display name according to rules:
+  // - For Personal: AccountName / StoreName (or 1 name if identical or only 1 exists)
+  // - For Org: OrgName / StoreName (or 1 name if identical or only 1 exists)
+  let resolvedName = sellerDisplayName || "";
+  if (!resolvedName) {
+    if (isOrg) {
+      if (orgName && storeName) {
+        resolvedName = orgName.toLowerCase() === storeName.toLowerCase() ? orgName : `${orgName} / ${storeName}`;
+      } else {
+        resolvedName = orgName || storeName || "Tổ chức bán hàng";
+      }
+    } else {
+      if (accountName && storeName) {
+        resolvedName = accountName.toLowerCase() === storeName.toLowerCase() ? accountName : `${accountName} / ${storeName}`;
+      } else {
+        resolvedName = accountName || storeName || "Nhà bán hàng cá nhân";
+      }
+    }
+  }
+
+  // 3. Resolve Avatar: Store Logo -> Org Logo -> Account Avatar -> Fallback Icon
+  const resolvedAvatarUrl =
     sellerAvatarUrl ||
     store.logo_url ||
-    (isOrg ? organization?.logo_url : undefined);
+    (isOrg ? organization?.logo_url : (personalActor?.avatar_url || user?.avatar_url));
 
+  // 4. Check if Store is configured
+  const hasStore = Boolean(store.slug && store.slug !== "auto" && storeName);
   const storeSlug = store.slug || "auto";
 
-  // Offer Type Label Resolution
+  // 5. Offer Type Label Resolution
   const isCatalog = offer.offer_structure === "MENU_CATALOG" || (offer.items && offer.items.length > 0);
   const offerTypeLabel = isCatalog
     ? "DANH MỤC & BẢNG GIÁ"
@@ -80,38 +132,44 @@ export function OfferHeader({
       })
     : null;
 
-  const formattedExpiry = offer.expires_at
-    ? new Date(offer.expires_at).toLocaleDateString("vi-VN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      })
-    : null;
-
   const isExpired = offer.expires_at && new Date(offer.expires_at).getTime() < Date.now();
 
-  const brandColor = customization?.brand_color || "#2563eb";
+  // Template Container Theme Styles
+  let containerThemeClass = "bg-white dark:bg-neutral-900 border-neutral-200/90 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100";
+  let topBarThemeClass = "bg-neutral-50/80 dark:bg-neutral-800/40 border-neutral-200/80 dark:border-neutral-800/80";
 
-  // Real attachments list
-  const attachments = offer.attachments?.filter((a) => a && a.file_url) || [];
+  if (isLuxury) {
+    containerThemeClass = "bg-neutral-950 text-neutral-100 border-amber-500/30 shadow-2xl font-serif";
+    topBarThemeClass = "bg-neutral-900/90 border-amber-500/20 text-neutral-200";
+  } else if (isDarkTech) {
+    containerThemeClass = "bg-black text-cyan-50 border-cyan-500/30 shadow-2xl font-mono";
+    topBarThemeClass = "bg-neutral-950/90 border-cyan-500/20 text-cyan-200";
+  }
 
   return (
     <div
-      className={`rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200/90 dark:border-neutral-800 shadow-xs overflow-hidden ${className}`}
+      className={`rounded-3xl border shadow-xs overflow-hidden transition-all ${containerThemeClass} ${className}`}
     >
       {/* 1. SELLER MINI PROFILE ROW */}
-      <div className="p-4 sm:px-6 py-3.5 bg-neutral-50/70 dark:bg-neutral-800/40 border-b border-neutral-200/80 dark:border-neutral-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+      <div className={`p-4 sm:px-6 py-3.5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${topBarThemeClass}`}>
         {/* Left: Avatar, Name, Entity Type, Verified Badge, Public Location */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="relative shrink-0">
-            {resolvedLogoUrl ? (
+            {resolvedAvatarUrl ? (
               <img
-                src={resolvedLogoUrl}
-                alt={resolvedDisplayName}
+                src={resolvedAvatarUrl}
+                alt={resolvedName}
                 className="w-10 h-10 rounded-2xl object-cover border border-neutral-200 dark:border-neutral-700 bg-white"
               />
             ) : (
-              <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center font-bold text-xs border border-blue-200/60 dark:border-blue-900/60">
+              <div
+                className="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-xs border"
+                style={{
+                  backgroundColor: isLuxury ? "#1e1e1e" : isDarkTech ? "#051e28" : "#eff6ff",
+                  borderColor: isLuxury ? "#d97706" : isDarkTech ? "#06b6d4" : "#bfdbfe",
+                  color: isLuxury ? "#f59e0b" : isDarkTech ? "#22d3ee" : brandColor,
+                }}
+              >
                 {isOrg ? <Building2 className="w-5 h-5" /> : <User className="w-5 h-5" />}
               </div>
             )}
@@ -128,13 +186,13 @@ export function OfferHeader({
 
           <div className="min-w-0 space-y-0.5">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <h3 className="font-bold text-xs sm:text-sm text-neutral-900 dark:text-neutral-100 truncate max-w-xs sm:max-w-md">
-                {resolvedDisplayName}
+              <h3 className="font-bold text-xs sm:text-sm truncate max-w-xs sm:max-w-md">
+                {resolvedName}
               </h3>
             </div>
 
-            <div className="flex items-center gap-2 text-[11px] text-neutral-500 dark:text-neutral-400 flex-wrap">
-              <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+            <div className="flex items-center gap-2 text-[11px] opacity-75 flex-wrap">
+              <span className="font-semibold">
                 {isOrg ? "Tổ chức" : "Cá nhân"}
               </span>
 
@@ -158,14 +216,21 @@ export function OfferHeader({
           </div>
         </div>
 
-        {/* Right: CTA View Store */}
-        <Link
-          href={`/${storeSlug}`}
-          className="px-4 py-2 rounded-xl bg-white hover:bg-neutral-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-900 dark:text-neutral-100 text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 transition-all border border-neutral-200 dark:border-neutral-700 shadow-2xs self-start sm:self-center cursor-pointer"
-        >
-          <span>Xem cửa hàng</span>
-          <ArrowRight className="w-3.5 h-3.5 text-blue-600" />
-        </Link>
+        {/* Right: CTA View Store (Only rendered if store actually exists) */}
+        {hasStore && (
+          <Link
+            href={`/${storeSlug}`}
+            className="px-4 py-2 rounded-xl text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 transition-all border shadow-2xs self-start sm:self-center cursor-pointer hover:opacity-90 active:scale-95"
+            style={{
+              backgroundColor: isLuxury ? "#171717" : isDarkTech ? "#082f49" : "var(--tw-bg-opacity, #ffffff)",
+              borderColor: isLuxury ? "#d97706" : isDarkTech ? "#0284c7" : "#e5e7eb",
+              color: isLuxury ? "#fef08a" : isDarkTech ? "#38bdf8" : brandColor,
+            }}
+          >
+            <span>Xem cửa hàng</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        )}
       </div>
 
       {/* 2. OFFER HERO CONTENT */}
@@ -190,81 +255,36 @@ export function OfferHeader({
         </div>
 
         {/* Offer Title (Primary H1) */}
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-neutral-900 dark:text-neutral-100 tracking-tight leading-snug">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight leading-snug">
           {offer.name}
         </h1>
 
         {/* Description (If exists) */}
         {(offer.short_description || offer.description) && (
-          <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed max-w-3xl line-clamp-3">
+          <p className="text-xs sm:text-sm opacity-80 leading-relaxed max-w-3xl line-clamp-3">
             {offer.short_description || offer.description}
           </p>
         )}
 
-        {/* Metadata Strip */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-neutral-500 pt-1">
+        {/* Metadata Badges Bar */}
+        <div className="flex flex-wrap items-center gap-3 text-xs pt-1 border-t border-neutral-100 dark:border-neutral-800/80">
           {itemCount > 0 && (
-            <span className="font-semibold text-neutral-800 dark:text-neutral-200">
-              {itemCount} sản phẩm/dịch vụ
-            </span>
+            <div className="inline-flex items-center gap-1.5 opacity-80">
+              <Package className="w-3.5 h-3.5" style={{ color: brandColor }} />
+              <span>{itemCount} sản phẩm/dịch vụ</span>
+            </div>
           )}
-
-          {itemCount > 0 && formattedUpdate && <span>•</span>}
 
           {formattedUpdate && (
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-neutral-400" />
-              <span>Cập nhật {formattedUpdate}</span>
-            </span>
-          )}
-
-          {formattedExpiry && !isExpired && (
             <>
-              <span>•</span>
-              <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
-                <Clock className="w-3.5 h-3.5" />
-                <span>Hiệu lực đến {formattedExpiry}</span>
-              </span>
+              {itemCount > 0 && <span>•</span>}
+              <div className="inline-flex items-center gap-1.5 opacity-80">
+                <Calendar className="w-3.5 h-3.5 text-neutral-400" />
+                <span>Cập nhật {formattedUpdate}</span>
+              </div>
             </>
           )}
         </div>
-
-        {/* 3. ATTACHMENTS SECTION (Only rendered when actual files exist) */}
-        {attachments.length > 0 && (
-          <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-300">
-              <Paperclip className="w-3.5 h-3.5 text-blue-600" />
-              <span>Tài liệu đính kèm ({attachments.length}):</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-              {attachments.map((att) => (
-                <a
-                  key={att.id}
-                  href={att.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download={att.file_type !== "LINK"}
-                  className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800/70 hover:bg-blue-50 dark:hover:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 flex items-center justify-between text-xs transition-all text-neutral-800 dark:text-neutral-200 group cursor-pointer"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    {att.file_type === "LINK" ? (
-                      <Globe className="w-4 h-4 text-blue-600 shrink-0" />
-                    ) : (
-                      <FileDown className="w-4 h-4 text-emerald-600 shrink-0" />
-                    )}
-                    <span className="font-bold text-neutral-800 dark:text-neutral-200 group-hover:text-blue-600 truncate">
-                      {att.name}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-neutral-400 group-hover:underline shrink-0 ml-2">
-                    {att.file_size || "Tải về"} ↗
-                  </span>
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
