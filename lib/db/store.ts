@@ -166,13 +166,16 @@ function setStored<T>(key: string, value: T): void {
     localStorage.setItem(key, JSON.stringify(value));
     window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key } }));
   } catch (e: any) {
-    console.warn(`Storage quota notice on ${key}:`, e);
+    console.warn(`Storage quota notice on ${key}, clearing cache...`, e);
     try {
       // Clear non-critical verification log cache to free storage quota
       localStorage.removeItem(STORAGE_KEYS.MERKLE_BATCHES);
       localStorage.removeItem(STORAGE_KEYS.BLOCKCHAIN_ANCHORS);
       localStorage.removeItem(STORAGE_KEYS.DOCUMENT_HASHES);
       localStorage.removeItem(STORAGE_KEYS.VERIFICATION_RECORDS);
+      localStorage.removeItem(STORAGE_KEYS.LEDGER);
+      localStorage.removeItem(STORAGE_KEYS.MOVEMENTS);
+      localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
       localStorage.setItem(key, JSON.stringify(value));
       window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key } }));
     } catch (retryErr) {
@@ -345,65 +348,66 @@ export function useCommerceStore() {
     setBillingInvoicesState(getStored(STORAGE_KEYS.BILLING_INVOICES, INITIAL_BILLING_INVOICES));
     setIsLoaded(true);
 
-    const handleStorageUpdate = () => {
-      const u = getStored<UserIdentity | null>(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY);
-      const p = getStored<PersonalActor>(STORAGE_KEYS.PERSONAL_ACTOR, INITIAL_PERSONAL_ACTOR);
-      const oList = getStored<Organization[]>(STORAGE_KEYS.ORGANIZATIONS, INITIAL_ORGANIZATIONS);
-      const mList = getStored<OrganizationMember[]>(STORAGE_KEYS.ORGANIZATION_MEMBERS, INITIAL_ORGANIZATION_MEMBERS);
-      const sList = getStored<Subscription[]>(STORAGE_KEYS.SUBSCRIPTIONS, INITIAL_SUBSCRIPTIONS);
-      const ctx = getStored<WorkContext | null>(STORAGE_KEYS.ACTIVE_CONTEXT, null);
+    const handleStorageUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<{ key?: string }>;
+      const updatedKey = customEvent?.detail?.key;
 
-      setCurrentUserState(u);
+      if (!updatedKey) return;
 
-      const name = u?.full_name || p.display_name || "Cá nhân";
-      const personalActorObj: PersonalActor = {
-        ...p,
-        user_id: u?.id || p.user_id,
-        display_name: `${name} (Cá nhân)`,
-      };
-      setPersonalActorState(personalActorObj);
-      setOrganizationsState(oList);
-      setOrgMembersState(mList);
-      setSubscriptionsState(sList);
+      switch (updatedKey) {
+        case STORAGE_KEYS.OFFERS:
+          setOffersState(getStored(STORAGE_KEYS.OFFERS, INITIAL_OFFERS));
+          break;
+        case STORAGE_KEYS.PRODUCTS:
+          setProductsState(getStored(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS));
+          break;
+        case STORAGE_KEYS.STORE:
+          setStoreState(getStored(STORAGE_KEYS.STORE, INITIAL_STORE));
+          break;
+        case STORAGE_KEYS.USER:
+        case STORAGE_KEYS.PERSONAL_ACTOR:
+        case STORAGE_KEYS.ORGANIZATION:
+        case STORAGE_KEYS.ORGANIZATIONS:
+        case STORAGE_KEYS.ORGANIZATION_MEMBERS:
+        case STORAGE_KEYS.ACTIVE_CONTEXT: {
+          const uLatest = getStored<UserIdentity | null>(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY);
+          const pLatest = getStored<PersonalActor>(STORAGE_KEYS.PERSONAL_ACTOR, INITIAL_PERSONAL_ACTOR);
+          const oListLatest = getStored<Organization[]>(STORAGE_KEYS.ORGANIZATIONS, INITIAL_ORGANIZATIONS);
+          const mListLatest = getStored<OrganizationMember[]>(STORAGE_KEYS.ORGANIZATION_MEMBERS, INITIAL_ORGANIZATION_MEMBERS);
+          const sListLatest = getStored<Subscription[]>(STORAGE_KEYS.SUBSCRIPTIONS, INITIAL_SUBSCRIPTIONS);
+          const ctxLatest = getStored<WorkContext | null>(STORAGE_KEYS.ACTIVE_CONTEXT, null);
 
-      if (ctx) {
-        if (ctx.context_type === "PERSONAL") {
-          setCurrentContextState({ ...ctx, display_name: name });
-        } else {
-          setCurrentContextState(ctx);
+          setCurrentUserState(uLatest);
+
+          const actorName = uLatest?.full_name || pLatest.display_name || "Cá nhân";
+          const actorObj: PersonalActor = {
+            ...pLatest,
+            user_id: uLatest?.id || pLatest.user_id,
+            display_name: `${actorName} (Cá nhân)`,
+          };
+          setPersonalActorState(actorObj);
+          setOrganizationsState(oListLatest);
+          setOrgMembersState(mListLatest);
+          setSubscriptionsState(sListLatest);
+
+          if (ctxLatest) {
+            if (ctxLatest.context_type === "PERSONAL") {
+              setCurrentContextState({ ...ctxLatest, display_name: actorName });
+            } else {
+              setCurrentContextState(ctxLatest);
+            }
+          }
+          break;
         }
+        case STORAGE_KEYS.PAYMENT_ACCOUNTS:
+          setPaymentAccountsState(getStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, INITIAL_PAYMENT_ACCOUNTS));
+          break;
+        case STORAGE_KEYS.NOTIFICATIONS:
+          setNotificationsState(getStored(STORAGE_KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS));
+          break;
+        default:
+          break;
       }
-
-      setOrgState(getStored(STORAGE_KEYS.ORGANIZATION, INITIAL_ORGANIZATION));
-      setStoreState(getStored(STORAGE_KEYS.STORE, INITIAL_STORE));
-      setCategoriesState(getStored(STORAGE_KEYS.CATEGORIES, INITIAL_CATEGORIES));
-      setCollectionsState(getStored(STORAGE_KEYS.COLLECTIONS, INITIAL_COLLECTIONS));
-      setOffersState(getStored(STORAGE_KEYS.OFFERS, INITIAL_OFFERS));
-      setProductsState(getStored(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS));
-      setWarehousesState(getStored(STORAGE_KEYS.WAREHOUSES, INITIAL_WAREHOUSES));
-      setInventoryState(getStored(STORAGE_KEYS.INVENTORY, INITIAL_INVENTORY));
-      setMovementsState(getStored(STORAGE_KEYS.MOVEMENTS, INITIAL_MOVEMENTS));
-      setRequestsState(getStored(STORAGE_KEYS.REQUESTS, INITIAL_REQUESTS));
-      setQuotationsState(getStored(STORAGE_KEYS.QUOTATIONS, INITIAL_QUOTATIONS));
-      setQuoteVersionsState(getStored(STORAGE_KEYS.QUOTATION_VERSIONS, INITIAL_QUOTATION_VERSIONS));
-      setDocHashesState(getStored(STORAGE_KEYS.DOCUMENT_HASHES, INITIAL_DOCUMENT_HASHES));
-      setVerifRecordsState(getStored(STORAGE_KEYS.VERIFICATION_RECORDS, INITIAL_VERIFICATION_RECORDS));
-      setMerkleBatchesState(getStored(STORAGE_KEYS.MERKLE_BATCHES, INITIAL_MERKLE_BATCHES));
-      setChainAnchorsState(getStored(STORAGE_KEYS.BLOCKCHAIN_ANCHORS, INITIAL_BLOCKCHAIN_ANCHORS));
-      setTransactionsState(getStored(STORAGE_KEYS.TRANSACTIONS, INITIAL_TRANSACTIONS));
-      setOrdersState(getStored(STORAGE_KEYS.ORDERS, INITIAL_ORDERS));
-      setPartiesState(getStored(STORAGE_KEYS.PARTIES, INITIAL_PARTIES));
-      setLedgerState(getStored(STORAGE_KEYS.LEDGER, INITIAL_LEDGER));
-      setExpensesState(getStored(STORAGE_KEYS.EXPENSES, INITIAL_EXPENSES));
-      setNotificationsState(getStored(STORAGE_KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS));
-      setShippingMethodsState(getStored(STORAGE_KEYS.SHIPPING_METHODS, INITIAL_SHIPPING_METHODS));
-      setShippingZonesState(getStored(STORAGE_KEYS.SHIPPING_ZONES, INITIAL_SHIPPING_ZONES));
-      setPaymentAccountsState(getStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, INITIAL_PAYMENT_ACCOUNTS));
-      setCurrentSessionState(getStored(STORAGE_KEYS.SESSION, INITIAL_AUTH_SESSION));
-      setPasskeysState(getStored(STORAGE_KEYS.PASSKEYS, INITIAL_PASSKEYS));
-      setSubscriptionState(getStored(STORAGE_KEYS.SUBSCRIPTION, INITIAL_SUBSCRIPTION));
-      setBillingOrdersState(getStored(STORAGE_KEYS.BILLING_ORDERS, INITIAL_BILLING_ORDERS));
-      setBillingInvoicesState(getStored(STORAGE_KEYS.BILLING_INVOICES, INITIAL_BILLING_INVOICES));
     };
 
     window.addEventListener("commerce_storage_update", handleStorageUpdate);

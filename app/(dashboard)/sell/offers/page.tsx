@@ -371,12 +371,16 @@ function OffersContent() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const sizeKb = Math.round(file.size / 1024);
+      let fileUrl = (event.target?.result as string) || "";
+      if (file.size > 80 * 1024) {
+        fileUrl = `blob:${file.name}`;
+      }
       const newAttachment: OfferAttachment = {
         id: `att-lib-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
         name: file.name,
-        file_url: (event.target?.result as string) || "",
+        file_url: fileUrl,
         file_type: file.type || file.name.split(".").pop() || "file",
-        file_size: `${sizeKb} KB`,
+        file_size: sizeKb > 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${sizeKb} KB`,
       };
       setLibProdItem((prev) => {
         const existing = prev.attachments || [];
@@ -600,12 +604,16 @@ function OffersContent() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const sizeKb = Math.round(file.size / 1024);
+      let fileUrl = (event.target?.result as string) || "";
+      if (file.size > 80 * 1024) {
+        fileUrl = `blob:${file.name}`;
+      }
       const newAttachment: OfferAttachment = {
         id: `att-item-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
         name: file.name,
-        file_url: (event.target?.result as string) || "",
+        file_url: fileUrl,
         file_type: file.type || file.name.split(".").pop() || "file",
-        file_size: `${sizeKb} KB`,
+        file_size: sizeKb > 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${sizeKb} KB`,
       };
       setCatalogItemsList((prev) => {
         const copy = [...prev];
@@ -2485,12 +2493,16 @@ function OffersContent() {
                         {isSelected ? <CheckSquare className="w-5 h-5 text-blue-600" /> : <Square className="w-5 h-5 text-neutral-300 dark:text-neutral-600" />}
                       </div>
 
-                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 shrink-0 border border-neutral-200 dark:border-neutral-700">
-                        <img
-                          src={prod.image_url || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=150"}
-                          alt={prod.name}
-                          className="w-full h-full object-cover"
-                        />
+                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 shrink-0 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center">
+                        {prod.image_url ? (
+                          <img
+                            src={prod.image_url}
+                            alt={prod.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Package className="w-6 h-6 text-neutral-400 opacity-50" />
+                        )}
                       </div>
 
                       <div className="flex-1 min-w-0">
