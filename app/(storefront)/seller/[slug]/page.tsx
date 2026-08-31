@@ -27,16 +27,20 @@ import { formatVND } from "@/lib/utils";
 import { SellerPublicProfileService } from "@/lib/storefront/seller-profile-service";
 import { QRModal } from "@/components/shared/qr-modal";
 import { CopyButton } from "@/components/shared/copy-button";
+import { VerifiedReviewCard } from "@/components/reviews/verified-review-card";
+import { ReviewReportModal } from "@/components/reviews/review-report-modal";
+import { TransactionReviewService } from "@/lib/services/transaction-review-service";
 
 export default function SellerPublicProfilePage() {
   const params = useParams();
   const slug = (params?.slug as string) || "cong-ty-2k";
 
-  const { store, organization, offers, products, orders, currentUser } = useCommerceStore();
+  const { store, organization, offers, products, orders, currentUser, currentContext, reviews, respondToReview, reportReview } = useCommerceStore();
   const [showQR, setShowQR] = useState(false);
+  const [reportingReviewId, setReportingReviewId] = useState<string | null>(null);
 
   const isPersonalQuery = slug.startsWith("u-") || slug === "personal";
-  const actorId = isPersonalQuery ? (currentUser?.id || "personal") : organization.id;
+  const actorId = isPersonalQuery ? (currentUser?.id || "personal") : (organization.id || store.id || "seller_default");
 
   const profile = SellerPublicProfileService.getSellerPublicProfile({
     actorId,
@@ -251,7 +255,119 @@ export default function SellerPublicProfilePage() {
           )}
         </div>
 
-        {/* 4. PUBLIC STORES */}
+        {/* 4. VERIFIED CUSTOMER REVIEWS */}
+        {(() => {
+          const sellerReviews = reviews.filter(
+            (r) =>
+              (r.reviewee_actor_id === actorId || r.reviewee_actor_id === store.id || r.reviewee_name === profile.display_name) &&
+              r.status === "PUBLISHED"
+          );
+          const reviewStats = TransactionReviewService.calculateActorStats(actorId, profile.actor_type, reviews);
+          const totalReviews = sellerReviews.length;
+          const isOwnerViewing = currentContext.actor_id === actorId || currentContext.actor_id === store.id;
+
+          return (
+            <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200/90 dark:border-neutral-800 p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-100 dark:border-neutral-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-500 flex items-center justify-center font-bold">
+                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-neutral-900 dark:text-neutral-100 tracking-tight">
+                      Đánh Giá Từ Khách Hàng ({totalReviews})
+                    </h3>
+                    <p className="text-xs text-neutral-500">
+                      Đánh giá minh bạch từ các giao dịch thương mại đã hoàn thành
+                    </p>
+                  </div>
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-200/60 dark:border-emerald-900/40 self-start sm:self-auto">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>100% Giao dịch đã xác minh</span>
+                </div>
+              </div>
+
+              {totalReviews > 0 ? (
+                <div className="space-y-6">
+                  {/* Rating Breakdown Summary */}
+                  <div className="p-5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/70 dark:border-neutral-800 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                    <div className="text-center md:text-left space-y-1">
+                      <p className="text-4xl font-black text-amber-500 tracking-tight">
+                        {reviewStats.overall_rating_avg?.toFixed(1) || "5.0"}
+                        <span className="text-sm text-neutral-400 font-normal"> / 5.0</span>
+                      </p>
+                      <div className="flex items-center justify-center md:justify-start gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`w-4 h-4 ${
+                              star <= Math.round(reviewStats.overall_rating_avg || 5)
+                                ? "fill-amber-400 text-amber-400"
+                                : "text-neutral-200 dark:text-neutral-700"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-[11px] text-neutral-500 font-medium">
+                        Dựa trên {totalReviews} đánh giá đã xác minh
+                      </p>
+                    </div>
+
+                    {/* Star Distribution Bars */}
+                    <div className="md:col-span-2 space-y-1.5 text-xs">
+                      {[5, 4, 3, 2, 1].map((star) => {
+                        const count = reviewStats.rating_distribution[`star_${star}` as keyof typeof reviewStats.rating_distribution] || 0;
+                        const pct = totalReviews > 0 ? Math.round((count / totalReviews) * 100) : 0;
+                        return (
+                          <div key={star} className="flex items-center gap-2 text-[11px]">
+                            <span className="w-7 font-bold text-neutral-600 dark:text-neutral-400">{star} ★</span>
+                            <div className="flex-1 h-2 rounded-full bg-neutral-200 dark:bg-neutral-700 overflow-hidden">
+                              <div
+                                className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="w-10 text-right text-neutral-400 font-medium">{pct}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Review Cards List */}
+                  <div className="space-y-3">
+                    {sellerReviews.map((rev) => (
+                      <VerifiedReviewCard
+                        key={rev.id}
+                        review={rev}
+                        canRespond={isOwnerViewing}
+                        onRespond={(revId, comment) => respondToReview(revId, comment)}
+                        onReport={(revId) => setReportingReviewId(revId)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                /* Clean Empty State */
+                <div className="text-center py-8 space-y-2">
+                  <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-400 flex items-center justify-center mx-auto">
+                    <Star className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-sm font-bold text-neutral-800 dark:text-neutral-200">
+                    Chưa có đánh giá từ giao dịch hoàn thành
+                  </h4>
+                  <p className="text-xs text-neutral-400 max-w-sm mx-auto">
+                    Các đánh giá kèm chứng nhận xác minh sẽ xuất hiện tại đây sau khi khách hàng hoàn tất mua hàng và thanh toán.
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* 5. PUBLIC STORES */}
         {profile.public_stores.length > 0 && (
           <div className="space-y-4">
             <h3 className="text-base sm:text-lg font-black text-neutral-900 dark:text-neutral-100 tracking-tight flex items-center gap-2">
@@ -355,6 +471,17 @@ export default function SellerPublicProfilePage() {
         title="Mã QR Hồ Sơ Người Bán"
         subtitle={`Quét để mở hồ sơ của ${profile.display_name}`}
       />
+
+      {reportingReviewId && (
+        <ReviewReportModal
+          isOpen={true}
+          onClose={() => setReportingReviewId(null)}
+          reviewId={reportingReviewId}
+          onSubmit={async (reason, desc) => {
+            await reportReview(reportingReviewId, reason, desc);
+          }}
+        />
+      )}
     </div>
   );
 }

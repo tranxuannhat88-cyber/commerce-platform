@@ -99,7 +99,7 @@ export function SellerTrustSummary({
             </div>
           )}
 
-          {/* Metric 5: Aggregate Rating (Only if ratingCount > 0) */}
+          {/* Metric 5: Verified Reviews (Only if ratingCount > 0) */}
           {hasRating && (
             <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 space-y-1">
               <div className="flex items-center justify-center gap-1 text-amber-500 font-black text-base sm:text-lg">
@@ -107,7 +107,7 @@ export function SellerTrustSummary({
                 <span>{ratingAverage?.toFixed(1)}</span>
                 <span className="text-[10px] text-neutral-400 font-normal">({ratingCount})</span>
               </div>
-              <p className="text-[10px] text-neutral-500 font-semibold">Đánh Giá</p>
+              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">✓ Đánh Giá Đã Xác Minh</p>
             </div>
           )}
         </div>
@@ -116,11 +116,19 @@ export function SellerTrustSummary({
         <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/70 dark:border-neutral-800 text-xs space-y-2">
           <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-300">
             <Info className="w-4 h-4 text-blue-600 shrink-0" />
-            <span>Chưa có đủ dữ liệu giao dịch để tính các chỉ số uy tín.</span>
+            <span>Chưa có đánh giá từ giao dịch hoàn thành trên nền tảng.</span>
           </div>
           <p className="text-[11px] text-neutral-400 pl-6">
-            Các chỉ số đánh giá và điểm uy tín sẽ được cập nhật tự động khi người bán hoàn tất giao dịch trên nền tảng.
+            Mọi chỉ số danh tiếng và đánh giá chỉ được tạo sau khi đơn hàng được thực hiện và thanh toán thành công.
           </p>
+        </div>
+      )}
+
+      {/* Verification footer badge */}
+      {isVerified && (
+        <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold pt-1">
+          <CheckCircle className="w-4 h-4" />
+          <span>Tài khoản đã hoàn tất định danh bảo chứng (KYC/KYB Verified)</span>
         </div>
       )}
 

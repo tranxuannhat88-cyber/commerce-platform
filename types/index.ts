@@ -1227,3 +1227,137 @@ export interface StoreCustomizationSettings {
   };
 }
 
+// ==========================================
+// VERIFIED TRANSACTION REVIEWS & REPUTATION
+// ==========================================
+
+export type ReviewRole = 'BUYER' | 'SELLER';
+
+export type ReviewStatus = 
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'HIDDEN_PENDING_REVEAL'
+  | 'PUBLISHED'
+  | 'REPORTED'
+  | 'UNDER_REVIEW'
+  | 'HIDDEN'
+  | 'REMOVED';
+
+export type ReviewReportReason = 
+  | 'SPAM'
+  | 'OFFENSIVE_CONTENT'
+  | 'NOT_TRANSACTION_RELATED'
+  | 'PERSONAL_INFO_LEAK'
+  | 'FRAUD'
+  | 'OTHER';
+
+export type ReviewReportStatus = 'PENDING' | 'INVESTIGATING' | 'RESOLVED_HIDDEN' | 'RESOLVED_KEPT' | 'DISMISSED';
+
+export interface TransactionReview {
+  id: string;
+  transaction_id: string;
+  order_id?: string;
+  order_number?: string;
+  
+  reviewer_actor_id: string;
+  reviewer_actor_type: 'PERSONAL' | 'ORGANIZATION';
+  reviewer_name?: string;
+  reviewer_avatar?: string;
+  
+  reviewee_actor_id: string;
+  reviewee_actor_type: 'PERSONAL' | 'ORGANIZATION';
+  reviewee_name?: string;
+  
+  reviewer_role: ReviewRole;
+  
+  // Universal overall rating (1-5 integer)
+  overall_rating: number;
+  
+  // Buyer -> Seller Criteria (1-5 nullable)
+  accuracy_rating?: number;       // Đúng mô tả
+  timeliness_rating?: number;     // Đúng hẹn giao hàng
+  communication_rating?: number;  // Giao tiếp & hỗ trợ
+  quality_rating?: number;        // Chất lượng sản phẩm / dịch vụ
+  
+  // Seller -> Buyer Criteria (1-5 nullable)
+  payment_rating?: number;        // Thanh toán đúng hạn
+  clarity_rating?: number;        // Yêu cầu / thông tin rõ ràng
+  cooperation_rating?: number;    // Hợp tác & phối hợp
+  
+  comment?: string;
+  
+  status: ReviewStatus;
+  is_verified_transaction: boolean;
+  
+  submitted_at: string;
+  published_at?: string;
+  editable_until: string;          // submitted_at + 24h
+  review_deadline: string;         // transaction_completed_at + 14 days
+  
+  // Audit metadata
+  performed_by_user_id: string;
+  
+  // Response from reviewee
+  response?: ReviewResponse;
+  
+  // Blockchain / Merkle verification hash reference
+  review_hash?: string;
+  
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReviewResponse {
+  id: string;
+  review_id: string;
+  responder_actor_id: string;
+  responder_name?: string;
+  comment: string;
+  performed_by_user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReviewReport {
+  id: string;
+  review_id: string;
+  reporter_actor_id: string;
+  reporter_user_id: string;
+  reason: ReviewReportReason;
+  description?: string;
+  status: ReviewReportStatus;
+  moderator_notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ActorReviewStats {
+  actor_id: string;
+  actor_type: 'PERSONAL' | 'ORGANIZATION';
+  published_reviews_count: number;
+  overall_rating_avg: number | null;
+  
+  // Buyer -> Seller Aggregates
+  accuracy_rating_avg?: number | null;
+  timeliness_rating_avg?: number | null;
+  communication_rating_avg?: number | null;
+  quality_rating_avg?: number | null;
+  
+  // Seller -> Buyer Aggregates
+  payment_rating_avg?: number | null;
+  clarity_rating_avg?: number | null;
+  cooperation_rating_avg?: number | null;
+  
+  // Star Distribution
+  rating_distribution: {
+    star_5: number;
+    star_4: number;
+    star_3: number;
+    star_2: number;
+    star_1: number;
+  };
+  
+  updated_at: string;
+}
+
+

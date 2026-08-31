@@ -18,20 +18,23 @@ import {
   MapPin,
   FileText,
   CreditCard,
+  Star,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND, formatDateTime } from "@/lib/utils";
 import { Order, OrderStatus } from "@/types";
 import { QRModal } from "@/components/shared/qr-modal";
+import { ReviewModal } from "@/components/reviews/review-modal";
 import confetti from "canvas-confetti";
 
 export default function SalesOrdersPage() {
-  const { orders, updateOrderStatus, confirmPayment, updateOrderShippingQuote } = useCommerceStore();
+  const { orders, updateOrderStatus, confirmPayment, updateOrderShippingQuote, reviews } = useCommerceStore();
   const [activeStatus, setActiveStatus] = useState<"ALL" | OrderStatus>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [simulatingPaymentId, setSimulatingPaymentId] = useState<string | null>(null);
   const [showQRModal, setShowQRModal] = useState<string | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
   
   // Seller Shipping Quote State
   const [quoteFeeInput, setQuoteFeeInput] = useState<number>(0);
@@ -579,9 +582,36 @@ export default function SalesOrdersPage() {
                   Hủy đơn (Trả kho)
                 </button>
               </div>
+
+              {/* Review Buyer Option when Completed */}
+              {selectedOrder.order_status === "COMPLETED" && (
+                <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-700/60 flex items-center justify-between">
+                  <div className="text-xs text-neutral-500">
+                    Giao dịch đã hoàn tất. Bạn có thể đánh giá độ tin cậy của khách hàng.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowReviewModal(true)}
+                    className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  >
+                    <Star className="w-3.5 h-3.5 fill-white text-white" />
+                    <span>Đánh Giá Người Mua</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
+      )}
+
+      {/* Verified Review Modal for Seller -> Buyer */}
+      {showReviewModal && selectedOrder && (
+        <ReviewModal
+          isOpen={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          order={selectedOrder}
+          forcedRole="SELLER"
+        />
       )}
     </div>
   );

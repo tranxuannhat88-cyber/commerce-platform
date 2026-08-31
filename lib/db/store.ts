@@ -43,7 +43,15 @@ import {
   FulfillmentMethodType,
   TemplateLicense,
   StoreCustomizationSettings,
+  TransactionReview,
+  ReviewReport,
+  ActorReviewStats,
+  ReviewRole,
+  ReviewResponse,
 } from "@/types";
+import { TransactionReviewService } from "@/lib/services/transaction-review-service";
+import { ReviewRevealService } from "@/lib/services/review-reveal-service";
+import { ReviewEligibilityService } from "@/lib/services/review-eligibility-service";
 
 import {
   INITIAL_PERSONAL_ACTOR,
@@ -154,6 +162,9 @@ const STORAGE_KEYS = {
   BILLING_ORDERS: "commerce_billing_orders",
   BILLING_INVOICES: "commerce_billing_invoices",
   TEMPLATE_LICENSES: "commerce_template_licenses",
+  REVIEWS: "commerce_reviews",
+  REVIEW_REPORTS: "commerce_review_reports",
+  ACTOR_REVIEW_STATS: "commerce_actor_review_stats",
 };
 
 function getStored<T>(key: string, fallback: T): T {
@@ -237,6 +248,9 @@ export function useCommerceStore() {
   const [billingOrders, setBillingOrdersState] = useState<BillingOrder[]>(INITIAL_BILLING_ORDERS);
   const [billingInvoices, setBillingInvoicesState] = useState<BillingInvoice[]>(INITIAL_BILLING_INVOICES);
   const [templateLicenses, setTemplateLicensesState] = useState<TemplateLicense[]>(INITIAL_TEMPLATE_LICENSES);
+  const [reviews, setReviewsState] = useState<TransactionReview[]>([]);
+  const [reviewReports, setReviewReportsState] = useState<ReviewReport[]>([]);
+  const [actorReviewStats, setActorReviewStatsState] = useState<Record<string, ActorReviewStats>>({});
 
   useEffect(() => {
     // PURGE GUARD: Automatically clear stale mock data from previous sessions
@@ -356,6 +370,9 @@ export function useCommerceStore() {
     setPasskeysState(getStored(STORAGE_KEYS.PASSKEYS, INITIAL_PASSKEYS));
     setBillingOrdersState(getStored(STORAGE_KEYS.BILLING_ORDERS, INITIAL_BILLING_ORDERS));
     setBillingInvoicesState(getStored(STORAGE_KEYS.BILLING_INVOICES, INITIAL_BILLING_INVOICES));
+    setReviewsState(getStored(STORAGE_KEYS.REVIEWS, []));
+    setReviewReportsState(getStored(STORAGE_KEYS.REVIEW_REPORTS, []));
+    setActorReviewStatsState(getStored(STORAGE_KEYS.ACTOR_REVIEW_STATS, {}));
     setIsLoaded(true);
 
     const handleStorageUpdate = (e: Event) => {
@@ -373,6 +390,12 @@ export function useCommerceStore() {
           break;
         case STORAGE_KEYS.STORE:
           setStoreState(getStored(STORAGE_KEYS.STORE, INITIAL_STORE));
+          break;
+        case STORAGE_KEYS.REVIEWS:
+          setReviewsState(getStored(STORAGE_KEYS.REVIEWS, []));
+          break;
+        case STORAGE_KEYS.REVIEW_REPORTS:
+          setReviewReportsState(getStored(STORAGE_KEYS.REVIEW_REPORTS, []));
           break;
         case STORAGE_KEYS.USER:
         case STORAGE_KEYS.PERSONAL_ACTOR:
@@ -393,7 +416,7 @@ export function useCommerceStore() {
           const actorObj: PersonalActor = {
             ...pLatest,
             user_id: uLatest?.id || pLatest.user_id,
-            display_name: `${actorName} (Cá nhân)`,
+            display_name: actorName,
           };
           setPersonalActorState(actorObj);
           setOrganizationsState(oListLatest);
@@ -506,11 +529,27 @@ export function useCommerceStore() {
       });
     };
 
+    const checkServerReviews = () => {
+      SyncBridgeService.pullReviewsFromServer({}).then((res) => {
+        if (res.reviews && res.reviews.length > 0) {
+          setReviewsState((prev) => {
+            const merged = [...res.reviews];
+            setStored(STORAGE_KEYS.REVIEWS, merged);
+            return merged;
+          });
+        }
+      });
+    };
+
     // Initial Pull
     checkServerOrders();
+    checkServerReviews();
 
     // Periodic interval pull every 4 seconds for realtime sync across tabs/devices
-    const pollTimer = setInterval(checkServerOrders, 4000);
+    const pollTimer = setInterval(() => {
+      checkServerOrders();
+      checkServerReviews();
+    }, 4000);
 
     return () => {
       window.removeEventListener("commerce_storage_update", handleStorageUpdate);
@@ -2793,6 +2832,146 @@ export function useCommerceStore() {
     SyncBridgeService.syncStoreToServer(updatedStore, paymentAccounts);
   };
 
+  // ==========================================
+  // VERIFIED TRANSACTION REVIEWS & REPUTATION
+  // ==========================================
+  const submitReview = async (reviewData: {
+    transaction_id: string;
+    order_id?: string;
+    order_number?: string;
+    reviewer_actor_id: string;
+    reviewer_actor_type?: "PERSONAL" | "ORGANIZATION";
+    reviewer_name?: string;
+    reviewer_avatar?: string;
+    reviewee_actor_id: string;
+    reviewee_actor_type?: "PERSONAL" | "ORGANIZATION";
+    reviewee_name?: string;
+    reviewer_role: ReviewRole;
+    overall_rating: number;
+    accuracy_rating?: number;
+    timeliness_rating?: number;
+    communication_rating?: number;
+    quality_rating?: number;
+    payment_rating?: number;
+    clarity_rating?: number;
+    cooperation_rating?: number;
+    comment?: string;
+    transaction_completed_at?: string;
+  }) => {
+    const review = TransactionReviewService.buildReviewPayload({
+      transactionId: reviewData.transaction_id,
+      orderId: reviewData.order_id,
+      orderNumber: reviewData.order_number,
+      reviewerActorId: reviewData.reviewer_actor_id,
+      reviewerActorType: reviewData.reviewer_actor_type || "PERSONAL",
+      reviewerName: reviewData.reviewer_name,
+      reviewerAvatar: reviewData.reviewer_avatar,
+      revieweeActorId: reviewData.reviewee_actor_id,
+      revieweeActorType: reviewData.reviewee_actor_type || "PERSONAL",
+      revieweeName: reviewData.reviewee_name,
+      reviewerRole: reviewData.reviewer_role,
+      overallRating: reviewData.overall_rating,
+      accuracyRating: reviewData.accuracy_rating,
+      timelinessRating: reviewData.timeliness_rating,
+      communicationRating: reviewData.communication_rating,
+      qualityRating: reviewData.quality_rating,
+      paymentRating: reviewData.payment_rating,
+      clarityRating: reviewData.clarity_rating,
+      cooperationRating: reviewData.cooperation_rating,
+      comment: reviewData.comment,
+      performedByUserId: currentUser?.id || "usr_default",
+      transactionCompletedAt: reviewData.transaction_completed_at,
+    });
+
+    const currentReviews = getStored<TransactionReview[]>(STORAGE_KEYS.REVIEWS, reviews) || [];
+    const updated = [review, ...currentReviews.filter((r) => r.id !== review.id)];
+
+    // Run Double-Blind reveal check
+    const { updatedReviews } = ReviewRevealService.processDoubleBlindReveal(updated);
+
+    setReviewsState(updatedReviews);
+    setStored(STORAGE_KEYS.REVIEWS, updatedReviews);
+
+    // Sync to server database
+    SyncBridgeService.submitReviewToServer(review);
+
+    addNotification({
+      type: "ORDER_STATUS_CHANGED" as any,
+      title: "Đã gửi đánh giá giao dịch",
+      message: `Đánh giá cho đối tác ${reviewData.reviewee_name || ""} đã được ghi nhận.`,
+      link: `/transactions`,
+    });
+
+    return review;
+  };
+
+  const updateReview = async (reviewId: string, updates: { overall_rating?: number; comment?: string }) => {
+    const currentReviews = getStored<TransactionReview[]>(STORAGE_KEYS.REVIEWS, reviews) || [];
+    const target = currentReviews.find((r) => r.id === reviewId);
+    if (!target) return null;
+
+    if (!ReviewEligibilityService.isEditable(target)) {
+      throw new Error("Thời gian chỉnh sửa 24 giờ của đánh giá đã kết thúc.");
+    }
+
+    const updatedReview: TransactionReview = {
+      ...target,
+      overall_rating: updates.overall_rating ? TransactionReviewService.validateRating(updates.overall_rating, true)! : target.overall_rating,
+      comment: updates.comment !== undefined ? TransactionReviewService.sanitizeComment(updates.comment) : target.comment,
+      updated_at: new Date().toISOString(),
+    };
+
+    const updated = currentReviews.map((r) => (r.id === reviewId ? updatedReview : r));
+    setReviewsState(updated);
+    setStored(STORAGE_KEYS.REVIEWS, updated);
+
+    SyncBridgeService.submitReviewToServer(updatedReview);
+    return updatedReview;
+  };
+
+  const respondToReview = async (reviewId: string, comment: string) => {
+    const responsePayload: ReviewResponse = {
+      id: `res-${Date.now()}`,
+      review_id: reviewId,
+      responder_actor_id: currentContext.actor_id,
+      responder_name: currentContext.context_type === "ORGANIZATION" ? organization.name : (currentUser?.full_name || personalActor.display_name || store.store_name),
+      comment: TransactionReviewService.sanitizeComment(comment) || comment,
+      performed_by_user_id: currentUser?.id || "usr_default",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const currentReviews = getStored<TransactionReview[]>(STORAGE_KEYS.REVIEWS, reviews) || [];
+    const updated = currentReviews.map((r) => (r.id === reviewId ? { ...r, response: responsePayload, updated_at: new Date().toISOString() } : r));
+    setReviewsState(updated);
+    setStored(STORAGE_KEYS.REVIEWS, updated);
+
+    SyncBridgeService.respondToReviewOnServer(reviewId, responsePayload);
+    return responsePayload;
+  };
+
+  const reportReview = async (reviewId: string, reason: import("@/types").ReviewReportReason, description?: string) => {
+    const report: ReviewReport = {
+      id: `rep-${Date.now()}`,
+      review_id: reviewId,
+      reporter_actor_id: currentContext.actor_id,
+      reporter_user_id: currentUser?.id || "usr_default",
+      reason,
+      description,
+      status: "PENDING",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const currentReports = getStored<ReviewReport[]>(STORAGE_KEYS.REVIEW_REPORTS, reviewReports) || [];
+    const updated = [report, ...currentReports];
+    setReviewReportsState(updated);
+    setStored(STORAGE_KEYS.REVIEW_REPORTS, updated);
+
+    SyncBridgeService.reportReviewToServer(report);
+    return report;
+  };
+
   const totalSales = orders.reduce((acc, o) => (o.order_status !== "CANCELLED" ? acc + o.total_amount : acc), 0);
   const totalCashReceived = orders.reduce(
     (acc, o) => (o.payment?.payment_status === "PAID" ? acc + o.total_amount : acc),
@@ -2847,6 +3026,14 @@ export function useCommerceStore() {
     billingOrders,
     billingInvoices,
     templateLicenses,
+    reviews,
+    reviewReports,
+    actorReviewStats,
+    // Review Actions
+    submitReview,
+    updateReview,
+    respondToReview,
+    reportReview,
     // Template Actions
     purchaseTemplateLicense,
     applyStoreTemplate,

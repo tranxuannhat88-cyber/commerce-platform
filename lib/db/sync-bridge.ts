@@ -112,4 +112,95 @@ export class SyncBridgeService {
       return [];
     }
   }
+
+  /**
+   * Đồng bộ Đánh giá giao dịch lên máy chủ
+   */
+  public static async submitReviewToServer(review: import("@/types").TransactionReview): Promise<{
+    success: boolean;
+    review?: import("@/types").TransactionReview;
+    isRevealed?: boolean;
+    stats?: import("@/types").ActorReviewStats;
+  }> {
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(review),
+      });
+      if (!res.ok) return { success: false };
+      return await res.json();
+    } catch (err) {
+      console.warn("Background submitReviewToServer warning:", err);
+      return { success: false };
+    }
+  }
+
+  /**
+   * Kéo danh sách Đánh giá từ máy chủ
+   */
+  public static async pullReviewsFromServer(params: {
+    actorId?: string;
+    storeSlug?: string;
+    currentActorId?: string;
+    transactionId?: string;
+  }): Promise<{ reviews: import("@/types").TransactionReview[]; stats?: import("@/types").ActorReviewStats }> {
+    try {
+      const query = new URLSearchParams();
+      if (params.actorId) query.set("actor_id", params.actorId);
+      if (params.storeSlug) query.set("store_slug", params.storeSlug);
+      if (params.currentActorId) query.set("current_actor_id", params.currentActorId);
+      if (params.transactionId) query.set("transaction_id", params.transactionId);
+
+      const res = await fetch(`/api/reviews?${query.toString()}`);
+      if (!res.ok) return { reviews: [] };
+      const data = await res.json();
+      return {
+        reviews: data.reviews || [],
+        stats: data.stats,
+      };
+    } catch (err) {
+      return { reviews: [] };
+    }
+  }
+
+  /**
+   * Gửi phản hồi chính thức cho Đánh giá lên máy chủ
+   */
+  public static async respondToReviewOnServer(
+    reviewId: string,
+    responseData: {
+      responder_actor_id: string;
+      responder_name?: string;
+      comment: string;
+      performed_by_user_id?: string;
+    }
+  ): Promise<boolean> {
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "RESPOND", review_id: reviewId, ...responseData }),
+      });
+      return res.ok;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  /**
+   * Gửi Báo cáo vi phạm đánh giá lên máy chủ
+   */
+  public static async reportReviewToServer(report: import("@/types").ReviewReport): Promise<boolean> {
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "REPORT_REVIEW", ...report }),
+      });
+      return res.ok;
+    } catch (err) {
+      return false;
+    }
+  }
 }

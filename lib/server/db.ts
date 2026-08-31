@@ -1,6 +1,20 @@
 import fs from "fs";
 import path from "path";
-import { Offer, Store, Product, ActorPaymentAccount, Order, Organization, TemplateLicense } from "@/types";
+import {
+  Offer,
+  Store,
+  Product,
+  ActorPaymentAccount,
+  Order,
+  Organization,
+  TemplateLicense,
+  TransactionReview,
+  ReviewReport,
+  ActorReviewStats,
+  ReviewResponse,
+} from "@/types";
+import { ReviewRevealService } from "@/lib/services/review-reveal-service";
+import { TransactionReviewService } from "@/lib/services/transaction-review-service";
 
 export interface ServerSellerProfile {
   actor_id?: string;
@@ -22,6 +36,9 @@ export interface ServerDatabase {
   organizations: Organization[];
   template_licenses: TemplateLicense[];
   sellerProfiles?: Record<string, ServerSellerProfile>;
+  reviews: TransactionReview[];
+  reviewReports: ReviewReport[];
+  actorReviewStats?: Record<string, ActorReviewStats>;
   last_updated_at: string;
 }
 
@@ -51,6 +68,9 @@ function getInitialDb(): ServerDatabase {
     organizations: [],
     template_licenses: [],
     sellerProfiles: {},
+    reviews: [],
+    reviewReports: [],
+    actorReviewStats: {},
     last_updated_at: new Date().toISOString(),
   };
 }
@@ -79,6 +99,9 @@ export class ServerDbManager {
           organizations: parsed.organizations || [],
           template_licenses: parsed.template_licenses || [],
           sellerProfiles: parsed.sellerProfiles || {},
+          reviews: parsed.reviews || [],
+          reviewReports: parsed.reviewReports || [],
+          actorReviewStats: parsed.actorReviewStats || {},
           last_updated_at: parsed.last_updated_at || new Date().toISOString(),
         };
         return memoryDb;
@@ -356,6 +379,94 @@ export class ServerDbManager {
         (l.template_id.toLowerCase() === clean || l.template_code.toLowerCase() === clean) &&
         l.status === "ACTIVE"
     );
+  }
+
+  // ==========================================
+  // VERIFIED REVIEWS & REPUTATION ENGINE
+  // ==========================================
+
+  public static getAllReviews(): TransactionReview[] {
+    const db = this.getDb();
+    if (!db.reviews) db.reviews = [];
+    
+    // Process Double-Blind reveal whenever reviews are read
+    const { updatedReviews, newlyPublishedCount } = ReviewRevealService.processDoubleBlindReveal(db.reviews);
+    if (newlyPublishedCount > 0) {
+      db.reviews = updatedReviews;
+      this.saveDb(db);
+    }
+    return db.reviews;
+  }
+
+  public static getActorReviews(actorId: string, currentActorId?: string): TransactionReview[] {
+    const all = this.getAllReviews();
+    const forActor = all.filter((r) => r.reviewee_actor_id === actorId || r.reviewer_actor_id === actorId);
+    return ReviewRevealService.sanitizeReviewsForActor(forActor, currentActorId);
+  }
+
+  public static getActorReviewStats(actorId: string, actorType: "PERSONAL" | "ORGANIZATION" = "PERSONAL"): ActorReviewStats {
+    const all = this.getAllReviews();
+    return TransactionReviewService.calculateActorStats(actorId, actorType, all);
+  }
+
+  public static upsertReview(review: TransactionReview): { review: TransactionReview; isRevealed: boolean } {
+    const db = this.getDb();
+    if (!db.reviews) db.reviews = [];
+
+    const existingIdx = db.reviews.findIndex(
+      (r) =>
+        r.id === review.id ||
+        (r.transaction_id === review.transaction_id &&
+          r.reviewer_actor_id === review.reviewer_actor_id &&
+          r.reviewee_actor_id === review.reviewee_actor_id)
+    );
+
+    if (existingIdx >= 0) {
+      db.reviews[existingIdx] = {
+        ...db.reviews[existingIdx],
+        ...review,
+        updated_at: new Date().toISOString(),
+      };
+    } else {
+      db.reviews.unshift(review);
+    }
+
+    // Run Double-Blind reveal check
+    const { updatedReviews } = ReviewRevealService.processDoubleBlindReveal(db.reviews);
+    db.reviews = updatedReviews;
+    this.saveDb(db);
+
+    const saved = db.reviews.find((r) => r.id === review.id) || review;
+    return {
+      review: saved,
+      isRevealed: saved.status === "PUBLISHED",
+    };
+  }
+
+  public static respondToReview(reviewId: string, response: ReviewResponse): TransactionReview | null {
+    const db = this.getDb();
+    if (!db.reviews) db.reviews = [];
+
+    const targetIdx = db.reviews.findIndex((r) => r.id === reviewId);
+    if (targetIdx < 0) return null;
+
+    db.reviews[targetIdx] = {
+      ...db.reviews[targetIdx],
+      response,
+      updated_at: new Date().toISOString(),
+    };
+
+    this.saveDb(db);
+    return db.reviews[targetIdx];
+  }
+
+  public static reportReview(report: ReviewReport): ReviewReport {
+    const db = this.getDb();
+    if (!db.reviewReports) db.reviewReports = [];
+
+    db.reviewReports.unshift(report);
+    this.saveDb(db);
+    return report;
   }
 }
 

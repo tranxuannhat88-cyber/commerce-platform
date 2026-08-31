@@ -15,9 +15,12 @@ import {
   RefreshCw,
   Search,
   Sparkles,
+  Star,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND, formatDate, formatDateTime } from "@/lib/utils";
+import { ReviewModal } from "@/components/reviews/review-modal";
+import { Transaction } from "@/types";
 import confetti from "canvas-confetti";
 
 export default function TransactionsTrustPage() {
@@ -31,11 +34,13 @@ export default function TransactionsTrustPage() {
     organization,
     currentUser,
     personalActor,
+    reviews,
   } = useCommerceStore();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isAnchoring, setIsAnchoring] = useState(false);
   const [anchorSuccessMsg, setAnchorSuccessMsg] = useState<string | null>(null);
+  const [selectedTxForReview, setSelectedTxForReview] = useState<Transaction | null>(null);
 
   const pendingRecords = verificationRecords.filter((vr) => vr.verification_status !== "ANCHORED");
   const anchoredRecords = verificationRecords.filter((vr) => vr.verification_status === "ANCHORED");
@@ -235,8 +240,28 @@ export default function TransactionsTrustPage() {
                 </div>
               </div>
 
-              {/* Action Button to Open Passport */}
-              <div className="shrink-0 flex items-center justify-end">
+              {/* Action Buttons: Review & Open Passport */}
+              <div className="shrink-0 flex flex-wrap items-center justify-end gap-2.5">
+                {(() => {
+                  const hasReviewed = reviews.some(
+                    (r) => r.transaction_id === tx.id || (tx.order_number && r.order_number === tx.order_number)
+                  );
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTxForReview(tx)}
+                      className={`px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        hasReviewed
+                          ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200"
+                          : "bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/20"
+                      }`}
+                    >
+                      <Star className={`w-4 h-4 ${hasReviewed ? "text-amber-500 fill-amber-500" : "fill-white text-white"}`} />
+                      <span>{hasReviewed ? "Xem Đánh Giá" : "Đánh Giá Đối Tác"}</span>
+                    </button>
+                  );
+                })()}
+
                 <Link
                   href={`/transaction/${tx.id}/verify`}
                   target="_blank"
@@ -311,6 +336,15 @@ export default function TransactionsTrustPage() {
           })}
         </div>
       </div>
+
+      {/* Verified Review Modal */}
+      {selectedTxForReview && (
+        <ReviewModal
+          isOpen={true}
+          onClose={() => setSelectedTxForReview(null)}
+          transaction={selectedTxForReview}
+        />
+      )}
     </div>
   );
 }
