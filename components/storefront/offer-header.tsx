@@ -73,7 +73,6 @@ export function OfferHeader({
   const templateCode = activeTemplate?.code || "FREE_MODERN";
   const isLuxury = templateCode === "PREMIUM_FLAGSHIP_LUXURY";
   const isDarkTech = templateCode === "PREMIUM_DARK_TECH";
-  const isMinimal = templateCode === "FREE_MINIMAL";
 
   // 2. Resolve Seller Identity (Account Name / Org Name / Store Name)
   const accountName = (personalActor?.display_name || user?.full_name || "").trim();
@@ -108,11 +107,10 @@ export function OfferHeader({
     store.logo_url ||
     (isOrg ? organization?.logo_url : (personalActor?.avatar_url || user?.avatar_url));
 
-  // 4. Check if Store is configured
-  const hasStore = Boolean(store.slug && store.slug !== "auto" && storeName);
-  const storeSlug = store.slug || "auto";
+  // Store Link Target (Always navigates to valid store link)
+  const storeSlug = store.slug && store.slug !== "auto" ? store.slug : "store";
 
-  // 5. Offer Type Label Resolution
+  // 4. Offer Type Label Resolution
   const isCatalog = offer.offer_structure === "MENU_CATALOG" || (offer.items && offer.items.length > 0);
   const offerTypeLabel = isCatalog
     ? "DANH MỤC & BẢNG GIÁ"
@@ -134,9 +132,9 @@ export function OfferHeader({
 
   const isExpired = offer.expires_at && new Date(offer.expires_at).getTime() < Date.now();
 
-  // Template Container Theme Styles
+  // Theme styling for container and top bar
   let containerThemeClass = "bg-white dark:bg-neutral-900 border-neutral-200/90 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100";
-  let topBarThemeClass = "bg-neutral-50/80 dark:bg-neutral-800/40 border-neutral-200/80 dark:border-neutral-800/80";
+  let topBarThemeClass = "bg-neutral-50/80 dark:bg-neutral-800/50 border-neutral-200/80 dark:border-neutral-800/80";
 
   if (isLuxury) {
     containerThemeClass = "bg-neutral-950 text-neutral-100 border-amber-500/30 shadow-2xl font-serif";
@@ -216,21 +214,18 @@ export function OfferHeader({
           </div>
         </div>
 
-        {/* Right: CTA View Store (Only rendered if store actually exists) */}
-        {hasStore && (
-          <Link
-            href={`/${storeSlug}`}
-            className="px-4 py-2 rounded-xl text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 transition-all border shadow-2xs self-start sm:self-center cursor-pointer hover:opacity-90 active:scale-95"
-            style={{
-              backgroundColor: isLuxury ? "#171717" : isDarkTech ? "#082f49" : "var(--tw-bg-opacity, #ffffff)",
-              borderColor: isLuxury ? "#d97706" : isDarkTech ? "#0284c7" : "#e5e7eb",
-              color: isLuxury ? "#fef08a" : isDarkTech ? "#38bdf8" : brandColor,
-            }}
-          >
-            <span>Xem cửa hàng</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        )}
+        {/* Right: CTA View Store (ALWAYS DISPLAYED) */}
+        <Link
+          href={`/${storeSlug}`}
+          className="px-4 py-2 rounded-xl text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 transition-all border shadow-xs self-start sm:self-center cursor-pointer hover:opacity-90 active:scale-95 text-white"
+          style={{
+            backgroundColor: brandColor,
+            borderColor: brandColor,
+          }}
+        >
+          <span>Xem cửa hàng</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
 
       {/* 2. OFFER HERO CONTENT */}

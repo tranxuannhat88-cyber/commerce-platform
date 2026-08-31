@@ -52,11 +52,12 @@ export interface ShippingCalculationInput {
   selected_method_id?: string;
   shipping_methods?: ShippingMethod[];
   shipping_zones?: ShippingZone[];
+  offer_fulfillment_override?: import('@/types').OfferFulfillmentOverride;
 }
 
 export class ShippingCalculationService {
   public static calculate(input: ShippingCalculationInput): ShippingCalculationResult {
-    const { store, items, subtotal, delivery_address, selected_method_id } = input;
+    const { store, items, subtotal, delivery_address, selected_method_id, offer_fulfillment_override } = input;
 
     const hasPhysicalItems = items.some((it) => {
       if (it.fulfillment_type === 'DIGITAL' || it.fulfillment_type === 'ON_SITE_SERVICE' || it.fulfillment_type === 'NO_DELIVERY') {
@@ -94,8 +95,30 @@ export class ShippingCalculationService {
       : [];
 
     if (methods.length === 0) {
-      const defaultFixedFee = store.shipping_settings?.default_fixed_fee ?? 30000;
-      const freeThreshold = store.shipping_settings?.free_shipping_threshold ?? 500000;
+      let defaultFixedFee = store.fulfillment_settings?.fixed_fee ?? store.shipping_settings?.default_fixed_fee ?? 30000;
+      let freeThreshold = store.fulfillment_settings?.free_shipping_threshold ?? store.shipping_settings?.free_shipping_threshold ?? 500000;
+      let methodType: import('@/types').ShippingMethodType = (store.fulfillment_settings?.fee_rule_type as any) || 'FREE_THRESHOLD';
+
+      // 1. Offer Fulfillment Override takes highest priority
+      if (offer_fulfillment_override && offer_fulfillment_override.mode === 'OFFER_OVERRIDE') {
+        if (offer_fulfillment_override.fee_rule_type === 'FREE') {
+          defaultFixedFee = 0;
+          freeThreshold = 0;
+          methodType = 'FREE';
+        } else if (offer_fulfillment_override.fee_rule_type === 'FIXED') {
+          defaultFixedFee = offer_fulfillment_override.fixed_fee ?? 0;
+          freeThreshold = 0;
+          methodType = 'FIXED';
+        } else if (offer_fulfillment_override.fee_rule_type === 'FREE_THRESHOLD') {
+          defaultFixedFee = offer_fulfillment_override.fixed_fee ?? 30000;
+          freeThreshold = offer_fulfillment_override.free_shipping_threshold ?? 500000;
+          methodType = 'FREE_THRESHOLD';
+        } else if (offer_fulfillment_override.fee_rule_type === 'QUOTE_LATER') {
+          defaultFixedFee = 0;
+          freeThreshold = 0;
+          methodType = 'QUOTE_LATER';
+        }
+      }
 
       methods = [
         {
@@ -103,7 +126,7 @@ export class ShippingCalculationService {
           organization_id: store.organization_id || store.owner_actor_id || store.id,
           store_id: store.id,
           name: 'Giao hàng tiêu chuẩn',
-          method_type: 'FREE_THRESHOLD',
+          method_type: methodType,
           fixed_fee: defaultFixedFee,
           free_shipping_threshold: freeThreshold,
           estimated_days: '2 - 3 ngày',

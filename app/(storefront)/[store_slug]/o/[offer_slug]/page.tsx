@@ -274,19 +274,9 @@ function DirectOfferContent() {
       }));
   }, [resolvedItems, selectedQuantities]);
 
-  const totalSelectedCount = selectedItemsList.reduce((acc, it) => acc + it.quantity, 0);
+  const selectedProductTypesCount = selectedItemsList.length;
+  const totalItemsQuantity = selectedItemsList.reduce((acc, it) => acc + it.quantity, 0);
   const subtotalAmount = selectedItemsList.reduce((acc, it) => acc + it.line_total, 0);
-
-  // Auto-select initial quantity = 1 if single item offer
-  useEffect(() => {
-    if (resolvedItems.length === 1 && totalSelectedCount === 0) {
-      const singleItem = resolvedItems[0];
-      const isOut = singleItem.availability_status === "OUT_OF_STOCK";
-      if (!isOut) {
-        setSelectedQuantities({ [singleItem.id]: 1 });
-      }
-    }
-  }, [resolvedItems, totalSelectedCount]);
 
   const handleUpdateQty = (itemId: string, delta: number) => {
     setSelectedQuantities((prev) => {
@@ -371,12 +361,13 @@ function DirectOfferContent() {
       selected_method_id: selectedShippingMethodId,
       shipping_methods: shippingMethods,
       shipping_zones: shippingZones,
+      offer_fulfillment_override: offer?.fulfillment_override,
     });
-  }, [currentStore, selectedFulfillment, selectedItemsList, subtotalAmount, deliveryLocation, selectedShippingMethodId, shippingMethods, shippingZones]);
+  }, [currentStore, selectedFulfillment, selectedItemsList, subtotalAmount, deliveryLocation, selectedShippingMethodId, shippingMethods, shippingZones, offer]);
 
   const isQuoteLater = shippingCalculation.selected_option?.is_quote_later === true;
   const shippingFee = isQuoteLater || selectedFulfillment === "STORE_PICKUP" ? 0 : shippingCalculation.final_shipping_fee;
-  const grandTotal = subtotalAmount + shippingFee;
+  const grandTotal = totalItemsQuantity === 0 ? 0 : subtotalAmount + shippingFee;
 
   // Real Enabled Payment Methods
   const enabledPaymentMethods = useMemo(() => {
@@ -403,7 +394,7 @@ function DirectOfferContent() {
   // Submit Final Order
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (totalSelectedCount === 0 || !offer || !currentStore) return;
+    if (totalItemsQuantity === 0 || !offer || !currentStore) return;
 
     const phoneErr = getPhoneValidationError(customerPhone);
     if (phoneErr) {
@@ -746,7 +737,7 @@ function DirectOfferContent() {
                   <span>Tóm Tắt Đơn Hàng</span>
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-300">
-                  {totalSelectedCount} món đã chọn
+                  {selectedProductTypesCount} loại • {totalItemsQuantity} sản phẩm đã chọn
                 </span>
               </div>
 
@@ -784,7 +775,13 @@ function DirectOfferContent() {
                 <div className="flex justify-between text-neutral-600 dark:text-neutral-400">
                   <span>Phí giao hàng:</span>
                   <span className="font-semibold text-neutral-700 dark:text-neutral-300">
-                    {isQuoteLater ? "Báo sau" : selectedFulfillment === "STORE_PICKUP" ? "Miễn phí (Tại quầy)" : formatVND(shippingFee)}
+                    {isQuoteLater
+                      ? "Báo sau"
+                      : selectedFulfillment === "STORE_PICKUP"
+                      ? "Miễn phí (Tại quầy)"
+                      : shippingFee === 0
+                      ? "Miễn phí (0 đ)"
+                      : formatVND(shippingFee)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm pt-2 border-t border-neutral-100 dark:border-neutral-800 font-black">
@@ -796,7 +793,7 @@ function DirectOfferContent() {
               {/* CTA ĐẶT HÀNG */}
               <button
                 type="button"
-                disabled={totalSelectedCount === 0}
+                disabled={totalItemsQuantity === 0}
                 onClick={() => setShowCheckoutModal(true)}
                 className="w-full py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-black text-white shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 active:scale-98"
                 style={{ backgroundColor: brandColor }}
@@ -838,7 +835,7 @@ function DirectOfferContent() {
       </main>
 
       {/* 6. MOBILE STICKY ORDER BAR */}
-      {totalSelectedCount > 0 && (
+      {totalItemsQuantity > 0 && (
         <div className="lg:hidden fixed bottom-4 inset-x-3 z-40 animate-in slide-in-from-bottom-4">
           <div className="p-3.5 bg-neutral-950 text-white dark:bg-white dark:text-neutral-900 rounded-3xl shadow-2xl flex items-center justify-between gap-3 border border-neutral-800 dark:border-neutral-200">
             <div className="flex items-center gap-2.5 min-w-0 pl-1">
@@ -846,10 +843,12 @@ function DirectOfferContent() {
                 className="w-8 h-8 rounded-xl text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs"
                 style={{ backgroundColor: brandColor }}
               >
-                {totalSelectedCount}
+                {totalItemsQuantity}
               </div>
               <div className="truncate">
-                <p className="text-[10px] opacity-70">Tổng thanh toán:</p>
+                <p className="text-[10px] opacity-70">
+                  {selectedProductTypesCount} loại ({totalItemsQuantity} sản phẩm)
+                </p>
                 <p className="text-sm font-black text-rose-400 dark:text-rose-600 truncate">{formatVND(grandTotal)}</p>
               </div>
             </div>
@@ -880,7 +879,7 @@ function DirectOfferContent() {
                 <div>
                   <h3 className="text-base font-black text-neutral-900 dark:text-neutral-100">Xác Nhận Đặt Hàng</h3>
                   <p className="text-xs text-neutral-500">
-                    {totalSelectedCount} sản phẩm • Tổng {formatVND(grandTotal)}
+                    {selectedProductTypesCount} loại sản phẩm • {totalItemsQuantity} sản phẩm • Tổng {formatVND(grandTotal)}
                   </p>
                 </div>
               </div>
