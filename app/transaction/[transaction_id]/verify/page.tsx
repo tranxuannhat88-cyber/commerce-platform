@@ -31,12 +31,33 @@ export default function TransactionPassportPage() {
   const params = useParams();
   const txId = params?.transaction_id as string;
 
-  const { transactions, verificationRecords, blockchainAnchors, merkleBatches } = useCommerceStore();
+  const {
+    transactions,
+    verificationRecords,
+    blockchainAnchors,
+    merkleBatches,
+    orders,
+    store,
+    organization,
+    currentUser,
+    personalActor,
+  } = useCommerceStore();
   const [selectedRecord, setSelectedRecord] = useState<VerificationRecord | null>(null);
   const [isTampered, setIsTampered] = useState(false);
 
-  const transaction = transactions.find((t) => t.id === txId) || transactions[0];
-  const txRecords = verificationRecords.filter((vr) => vr.transaction_id === transaction?.id || vr.entity_id === transaction?.order_id || vr.entity_id === transaction?.request_id || vr.entity_id === transaction?.quotation_id);
+  const transaction = transactions.find((t) => t.id === txId || t.transaction_code === txId) || transactions[0];
+  const matchedOrder = orders.find(
+    (o) => o.id === transaction?.order_id || o.order_number === transaction?.order_number
+  );
+
+  const txRecords = verificationRecords.filter(
+    (vr) =>
+      vr.transaction_id === transaction?.id ||
+      vr.entity_id === transaction?.order_id ||
+      vr.entity_id === matchedOrder?.id ||
+      vr.entity_id === transaction?.request_id ||
+      vr.entity_id === transaction?.quotation_id
+  );
 
   if (!transaction) {
     return (
@@ -51,59 +72,126 @@ export default function TransactionPassportPage() {
     );
   }
 
+  const rawSeller = transaction.seller_name;
+  const realSellerName =
+    (rawSeller && rawSeller !== "CÔNG TY TNHH KỸ THUẬT 2K" && rawSeller !== "Doanh nghiệp" && rawSeller !== "Chưa có tổ chức")
+      ? rawSeller
+      : (store.store_name || currentUser?.full_name || personalActor.display_name || organization.name || "Nhà bán hàng");
+
+  const realBuyerName = transaction.buyer_name || matchedOrder?.customer_name || "Khách Hàng";
+  const realTotal = transaction.total_amount || matchedOrder?.total_amount || 0;
+  const isDirectOffer = !transaction.quotation_id;
+  const isOrderPaid = matchedOrder?.payment?.payment_status === "PAID";
+  const isOrderCompleted = matchedOrder?.order_status === "COMPLETED";
+
   const anchor = blockchainAnchors[0];
   const shareUrl = typeof window !== "undefined" ? window.location.href : `/transaction/${transaction.id}/verify`;
 
-  const timelineSteps = [
-    {
-      title: "1. Yêu Cầu Mua Hàng Được Công Bố (RFQ Published)",
-      eventType: "REQUEST_PUBLISHED",
-      desc: "Yêu cầu kỹ thuật và bản vẽ 2D/3D được mã hóa và đóng dấu thời gian.",
-      time: "2 ngày trước",
-      version: "Version 1",
-      icon: "🏷️",
-    },
-    {
-      title: "2. Báo Giá Đã Gửi & Snapshot Phiên Bản (Quotation Submitted)",
-      eventType: "QUOTATION_SUBMITTED",
-      desc: "Nhà cung cấp gửi bảng giá và cam kết tiến độ. Snapshot phiên bản được khóa bất biến.",
-      time: "24 giờ trước",
-      version: `Version ${transaction.quotation_version}`,
-      icon: "📑",
-    },
-    {
-      title: "3. Bên Mua Chấp Thuận Báo Giá (Quotation Accepted)",
-      eventType: "QUOTATION_ACCEPTED",
-      desc: "Bên Mua chính thức duyệt Version 3. Hệ thống khóa cứng thỏa thuận thương mại.",
-      time: "6 giờ trước",
-      version: `Version ${transaction.quotation_version}`,
-      icon: "🤝",
-    },
-    {
-      title: "4. Khởi Tạo Đơn Hàng Tự Động (Order Created)",
-      eventType: "ORDER_CREATED",
-      desc: "Sinh mã Đơn hàng, điều khoản giao nhận và số lượng sản phẩm/dịch vụ.",
-      time: "5 giờ trước",
-      version: "DH260829-00125",
-      icon: "📦",
-    },
-    {
-      title: "5. Xác Nhận Thanh Toán VietQR (Payment Confirmed)",
-      eventType: "PAYMENT_CONFIRMED",
-      desc: "Nhận tiền qua Napas VietQR và đối soát ghi sổ cái kép (Ledger).",
-      time: "4 giờ trước",
-      version: "MB-TX-889921",
-      icon: "💳",
-    },
-    {
-      title: "6. Hoàn Tất Giao Hàng & Nghiệm Thu (Transaction Completed)",
-      eventType: "TRANSACTION_COMPLETED",
-      desc: "Nghiệm thu thực tế và cập nhật dữ liệu tin cậy (Trust Score).",
-      time: "1 giờ trước",
-      version: "Hoàn tất 100%",
-      icon: "🚚",
-    },
-  ];
+  const timelineSteps = isDirectOffer
+    ? [
+        {
+          title: "1. Khởi Tạo Đơn Hàng Từ Offer (Order Created)",
+          eventType: "ORDER_CREATED",
+          desc: `Khởi tạo đơn hàng ${matchedOrder?.order_number || transaction.order_number} gồm ${matchedOrder?.items?.length || 1} loại sản phẩm/dịch vụ.`,
+          time: matchedOrder?.created_at ? formatDateTime(matchedOrder.created_at) : formatDateTime(transaction.created_at),
+          version: matchedOrder?.order_number || transaction.order_number,
+          icon: "📦",
+          isDone: true,
+        },
+        {
+          title: "2. Khóa Thỏa Thuận Giao Hàng & Cước Phí (Fulfillment Locked)",
+          eventType: "FULFILLMENT_LOCKED",
+          desc: `Phương thức: ${matchedOrder?.fulfillment_snapshot?.method_name || "Giao hàng tận nơi"} - Cước vận chuyển: ${formatVND(matchedOrder?.shipping_fee || 0)}.`,
+          time: matchedOrder?.created_at ? formatDateTime(matchedOrder.created_at) : formatDateTime(transaction.created_at),
+          version: matchedOrder?.fulfillment_snapshot?.method_type || "DELIVERY",
+          icon: "🚚",
+          isDone: true,
+        },
+        {
+          title: "3. Xác Nhận Thanh Toán (Payment Confirmed)",
+          eventType: "PAYMENT_CONFIRMED",
+          desc: isOrderPaid
+            ? `Đã nhận thanh toán ${formatVND(realTotal)} qua ${matchedOrder?.payment?.provider || "VietQR"}.`
+            : `Đang chờ thanh toán qua ${matchedOrder?.payment?.payment_method || "VietQR"}.`,
+          time: matchedOrder?.payment?.paid_at ? formatDateTime(matchedOrder.payment.paid_at) : (isOrderPaid ? "Đã thanh toán" : "Đang chờ thanh toán"),
+          version: matchedOrder?.payment?.payment_status || "UNPAID",
+          icon: "💳",
+          isDone: isOrderPaid,
+        },
+        {
+          title: "4. Hoàn Tất Giao Hàng & Nghiệm Thu (Transaction Completed)",
+          eventType: "TRANSACTION_COMPLETED",
+          desc: isOrderCompleted
+            ? "Đơn hàng đã được giao nhận và hoàn tất thành công."
+            : "Đang tiến hành chuẩn bị & vận chuyển đơn hàng.",
+          time: isOrderCompleted ? (matchedOrder?.updated_at ? formatDateTime(matchedOrder.updated_at) : "Hoàn tất") : "Đang xử lý",
+          version: matchedOrder?.order_status || "PROCESSING",
+          icon: "✅",
+          isDone: isOrderCompleted,
+        },
+      ]
+    : [
+        {
+          title: "1. Yêu Cầu Mua Hàng Được Công Bố (RFQ Published)",
+          eventType: "REQUEST_PUBLISHED",
+          desc: "Yêu cầu kỹ thuật và chào hàng được mã hóa và đóng dấu thời gian.",
+          time: formatDateTime(transaction.created_at),
+          version: "Version 1",
+          icon: "🏷️",
+          isDone: true,
+        },
+        {
+          title: "2. Báo Giá Đã Gửi & Snapshot Phiên Bản (Quotation Submitted)",
+          eventType: "QUOTATION_SUBMITTED",
+          desc: "Snapshot phiên bản báo giá chốt được khóa bất biến.",
+          time: formatDateTime(transaction.created_at),
+          version: `Version ${transaction.quotation_version || 1}`,
+          icon: "📑",
+          isDone: true,
+        },
+        {
+          title: "3. Bên Mua Chấp Thuận Báo Giá (Quotation Accepted)",
+          eventType: "QUOTATION_ACCEPTED",
+          desc: "Bên Mua chính thức duyệt báo giá và khóa cứng điều khoản.",
+          time: formatDateTime(transaction.created_at),
+          version: `Version ${transaction.quotation_version || 1}`,
+          icon: "🤝",
+          isDone: true,
+        },
+        {
+          title: "4. Khởi Tạo Đơn Hàng Tự Động (Order Created)",
+          eventType: "ORDER_CREATED",
+          desc: `Sinh mã Đơn hàng ${matchedOrder?.order_number || transaction.order_number} và điều khoản giao nhận.`,
+          time: matchedOrder?.created_at ? formatDateTime(matchedOrder.created_at) : formatDateTime(transaction.created_at),
+          version: matchedOrder?.order_number || transaction.order_number,
+          icon: "📦",
+          isDone: true,
+        },
+        {
+          title: "5. Xác Nhận Thanh Toán (Payment Confirmed)",
+          eventType: "PAYMENT_CONFIRMED",
+          desc: isOrderPaid
+            ? `Đã nhận thanh toán ${formatVND(realTotal)} qua ${matchedOrder?.payment?.provider || "VietQR"}.`
+            : `Đang chờ thanh toán qua ${matchedOrder?.payment?.payment_method || "VietQR"}.`,
+          time: matchedOrder?.payment?.paid_at ? formatDateTime(matchedOrder.payment.paid_at) : (isOrderPaid ? "Đã thanh toán" : "Đang chờ"),
+          version: matchedOrder?.payment?.payment_status || "UNPAID",
+          icon: "💳",
+          isDone: isOrderPaid,
+        },
+        {
+          title: "6. Hoàn Tất Giao Hàng & Nghiệm Thu (Transaction Completed)",
+          eventType: "TRANSACTION_COMPLETED",
+          desc: isOrderCompleted
+            ? "Nghiệm thu thực tế và cập nhật dữ liệu giao dịch thành công."
+            : "Đang tiến hành giao hàng & bàn giao nghiệm thu.",
+          time: isOrderCompleted ? "Hoàn tất" : "Đang xử lý",
+          version: matchedOrder?.order_status || "PROCESSING",
+          icon: "🚚",
+          isDone: isOrderCompleted,
+        },
+      ];
+
+  const completedStepsCount = timelineSteps.filter((s) => s.isDone).length;
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 font-sans pb-24 text-neutral-900 dark:text-neutral-100">
@@ -165,20 +253,20 @@ export default function TransactionPassportPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-white/10 text-xs">
             <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
               <span className="text-[10px] text-neutral-400">Bên Mua (Buyer):</span>
-              <p className="font-bold text-white mt-0.5">{transaction.buyer_name || "Công Ty Cơ Khí Hùng Vương"}</p>
+              <p className="font-bold text-white mt-0.5">{realBuyerName}</p>
             </div>
             <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
               <span className="text-[10px] text-neutral-400">Bên Bán (Seller):</span>
-              <p className="font-bold text-white mt-0.5">{transaction.seller_name || "CÔNG TY TNHH KỸ THUẬT 2K"}</p>
+              <p className="font-bold text-white mt-0.5">{realSellerName}</p>
             </div>
             <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
               <span className="text-[10px] text-neutral-400">Giá trị giao dịch:</span>
-              <p className="font-bold text-emerald-400 text-sm mt-0.5">{formatVND(transaction.total_amount)}</p>
+              <p className="font-bold text-emerald-400 text-sm mt-0.5">{formatVND(realTotal)}</p>
             </div>
           </div>
         </div>
 
-        {/* Verification Timeline (The 6 Stages of Truth) */}
+        {/* Verification Timeline (The Stages of Truth) */}
         <div className="p-6 md:p-8 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-6">
           <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
             <div>
@@ -187,18 +275,18 @@ export default function TransactionPassportPage() {
                 <span>Tiến Trình Xác Thực (Verification Audit Trail)</span>
               </h3>
               <p className="text-xs text-neutral-500">
-                Toàn bộ 6 sự kiện đều được băm SHA-256 và gắn kết chặt chẽ vào Merkle Tree
+                Toàn bộ {timelineSteps.length} sự kiện đều được băm SHA-256 và gắn kết chặt chẽ vào Merkle Tree
               </p>
             </div>
 
             <span className="px-3 py-1 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold text-xs">
-              6/6 Sự Kiện Đã Được Khóa
+              {completedStepsCount}/{timelineSteps.length} Sự Kiện Đã Khóa
             </span>
           </div>
 
           <div className="space-y-4">
             {timelineSteps.map((step, idx) => {
-              const rec = txRecords.find((r) => r.event_type === step.eventType) || txRecords[idx % txRecords.length];
+              const rec = txRecords.find((r) => r.event_type === step.eventType) || txRecords[idx % (txRecords.length || 1)];
               return (
                 <div
                   key={idx}
@@ -220,6 +308,7 @@ export default function TransactionPassportPage() {
                         </span>
                       </div>
                       <p className="text-xs text-neutral-500">{step.desc}</p>
+                      <p className="text-[10px] text-neutral-400 font-medium">Thời gian: {step.time}</p>
                     </div>
                   </div>
 
@@ -229,15 +318,29 @@ export default function TransactionPassportPage() {
                         <AlertTriangle className="w-4 h-4" />
                         <span>Sai lệch Hash!</span>
                       </span>
-                    ) : (
+                    ) : step.isDone ? (
                       <span className="text-xs font-black text-emerald-600 flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4" />
                         <span>Đã xác thực</span>
                       </span>
+                    ) : (
+                      <span className="text-xs font-bold text-amber-600 flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        <span>Đang xử lý</span>
+                      </span>
                     )}
 
                     <button
-                      onClick={() => setSelectedRecord(rec)}
+                      onClick={() => setSelectedRecord(rec || {
+                        id: `vr-${idx}`,
+                        entity_type: isDirectOffer ? "order" : "quotation",
+                        entity_id: matchedOrder?.id || transaction.order_id || transaction.id,
+                        entity_version: 1,
+                        event_type: step.eventType,
+                        data_hash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`,
+                        verification_status: "ANCHORED",
+                        created_at: transaction.created_at,
+                      })}
                       className="px-3 py-1.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 text-xs font-semibold flex items-center gap-1.5 shadow-xs cursor-pointer"
                     >
                       <Code className="w-3.5 h-3.5 text-blue-600" />

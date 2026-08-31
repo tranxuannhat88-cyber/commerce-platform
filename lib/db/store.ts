@@ -267,7 +267,7 @@ export function useCommerceStore() {
     const effectivePersonalActor: PersonalActor = {
       ...storedPersonal,
       user_id: storedUser?.id || storedPersonal.user_id,
-      display_name: `${effectiveUserName} (Cá nhân)`,
+      display_name: effectiveUserName,
       phone: storedUser?.primary_phone || storedPersonal.phone,
       email: storedUser?.primary_email || storedPersonal.email,
     };
@@ -1820,18 +1820,23 @@ export function useCommerceStore() {
     });
 
     // Create Transaction Passport
+    const isOrgSeller = currentContext.context_type === "ORGANIZATION" || Boolean(organization.name && organization.name !== "Chưa có tổ chức");
+    const sellerDisplayName = isOrgSeller
+      ? organization.name
+      : (store.store_name || currentUser?.full_name || personalActor.display_name || "Nhà bán hàng");
+
     const newTx: Transaction = {
       id: `tx-${Date.now()}`,
-      organization_id: organization.id,
+      organization_id: organization.id || "org_default",
       transaction_code: txCode,
       order_id: orderId,
       order_number: orderNumber,
       quotation_version: 1,
-      buyer_name: orderData.customer_name,
-      seller_name: organization.name,
+      buyer_name: orderData.customer_name || "Khách Hàng",
+      seller_name: sellerDisplayName,
       total_amount: totalAmount,
       status: "ACTIVE",
-      verification_completeness_score: 40,
+      verification_completeness_score: 60,
       is_fully_verified: false,
       created_at: new Date().toISOString(),
     };

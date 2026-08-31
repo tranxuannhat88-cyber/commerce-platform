@@ -27,6 +27,10 @@ export default function TransactionsTrustPage() {
     merkleBatches,
     blockchainAnchors,
     anchorPendingBatch,
+    store,
+    organization,
+    currentUser,
+    personalActor,
   } = useCommerceStore();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -198,16 +202,20 @@ export default function TransactionsTrustPage() {
                   </div>
                   <div>
                     <span className="text-neutral-400">Bên Bán:</span>{" "}
-                    <strong className="text-neutral-800 dark:text-neutral-200">{tx.seller_name || "Doanh nghiệp"}</strong>
+                    <strong className="text-neutral-800 dark:text-neutral-200">
+                      {(tx.seller_name && tx.seller_name !== "Doanh nghiệp" && tx.seller_name !== "Chưa có tổ chức")
+                        ? tx.seller_name
+                        : (store.store_name || currentUser?.full_name || personalActor.display_name || organization.name || "Nhà bán hàng")}
+                    </strong>
                   </div>
                   <div>
                     <span className="text-neutral-400">Đơn hàng:</span>{" "}
                     <strong className="text-neutral-800 dark:text-neutral-200">{tx.order_number || "Đơn hàng"}</strong>
                   </div>
                   <div>
-                    <span className="text-neutral-400">Phiên bản Báo giá chốt:</span>{" "}
+                    <span className="text-neutral-400">Nguồn giao dịch:</span>{" "}
                     <span className="px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-bold">
-                      Version {tx.quotation_version}
+                      {tx.quotation_id ? `Báo giá v${tx.quotation_version || 1}` : "Đơn hàng Offer"}
                     </span>
                   </div>
                 </div>
