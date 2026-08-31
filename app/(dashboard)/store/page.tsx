@@ -722,127 +722,254 @@ export default function StoreSettingsPage() {
                   <span>Phương Thức Vận Chuyển & Giao Hàng Mặc Định</span>
                 </h3>
                 <p className="text-xs text-neutral-500 mt-1">
-                  Thiết lập quy tắc tính phí giao hàng tận nơi và nhận hàng trực tiếp tại showroom.
+                  Bật/tắt các phương thức giao hàng và cấu hình mức phí, hạn mức freeship trực tiếp bên dưới mỗi phương thức.
                 </p>
               </div>
 
-              {/* Methods Toggles */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <label className="flex items-start gap-3 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={fulfillmentSettings.enabled_methods.includes("DELIVERY")}
-                    onChange={() => toggleFulfillmentMethod("DELIVERY")}
-                    className="w-4 h-4 text-blue-600 rounded mt-0.5"
-                  />
-                  <div className="space-y-0.5">
-                    <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
-                      Giao Hàng Tiêu Chuẩn Toàn Quốc
-                    </span>
-                    <span className="text-neutral-500 text-[11px]">
-                      Giao hàng qua các đơn vị bưu chính chuyển phát nhanh
-                    </span>
-                  </div>
-                </label>
-
-                <label className="flex items-start gap-3 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={fulfillmentSettings.enabled_methods.includes("STORE_PICKUP")}
-                    onChange={() => toggleFulfillmentMethod("STORE_PICKUP")}
-                    className="w-4 h-4 text-blue-600 rounded mt-0.5"
-                  />
-                  <div className="space-y-0.5">
-                    <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
-                      Nhận Tại Cửa Hàng / Showroom
-                    </span>
-                    <span className="text-neutral-500 text-[11px]">
-                      Miễn phí 100%, khách tự đến lấy hàng tại kho
-                    </span>
-                  </div>
-                </label>
-
-                <label className="flex items-start gap-3 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={fulfillmentSettings.enabled_methods.includes("SHIPPING_QUOTE_LATER")}
-                    onChange={() => toggleFulfillmentMethod("SHIPPING_QUOTE_LATER")}
-                    className="w-4 h-4 text-blue-600 rounded mt-0.5"
-                  />
-                  <div className="space-y-0.5">
-                    <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
-                      Báo Phí Giao Hàng Sau (Quote Later)
-                    </span>
-                    <span className="text-neutral-500 text-[11px]">
-                      Dành cho hàng cồng kềnh, máy móc hoặc đơn hàng số lượng lớn
-                    </span>
-                  </div>
-                </label>
-              </div>
-
-              {/* Fee Rules */}
-              <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-4 text-xs">
-                <h4 className="font-bold text-xs uppercase tracking-wider text-neutral-700 dark:text-neutral-300">
-                  Quy Tắc Phí Giao Hàng Mặc Định
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                      Phí Vận Chuyển Cố Định (đ)
+              {/* UNIFIED FULFILLMENT METHODS LIST */}
+              <div className="space-y-3.5 text-xs">
+                {/* 1. Phí giao hàng cố định */}
+                <div
+                  className={`p-4 rounded-2xl border transition-all space-y-3 ${
+                    fulfillmentSettings.enable_fixed_fee !== false
+                      ? "bg-white dark:bg-neutral-900 border-blue-500/80 ring-1 ring-blue-500/20 shadow-xs"
+                      : "bg-neutral-50/70 dark:bg-neutral-800/40 border-neutral-200 dark:border-neutral-700/80 opacity-80"
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <label className="flex items-start gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={fulfillmentSettings.enable_fixed_fee !== false}
+                        onChange={(e) =>
+                          setFulfillmentSettings({
+                            ...fulfillmentSettings,
+                            enable_fixed_fee: e.target.checked,
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600 rounded mt-0.5"
+                      />
+                      <div className="space-y-0.5">
+                        <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
+                          Phí giao hàng cố định (Giao hàng tận nơi toàn quốc)
+                        </span>
+                        <span className="text-neutral-500 text-[11px]">
+                          Áp dụng mức phí vận chuyển cố định tiêu chuẩn cho mọi đơn hàng
+                        </span>
+                      </div>
                     </label>
+
+                    {fulfillmentSettings.enable_fixed_fee !== false && (
+                      <div className="flex items-center gap-2 pl-7 sm:pl-0">
+                        <span className="text-xs text-neutral-500 font-bold whitespace-nowrap">Mức phí:</span>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="1000"
+                            min="0"
+                            value={fulfillmentSettings.fixed_fee ?? 30000}
+                            onChange={(e) =>
+                              setFulfillmentSettings({
+                                ...fulfillmentSettings,
+                                fixed_fee: Number(e.target.value),
+                              })
+                            }
+                            className="w-32 px-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-black text-xs text-right pr-7"
+                          />
+                          <span className="absolute right-2.5 top-2 text-xs font-bold text-neutral-400">đ</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Miễn phí giao hàng với đơn hàng giá trị trên */}
+                <div
+                  className={`p-4 rounded-2xl border transition-all space-y-3 ${
+                    fulfillmentSettings.enable_free_threshold !== false && Boolean(fulfillmentSettings.free_shipping_threshold)
+                      ? "bg-white dark:bg-neutral-900 border-blue-500/80 ring-1 ring-blue-500/20 shadow-xs"
+                      : "bg-neutral-50/70 dark:bg-neutral-800/40 border-neutral-200 dark:border-neutral-700/80 opacity-80"
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <label className="flex items-start gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={fulfillmentSettings.enable_free_threshold !== false && Boolean(fulfillmentSettings.free_shipping_threshold)}
+                        onChange={(e) =>
+                          setFulfillmentSettings({
+                            ...fulfillmentSettings,
+                            enable_free_threshold: e.target.checked,
+                            free_shipping_threshold: e.target.checked ? (fulfillmentSettings.free_shipping_threshold || 500000) : 0,
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600 rounded mt-0.5"
+                      />
+                      <div className="space-y-0.5">
+                        <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
+                          Miễn phí giao hàng với đơn hàng giá trị trên
+                        </span>
+                        <span className="text-neutral-500 text-[11px]">
+                          Tự động miễn phí ship khi đơn hàng đạt giá trị tối thiểu
+                        </span>
+                      </div>
+                    </label>
+
+                    {fulfillmentSettings.enable_free_threshold !== false && Boolean(fulfillmentSettings.free_shipping_threshold) && (
+                      <div className="flex items-center gap-2 pl-7 sm:pl-0">
+                        <span className="text-xs text-neutral-500 font-bold whitespace-nowrap">Đơn từ:</span>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="10000"
+                            min="0"
+                            value={fulfillmentSettings.free_shipping_threshold || 500000}
+                            onChange={(e) =>
+                              setFulfillmentSettings({
+                                ...fulfillmentSettings,
+                                free_shipping_threshold: Number(e.target.value),
+                              })
+                            }
+                            className="w-36 px-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-black text-xs text-right pr-7"
+                          />
+                          <span className="absolute right-2.5 top-2 text-xs font-bold text-neutral-400">đ</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Miễn phí giao hàng trong phạm vi */}
+                <div
+                  className={`p-4 rounded-2xl border transition-all space-y-3 ${
+                    fulfillmentSettings.enable_free_distance && Boolean(fulfillmentSettings.free_distance_km)
+                      ? "bg-white dark:bg-neutral-900 border-blue-500/80 ring-1 ring-blue-500/20 shadow-xs"
+                      : "bg-neutral-50/70 dark:bg-neutral-800/40 border-neutral-200 dark:border-neutral-700/80 opacity-80"
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <label className="flex items-start gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(fulfillmentSettings.enable_free_distance && fulfillmentSettings.free_distance_km)}
+                        onChange={(e) =>
+                          setFulfillmentSettings({
+                            ...fulfillmentSettings,
+                            enable_free_distance: e.target.checked,
+                            free_distance_km: e.target.checked ? (fulfillmentSettings.free_distance_km || 5) : 0,
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600 rounded mt-0.5"
+                      />
+                      <div className="space-y-0.5">
+                        <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
+                          Miễn phí giao hàng trong phạm vi
+                        </span>
+                        <span className="text-neutral-500 text-[11px]">
+                          Miễn phí ship cho khách hàng trong bán kính gần cửa hàng / kho
+                        </span>
+                      </div>
+                    </label>
+
+                    {Boolean(fulfillmentSettings.enable_free_distance && fulfillmentSettings.free_distance_km) && (
+                      <div className="flex items-center gap-2 pl-7 sm:pl-0">
+                        <span className="text-xs text-neutral-500 font-bold whitespace-nowrap">Bán kính:</span>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="1"
+                            min="1"
+                            max="100"
+                            value={fulfillmentSettings.free_distance_km || 5}
+                            onChange={(e) =>
+                              setFulfillmentSettings({
+                                ...fulfillmentSettings,
+                                free_distance_km: Number(e.target.value),
+                              })
+                            }
+                            className="w-24 px-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-black text-xs text-right pr-9"
+                          />
+                          <span className="absolute right-2.5 top-2 text-xs font-bold text-neutral-400">km</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Nhận tại Cửa hàng / Showroom */}
+                <div
+                  className={`p-4 rounded-2xl border transition-all space-y-3 ${
+                    fulfillmentSettings.enabled_methods.includes("STORE_PICKUP")
+                      ? "bg-white dark:bg-neutral-900 border-blue-500/80 ring-1 ring-blue-500/20 shadow-xs"
+                      : "bg-neutral-50/70 dark:bg-neutral-800/40 border-neutral-200 dark:border-neutral-700/80 opacity-80"
+                  }`}
+                >
+                  <label className="flex items-start gap-3 cursor-pointer select-none">
                     <input
-                      type="number"
-                      step="1000"
-                      value={fulfillmentSettings.fixed_fee}
-                      onChange={(e) =>
-                        setFulfillmentSettings({
-                          ...fulfillmentSettings,
-                          fixed_fee: Number(e.target.value),
-                        })
-                      }
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-bold text-xs"
+                      type="checkbox"
+                      checked={fulfillmentSettings.enabled_methods.includes("STORE_PICKUP")}
+                      onChange={() => toggleFulfillmentMethod("STORE_PICKUP")}
+                      className="w-4 h-4 text-blue-600 rounded mt-0.5"
                     />
-                  </div>
+                    <div className="space-y-0.5">
+                      <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
+                        Nhận Tại Cửa Hàng / Showroom
+                      </span>
+                      <span className="text-neutral-500 text-[11px]">
+                        Miễn phí 100%, khách tự đến lấy hàng tại cửa hàng hoặc kho xưởng
+                      </span>
+                    </div>
+                  </label>
 
-                  <div>
-                    <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                      Miễn Phí Vận Chuyển Cho Đơn Hàng Từ (đ)
-                    </label>
+                  {fulfillmentSettings.enabled_methods.includes("STORE_PICKUP") && (
+                    <div className="pl-7 pt-1 space-y-1.5 animate-in fade-in">
+                      <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300">
+                        Địa chỉ & Hướng dẫn nhận hàng tại cửa hàng:
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder="Số nhà, tên đường, thời gian mở cửa nhận hàng..."
+                        value={fulfillmentSettings.pickup_config?.address || address || ""}
+                        onChange={(e) =>
+                          setFulfillmentSettings({
+                            ...fulfillmentSettings,
+                            pickup_config: {
+                              store_name: store.store_name,
+                              address: e.target.value,
+                              instructions: fulfillmentSettings.pickup_config?.instructions || "",
+                            },
+                          })
+                        }
+                        className="w-full px-3.5 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. Báo Phí Giao Hàng Sau (Quote Later) */}
+                <div
+                  className={`p-4 rounded-2xl border transition-all space-y-3 ${
+                    fulfillmentSettings.enabled_methods.includes("SHIPPING_QUOTE_LATER")
+                      ? "bg-white dark:bg-neutral-900 border-blue-500/80 ring-1 ring-blue-500/20 shadow-xs"
+                      : "bg-neutral-50/70 dark:bg-neutral-800/40 border-neutral-200 dark:border-neutral-700/80 opacity-80"
+                  }`}
+                >
+                  <label className="flex items-start gap-3 cursor-pointer select-none">
                     <input
-                      type="number"
-                      step="10000"
-                      value={fulfillmentSettings.free_shipping_threshold || 0}
-                      onChange={(e) =>
-                        setFulfillmentSettings({
-                          ...fulfillmentSettings,
-                          free_shipping_threshold: Number(e.target.value),
-                        })
-                      }
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-bold text-xs"
+                      type="checkbox"
+                      checked={fulfillmentSettings.enabled_methods.includes("SHIPPING_QUOTE_LATER")}
+                      onChange={() => toggleFulfillmentMethod("SHIPPING_QUOTE_LATER")}
+                      className="w-4 h-4 text-blue-600 rounded mt-0.5"
                     />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                      Địa Chỉ & Hướng Dẫn Nhận Tại Cửa Hàng
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={fulfillmentSettings.pickup_config?.address || ""}
-                      onChange={(e) =>
-                        setFulfillmentSettings({
-                          ...fulfillmentSettings,
-                          pickup_config: {
-                            store_name: store.store_name,
-                            address: e.target.value,
-                            instructions: fulfillmentSettings.pickup_config?.instructions || "",
-                          },
-                        })
-                      }
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"
-                    />
-                  </div>
+                    <div className="space-y-0.5">
+                      <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
+                        Báo Phí Giao Hàng Sau (Quote Later)
+                      </span>
+                      <span className="text-neutral-500 text-[11px]">
+                        Dành cho hàng cồng kềnh, máy móc hoặc đơn hàng số lượng lớn (Người bán sẽ liên hệ báo cước vận chuyển thực tế trước khi giao)
+                      </span>
+                    </div>
+                  </label>
                 </div>
               </div>
             </div>

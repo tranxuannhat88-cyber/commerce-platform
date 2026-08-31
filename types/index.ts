@@ -195,6 +195,12 @@ export interface StoreFulfillmentSettings {
   fee_rule_type: ShippingFeeRuleType;
   fixed_fee: number;
   free_shipping_threshold?: number;
+  free_distance_km?: number;
+  enable_fixed_fee?: boolean;
+  enable_free_threshold?: boolean;
+  enable_free_distance?: boolean;
+  enable_pickup?: boolean;
+  enable_quote_later?: boolean;
   pickup_config?: {
     store_name: string;
     address: string;
@@ -223,6 +229,12 @@ export interface OfferFulfillmentOverride {
   fee_rule_type?: ShippingFeeRuleType;
   fixed_fee?: number;
   free_shipping_threshold?: number;
+  free_distance_km?: number;
+  enable_fixed_fee?: boolean;
+  enable_free_threshold?: boolean;
+  enable_free_distance?: boolean;
+  enable_pickup?: boolean;
+  enable_quote_later?: boolean;
   zone_overrides?: Array<{ zone_id: string; fee: number }>;
   pickup_instructions_override?: string;
 }

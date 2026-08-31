@@ -97,26 +97,49 @@ export class ShippingCalculationService {
     if (methods.length === 0) {
       let defaultFixedFee = store.fulfillment_settings?.fixed_fee ?? store.shipping_settings?.default_fixed_fee ?? 30000;
       let freeThreshold = store.fulfillment_settings?.free_shipping_threshold ?? store.shipping_settings?.free_shipping_threshold ?? 500000;
+      let freeDistanceKm = store.fulfillment_settings?.free_distance_km ?? 0;
       let methodType: import('@/types').ShippingMethodType = (store.fulfillment_settings?.fee_rule_type as any) || 'FREE_THRESHOLD';
 
       // 1. Offer Fulfillment Override takes highest priority
       if (offer_fulfillment_override && offer_fulfillment_override.mode === 'OFFER_OVERRIDE') {
-        if (offer_fulfillment_override.fee_rule_type === 'FREE') {
+        const off = offer_fulfillment_override;
+        if (off.fee_rule_type === 'FREE') {
           defaultFixedFee = 0;
           freeThreshold = 0;
           methodType = 'FREE';
-        } else if (offer_fulfillment_override.fee_rule_type === 'FIXED') {
-          defaultFixedFee = offer_fulfillment_override.fixed_fee ?? 0;
-          freeThreshold = 0;
-          methodType = 'FIXED';
-        } else if (offer_fulfillment_override.fee_rule_type === 'FREE_THRESHOLD') {
-          defaultFixedFee = offer_fulfillment_override.fixed_fee ?? 30000;
-          freeThreshold = offer_fulfillment_override.free_shipping_threshold ?? 500000;
-          methodType = 'FREE_THRESHOLD';
-        } else if (offer_fulfillment_override.fee_rule_type === 'QUOTE_LATER') {
+        } else if (off.fee_rule_type === 'QUOTE_LATER' || off.enable_quote_later) {
           defaultFixedFee = 0;
           freeThreshold = 0;
           methodType = 'QUOTE_LATER';
+        } else {
+          if (off.enable_fixed_fee !== false && off.fixed_fee !== undefined) {
+            defaultFixedFee = off.fixed_fee;
+          }
+          if (off.enable_free_threshold && off.free_shipping_threshold) {
+            freeThreshold = off.free_shipping_threshold;
+            methodType = 'FREE_THRESHOLD';
+          } else if (off.enable_fixed_fee !== false) {
+            methodType = 'FIXED';
+            freeThreshold = 0;
+          }
+          if (off.enable_free_distance && off.free_distance_km) {
+            freeDistanceKm = off.free_distance_km;
+          }
+        }
+      } else if (store.advanced_fulfillment_settings || store.fulfillment_settings) {
+        const set = store.advanced_fulfillment_settings || store.fulfillment_settings;
+        if (set?.enable_fixed_fee !== false && set?.fixed_fee !== undefined) {
+          defaultFixedFee = set.fixed_fee;
+        }
+        if (set?.enable_free_threshold && set?.free_shipping_threshold) {
+          freeThreshold = set.free_shipping_threshold;
+          methodType = 'FREE_THRESHOLD';
+        } else if (set?.enable_fixed_fee !== false) {
+          methodType = 'FIXED';
+          freeThreshold = 0;
+        }
+        if (set?.enable_free_distance && set?.free_distance_km) {
+          freeDistanceKm = set.free_distance_km;
         }
       }
 
@@ -125,12 +148,17 @@ export class ShippingCalculationService {
           id: 'sm-standard',
           organization_id: store.organization_id || store.owner_actor_id || store.id,
           store_id: store.id,
-          name: 'Giao hàng tiêu chuẩn',
+          name: 'Giao hàng tận nơi (Toàn quốc)',
           method_type: methodType,
           fixed_fee: defaultFixedFee,
           free_shipping_threshold: freeThreshold,
           estimated_days: '2 - 3 ngày',
-          description: freeThreshold > 0 ? ('Miễn phí giao hàng cho đơn từ ' + freeThreshold.toLocaleString('vi-VN') + 'đ') : 'Giao hàng tận nơi',
+          description:
+            freeThreshold > 0
+              ? `Miễn phí giao hàng cho đơn từ ${freeThreshold.toLocaleString('vi-VN')}đ`
+              : freeDistanceKm > 0
+              ? `Miễn phí giao hàng trong phạm vi ${freeDistanceKm}km`
+              : 'Giao hàng tận nơi tiêu chuẩn',
           priority: 1,
           active: true,
           created_at: new Date().toISOString(),
