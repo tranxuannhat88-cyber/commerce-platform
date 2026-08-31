@@ -309,6 +309,7 @@ function OffersContent() {
   // Fulfillment Override State
   const [fulfillmentOverrideMode, setFulfillmentOverrideMode] = useState<"STORE_DEFAULT" | "OFFER_OVERRIDE">("STORE_DEFAULT");
   const [customEnableFixedFee, setCustomEnableFixedFee] = useState<boolean>(true);
+  const [customFixedFeeDistanceKm, setCustomFixedFeeDistanceKm] = useState<string>("10");
   const [customFixedFee, setCustomFixedFee] = useState<string>("30000");
   const [customEnableFreeThreshold, setCustomEnableFreeThreshold] = useState<boolean>(true);
   const [customFreeThreshold, setCustomFreeThreshold] = useState<string>("500000");
@@ -998,6 +999,7 @@ function OffersContent() {
     if (offer.fulfillment_override?.mode === "OFFER_OVERRIDE") {
       setFulfillmentOverrideMode("OFFER_OVERRIDE");
       setCustomEnableFixedFee(offer.fulfillment_override.enable_fixed_fee !== false);
+      setCustomFixedFeeDistanceKm(offer.fulfillment_override.fixed_fee_distance_km ? String(offer.fulfillment_override.fixed_fee_distance_km) : "10");
       setCustomFixedFee(offer.fulfillment_override.fixed_fee ? formatThousands(offer.fulfillment_override.fixed_fee) : "30000");
       setCustomEnableFreeThreshold(offer.fulfillment_override.enable_free_threshold !== false && Boolean(offer.fulfillment_override.free_shipping_threshold));
       setCustomFreeThreshold(offer.fulfillment_override.free_shipping_threshold ? formatThousands(offer.fulfillment_override.free_shipping_threshold) : "500000");
@@ -1009,6 +1011,7 @@ function OffersContent() {
     } else {
       setFulfillmentOverrideMode("STORE_DEFAULT");
       setCustomEnableFixedFee(true);
+      setCustomFixedFeeDistanceKm("10");
       setCustomFixedFee("30000");
       setCustomEnableFreeThreshold(true);
       setCustomFreeThreshold("500000");
@@ -1050,6 +1053,7 @@ function OffersContent() {
     setCustomPayLaterTerms("NET_30");
     setFulfillmentOverrideMode("STORE_DEFAULT");
     setCustomEnableFixedFee(true);
+    setCustomFixedFeeDistanceKm("10");
     setCustomFixedFee("30000");
     setCustomEnableFreeThreshold(true);
     setCustomFreeThreshold("500000");
@@ -1174,6 +1178,7 @@ function OffersContent() {
         mode: fulfillmentOverrideMode,
         enabled_methods: fulfillmentOverrideMode === "OFFER_OVERRIDE" ? enabledFulfillmentList : undefined,
         enable_fixed_fee: fulfillmentOverrideMode === "OFFER_OVERRIDE" ? customEnableFixedFee : undefined,
+        fixed_fee_distance_km: fulfillmentOverrideMode === "OFFER_OVERRIDE" && customEnableFixedFee && customFixedFeeDistanceKm ? Number(customFixedFeeDistanceKm) : undefined,
         fixed_fee: fulfillmentOverrideMode === "OFFER_OVERRIDE" && customEnableFixedFee && customFixedFee ? parseThousands(customFixedFee) : undefined,
         enable_free_threshold: fulfillmentOverrideMode === "OFFER_OVERRIDE" ? customEnableFreeThreshold : undefined,
         free_shipping_threshold: fulfillmentOverrideMode === "OFFER_OVERRIDE" && customEnableFreeThreshold && customFreeThreshold ? parseThousands(customFreeThreshold) : undefined,
@@ -2625,7 +2630,7 @@ function OffersContent() {
                     <div className="pt-3 border-t border-emerald-200 dark:border-emerald-900/60 space-y-3 animate-in fade-in text-xs">
                       {/* UNIFIED FULFILLMENT METHODS LIST */}
                       <div className="space-y-3">
-                        {/* 1. Phí giao hàng cố định */}
+                        {/* 1. Phí giao hàng cố định trong phạm vi */}
                         <div
                           className={`p-3 rounded-xl border transition-all space-y-2 ${
                             customEnableFixedFee
@@ -2633,7 +2638,7 @@ function OffersContent() {
                               : "bg-neutral-50 dark:bg-neutral-800/40 border-neutral-200 dark:border-neutral-700 opacity-80"
                           }`}
                         >
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
                             <label className="flex items-start gap-2.5 cursor-pointer select-none">
                               <input
                                 type="checkbox"
@@ -2643,25 +2648,43 @@ function OffersContent() {
                               />
                               <div className="space-y-0.5">
                                 <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
-                                  Phí giao hàng cố định (Giao hàng tận nơi)
+                                  Phí giao hàng cố định trong phạm vi
                                 </span>
                                 <span className="text-neutral-500 text-[11px]">
-                                  Áp dụng mức phí vận chuyển cố định cho Offer này
+                                  Áp dụng mức phí vận chuyển cố định cho Offer này trong phạm vi quy định
                                 </span>
                               </div>
                             </label>
 
                             {customEnableFixedFee && (
-                              <div className="flex items-center gap-2 pl-6 sm:pl-0">
-                                <span className="text-xs text-neutral-500 font-bold whitespace-nowrap">Mức phí:</span>
-                                <div className="relative">
-                                  <input
-                                    type="text"
-                                    value={customFixedFee}
-                                    onChange={(e) => setCustomFixedFee(formatThousands(e.target.value))}
-                                    className="w-28 px-2.5 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-bold text-xs text-right pr-6"
-                                  />
-                                  <span className="absolute right-2 top-1.5 text-xs font-bold text-neutral-400">đ</span>
+                              <div className="flex flex-wrap items-center gap-2.5 pl-6 md:pl-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-neutral-500 font-bold whitespace-nowrap">Phạm vi:</span>
+                                  <div className="relative">
+                                    <input
+                                      type="number"
+                                      step="1"
+                                      min="1"
+                                      max="1000"
+                                      value={customFixedFeeDistanceKm}
+                                      onChange={(e) => setCustomFixedFeeDistanceKm(e.target.value)}
+                                      className="w-20 px-2.5 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-bold text-xs text-right pr-7"
+                                    />
+                                    <span className="absolute right-2 top-1.5 text-xs font-bold text-neutral-400">km</span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-neutral-500 font-bold whitespace-nowrap">Mức phí:</span>
+                                  <div className="relative">
+                                    <input
+                                      type="text"
+                                      value={customFixedFee}
+                                      onChange={(e) => setCustomFixedFee(formatThousands(e.target.value))}
+                                      className="w-28 px-2.5 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-bold text-xs text-right pr-6"
+                                    />
+                                    <span className="absolute right-2 top-1.5 text-xs font-bold text-neutral-400">đ</span>
+                                  </div>
                                 </div>
                               </div>
                             )}

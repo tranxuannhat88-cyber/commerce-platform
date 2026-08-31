@@ -728,7 +728,7 @@ export default function StoreSettingsPage() {
 
               {/* UNIFIED FULFILLMENT METHODS LIST */}
               <div className="space-y-3.5 text-xs">
-                {/* 1. Phí giao hàng cố định */}
+                {/* 1. Phí giao hàng cố định trong phạm vi */}
                 <div
                   className={`p-4 rounded-2xl border transition-all space-y-3 ${
                     fulfillmentSettings.enable_fixed_fee !== false
@@ -736,7 +736,7 @@ export default function StoreSettingsPage() {
                       : "bg-neutral-50/70 dark:bg-neutral-800/40 border-neutral-200 dark:border-neutral-700/80 opacity-80"
                   }`}
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <label className="flex items-start gap-3 cursor-pointer select-none">
                       <input
                         type="checkbox"
@@ -751,32 +751,55 @@ export default function StoreSettingsPage() {
                       />
                       <div className="space-y-0.5">
                         <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
-                          Phí giao hàng cố định (Giao hàng tận nơi toàn quốc)
+                          Phí giao hàng cố định trong phạm vi
                         </span>
                         <span className="text-neutral-500 text-[11px]">
-                          Áp dụng mức phí vận chuyển cố định tiêu chuẩn cho mọi đơn hàng
+                          Áp dụng mức phí vận chuyển cố định cho các đơn hàng giao trong phạm vi quy định
                         </span>
                       </div>
                     </label>
 
                     {fulfillmentSettings.enable_fixed_fee !== false && (
-                      <div className="flex items-center gap-2 pl-7 sm:pl-0">
-                        <span className="text-xs text-neutral-500 font-bold whitespace-nowrap">Mức phí:</span>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            step="1000"
-                            min="0"
-                            value={fulfillmentSettings.fixed_fee ?? 30000}
-                            onChange={(e) =>
-                              setFulfillmentSettings({
-                                ...fulfillmentSettings,
-                                fixed_fee: Number(e.target.value),
-                              })
-                            }
-                            className="w-32 px-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-black text-xs text-right pr-7"
-                          />
-                          <span className="absolute right-2.5 top-2 text-xs font-bold text-neutral-400">đ</span>
+                      <div className="flex flex-wrap items-center gap-3 pl-7 md:pl-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-neutral-500 font-bold whitespace-nowrap">Phạm vi:</span>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="1"
+                              min="1"
+                              max="1000"
+                              value={fulfillmentSettings.fixed_fee_distance_km ?? 10}
+                              onChange={(e) =>
+                                setFulfillmentSettings({
+                                  ...fulfillmentSettings,
+                                  fixed_fee_distance_km: Number(e.target.value),
+                                })
+                              }
+                              className="w-24 px-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-black text-xs text-right pr-8"
+                            />
+                            <span className="absolute right-2.5 top-2 text-xs font-bold text-neutral-400">km</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-neutral-500 font-bold whitespace-nowrap">Mức phí:</span>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="1000"
+                              min="0"
+                              value={fulfillmentSettings.fixed_fee ?? 30000}
+                              onChange={(e) =>
+                                setFulfillmentSettings({
+                                  ...fulfillmentSettings,
+                                  fixed_fee: Number(e.target.value),
+                                })
+                              }
+                              className="w-32 px-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-black text-xs text-right pr-7"
+                            />
+                            <span className="absolute right-2.5 top-2 text-xs font-bold text-neutral-400">đ</span>
+                          </div>
                         </div>
                       </div>
                     )}

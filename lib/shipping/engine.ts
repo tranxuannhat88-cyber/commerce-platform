@@ -96,6 +96,7 @@ export class ShippingCalculationService {
 
     if (methods.length === 0) {
       let defaultFixedFee = store.fulfillment_settings?.fixed_fee ?? store.shipping_settings?.default_fixed_fee ?? 30000;
+      let fixedFeeDistanceKm = store.fulfillment_settings?.fixed_fee_distance_km ?? 0;
       let freeThreshold = store.fulfillment_settings?.free_shipping_threshold ?? store.shipping_settings?.free_shipping_threshold ?? 500000;
       let freeDistanceKm = store.fulfillment_settings?.free_distance_km ?? 0;
       let methodType: import('@/types').ShippingMethodType = (store.fulfillment_settings?.fee_rule_type as any) || 'FREE_THRESHOLD';
@@ -115,6 +116,9 @@ export class ShippingCalculationService {
           if (off.enable_fixed_fee !== false && off.fixed_fee !== undefined) {
             defaultFixedFee = off.fixed_fee;
           }
+          if (off.fixed_fee_distance_km) {
+            fixedFeeDistanceKm = off.fixed_fee_distance_km;
+          }
           if (off.enable_free_threshold && off.free_shipping_threshold) {
             freeThreshold = off.free_shipping_threshold;
             methodType = 'FREE_THRESHOLD';
@@ -130,6 +134,9 @@ export class ShippingCalculationService {
         const set = store.advanced_fulfillment_settings || store.fulfillment_settings;
         if (set?.enable_fixed_fee !== false && set?.fixed_fee !== undefined) {
           defaultFixedFee = set.fixed_fee;
+        }
+        if (set?.fixed_fee_distance_km) {
+          fixedFeeDistanceKm = set.fixed_fee_distance_km;
         }
         if (set?.enable_free_threshold && set?.free_shipping_threshold) {
           freeThreshold = set.free_shipping_threshold;
@@ -148,7 +155,7 @@ export class ShippingCalculationService {
           id: 'sm-standard',
           organization_id: store.organization_id || store.owner_actor_id || store.id,
           store_id: store.id,
-          name: 'Giao hàng tận nơi (Toàn quốc)',
+          name: fixedFeeDistanceKm > 0 ? `Giao hàng trong phạm vi ${fixedFeeDistanceKm}km` : 'Giao hàng tận nơi (Toàn quốc)',
           method_type: methodType,
           fixed_fee: defaultFixedFee,
           free_shipping_threshold: freeThreshold,
@@ -158,6 +165,8 @@ export class ShippingCalculationService {
               ? `Miễn phí giao hàng cho đơn từ ${freeThreshold.toLocaleString('vi-VN')}đ`
               : freeDistanceKm > 0
               ? `Miễn phí giao hàng trong phạm vi ${freeDistanceKm}km`
+              : fixedFeeDistanceKm > 0
+              ? `Phí giao hàng cố định trong phạm vi ${fixedFeeDistanceKm}km`
               : 'Giao hàng tận nơi tiêu chuẩn',
           priority: 1,
           active: true,

@@ -194,6 +194,7 @@ export interface StoreFulfillmentSettings {
   default_method: FulfillmentMethodType;
   fee_rule_type: ShippingFeeRuleType;
   fixed_fee: number;
+  fixed_fee_distance_km?: number;
   free_shipping_threshold?: number;
   free_distance_km?: number;
   enable_fixed_fee?: boolean;
@@ -228,6 +229,7 @@ export interface OfferFulfillmentOverride {
   default_method?: FulfillmentMethodType;
   fee_rule_type?: ShippingFeeRuleType;
   fixed_fee?: number;
+  fixed_fee_distance_km?: number;
   free_shipping_threshold?: number;
   free_distance_km?: number;
   enable_fixed_fee?: boolean;
