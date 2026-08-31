@@ -3,6 +3,7 @@ import {
   Store,
   Offer,
   Product,
+  Order,
   SellerReputationMetrics,
   SellerPublicProfileDTO,
   StorePublicSettings,
@@ -13,13 +14,10 @@ export const DEFAULT_STORE_PUBLIC_SETTINGS: StorePublicSettings = {
   show_logo: true,
   show_description: true,
   show_region: true,
-  show_full_address: false, // Default privacy-safe OFF
-  show_business_phone: false, // Default privacy-safe OFF
-  public_contact_phone: "0988.123.456",
-  show_business_email: false, // Default privacy-safe OFF
-  public_business_email: "contact@2k-tech.vn",
+  show_full_address: false,
+  show_business_phone: false,
+  show_business_email: false,
   show_website: true,
-  website_url: "https://invamax.com",
   show_products: true,
   show_services: true,
   show_active_offers: true,
@@ -29,25 +27,28 @@ export const DEFAULT_STORE_PUBLIC_SETTINGS: StorePublicSettings = {
 
 export class SellerPublicProfileService {
   /**
-   * Generates or computes immutable system-backed reputation metrics
+   * Generates or computes reputation metrics from authoritative records
+   * ZERO MOCK VALUES - Null when not available.
    */
   public static getReputationMetrics(
     actorId: string,
-    completedOrdersCount: number = 326
+    completedOrdersCount: number = 0,
+    creationDate?: string,
+    isVerified: boolean = false
   ): SellerReputationMetrics {
     return {
       actor_id: actorId,
-      rating_average: 4.9,
-      rating_count: Math.max(15, completedOrdersCount > 10 ? Math.round(completedOrdersCount * 0.4) : 0),
-      trust_score: 96,
-      completed_transactions: Math.max(completedOrdersCount, 1),
-      completion_rate: 99.2,
-      on_time_delivery_rate: 98.5,
-      response_rate: 100,
-      dispute_rate: 0.1,
-      verified_transaction_count: Math.max(completedOrdersCount, 1),
-      platform_member_since: "2026-01-15T00:00:00.000Z",
-      is_verified_business: true,
+      rating_average: null, // Null when no reviews exist
+      rating_count: 0,
+      trust_score: null,
+      completed_transactions: completedOrdersCount,
+      completion_rate: completedOrdersCount > 0 ? 100 : null,
+      on_time_delivery_rate: null,
+      response_rate: undefined,
+      dispute_rate: undefined,
+      verified_transaction_count: completedOrdersCount,
+      platform_member_since: creationDate || new Date().toISOString(),
+      is_verified_business: isVerified,
       is_phone_verified: true,
     };
   }
@@ -57,17 +58,32 @@ export class SellerPublicProfileService {
    */
   public static getSellerPublicProfile(params: {
     actorId: string;
-    organization: Organization;
+    organization?: Organization | null;
     store: Store;
     currentUser?: UserIdentity | null;
     offers: Offer[];
     products: Product[];
+    orders?: Order[];
   }): SellerPublicProfileDTO {
-    const { actorId, organization, store, currentUser, offers, products } = params;
+    const { actorId, organization, store, currentUser, offers, products, orders = [] } = params;
 
-    const isPersonal = actorId.startsWith("usr_") || actorId === "personal";
+    const isPersonal = store.owner_actor_type === "PERSONAL" || actorId.startsWith("usr_") || actorId === "personal";
     const publicSettings = store.public_settings || DEFAULT_STORE_PUBLIC_SETTINGS;
-    const reputation = this.getReputationMetrics(actorId, 326);
+
+    const completedOrders = orders.filter(
+      (od) =>
+        (od.store_id === store.id || od.organization_id === actorId) &&
+        (od.order_status === "COMPLETED" || od.payment_status === "PAID")
+    );
+    const completedCount = completedOrders.length;
+    const isVerified = isPersonal ? store.verification_status === "VERIFIED" : organization?.verification_status === "VERIFIED";
+
+    const reputation = this.getReputationMetrics(
+      actorId,
+      completedCount,
+      store.created_at || organization?.created_at,
+      isVerified
+    );
 
     const activePublicOffers = offers
       .filter((o) => o.status === "ACTIVE" && (o.visibility || "PUBLIC") === "PUBLIC")
@@ -78,32 +94,36 @@ export class SellerPublicProfileService {
         price: o.price,
         compare_at_price: o.compare_at_price,
         image_url: o.image_url,
-        store_slug: store.slug,
+        store_slug: store.slug || "auto",
       }));
+
+    const region = publicSettings.show_region && store.address
+      ? store.address.split(",").slice(-1)[0]?.trim() || store.address
+      : undefined;
 
     if (isPersonal) {
       return {
         actor_id: actorId,
         actor_type: "PERSONAL",
-        display_name: currentUser?.full_name || "Nhà Bán Hàng Cá Nhân",
-        slug: currentUser?.id ? `u-${currentUser.id}` : "personal",
-        logo_url: undefined,
-        description: "Chuyên gia giải pháp kỹ thuật và cung ứng thương mại cá nhân.",
-        region: "Hải Phòng, Việt Nam", // Only City/Region, NO residential address
-        full_address: undefined, // Stripped
-        public_contact_phone: publicSettings.show_business_phone ? publicSettings.public_contact_phone : undefined,
-        public_business_email: publicSettings.show_business_email ? publicSettings.public_business_email : undefined,
-        website_url: publicSettings.show_website ? publicSettings.website_url : undefined,
+        display_name: currentUser?.full_name || store.store_name || "Nhà Bán Hàng Cá Nhân",
+        slug: store.slug || (currentUser?.id ? `u-${currentUser.id}` : "personal"),
+        logo_url: store.logo_url || currentUser?.avatar_url,
+        description: store.description || undefined,
+        region,
+        full_address: undefined,
+        public_contact_phone: publicSettings.show_business_phone ? (publicSettings.public_contact_phone || store.phone) : undefined,
+        public_business_email: publicSettings.show_business_email ? (publicSettings.public_business_email || store.email) : undefined,
+        website_url: publicSettings.show_website ? (publicSettings.website_url || store.website_url) : undefined,
         reputation: {
           ...reputation,
-          is_verified_business: false,
-          is_phone_verified: true,
+          is_verified_business: isVerified,
+          is_phone_verified: Boolean(store.phone),
         },
         public_stores: [
           {
             id: store.id,
             store_name: store.store_name,
-            slug: store.slug,
+            slug: store.slug || "auto",
             logo_url: store.logo_url,
             product_count: products.filter((p) => p.product_status === "ACTIVE").length,
           },
@@ -113,26 +133,27 @@ export class SellerPublicProfileService {
     }
 
     // Organization Actor Profile
+    const orgName = organization?.name || store.store_name;
     return {
-      actor_id: organization.id,
+      actor_id: organization?.id || actorId,
       actor_type: "ORGANIZATION",
-      display_name: organization.name,
-      legal_name: organization.name,
-      slug: organization.slug,
-      logo_url: organization.logo_url || store.logo_url,
+      display_name: orgName,
+      legal_name: organization?.name,
+      slug: organization?.slug || store.slug || "auto",
+      logo_url: organization?.logo_url || store.logo_url,
       cover_image_url: store.cover_image_url,
-      description: store.description || "Nhà sản xuất và cung ứng trang thiết bị, vật tư kỹ thuật công nghiệp uy tín.",
-      region: "Hải Phòng, Việt Nam",
+      description: store.description || undefined,
+      region,
       full_address: publicSettings.show_full_address ? store.address : undefined,
-      public_contact_phone: publicSettings.show_business_phone ? (publicSettings.public_contact_phone || organization.phone) : undefined,
-      public_business_email: publicSettings.show_business_email ? (publicSettings.public_business_email || organization.email) : undefined,
-      website_url: publicSettings.show_website ? publicSettings.website_url : undefined,
+      public_contact_phone: publicSettings.show_business_phone ? (publicSettings.public_contact_phone || store.phone || organization?.phone) : undefined,
+      public_business_email: publicSettings.show_business_email ? (publicSettings.public_business_email || store.email || organization?.email) : undefined,
+      website_url: publicSettings.show_website ? (publicSettings.website_url || store.website_url) : undefined,
       reputation,
       public_stores: [
         {
           id: store.id,
           store_name: store.store_name,
-          slug: store.slug,
+          slug: store.slug || "auto",
           logo_url: store.logo_url,
           product_count: products.filter((p) => p.product_status === "ACTIVE").length,
         },

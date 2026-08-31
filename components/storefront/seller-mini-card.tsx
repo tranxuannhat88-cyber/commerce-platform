@@ -53,22 +53,43 @@ export function SellerMiniCard({ seller, className = "" }: SellerMiniCardProps) 
             <h4 className="font-bold text-xs sm:text-sm text-neutral-900 dark:text-neutral-100 truncate">
               {seller.seller_display_name}
             </h4>
-            <span className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
-              ✓ {seller.badge_text}
-            </span>
+            {seller.is_verified && seller.badge_text && (
+              <span className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
+                ✓ {seller.badge_text}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400">
-            <span className="flex items-center gap-0.5 font-bold text-amber-500 dark:text-amber-400">
-              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-              {seller.rating_average.toFixed(1)}
+            <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+              {seller.actor_type === "ORGANIZATION" ? "Tổ chức" : "Cá nhân"}
             </span>
-            <span>•</span>
-            <span className="font-medium text-neutral-700 dark:text-neutral-300">
-              {seller.transaction_count} giao dịch
-            </span>
-            <span>•</span>
-            <span className="truncate">{seller.location_summary}</span>
+
+            {seller.rating_average !== null && seller.rating_average !== undefined && (
+              <>
+                <span>•</span>
+                <span className="flex items-center gap-0.5 font-bold text-amber-500 dark:text-amber-400">
+                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                  {seller.rating_average.toFixed(1)}
+                </span>
+              </>
+            )}
+
+            {seller.transaction_count > 0 && (
+              <>
+                <span>•</span>
+                <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                  {seller.transaction_count} giao dịch
+                </span>
+              </>
+            )}
+
+            {seller.location_summary && (
+              <>
+                <span>•</span>
+                <span className="truncate">{seller.location_summary}</span>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -78,7 +99,7 @@ export function SellerMiniCard({ seller, className = "" }: SellerMiniCardProps) 
         href={destinationHref}
         className="px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs font-bold shrink-0 flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
       >
-        <span>{seller.has_store ? "Xem Cửa Hàng" : "Xem Hồ Sơ"}</span>
+        <span>{seller.has_store ? "Xem cửa hàng" : "Xem hồ sơ người bán"}</span>
         <ArrowRight className="w-3 h-3" />
       </Link>
     </div>

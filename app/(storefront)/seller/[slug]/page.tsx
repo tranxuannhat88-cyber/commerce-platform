@@ -32,7 +32,7 @@ export default function SellerPublicProfilePage() {
   const params = useParams();
   const slug = (params?.slug as string) || "cong-ty-2k";
 
-  const { store, organization, offers, products, currentUser } = useCommerceStore();
+  const { store, organization, offers, products, orders, currentUser } = useCommerceStore();
   const [showQR, setShowQR] = useState(false);
 
   const isPersonalQuery = slug.startsWith("u-") || slug === "personal";
@@ -45,9 +45,15 @@ export default function SellerPublicProfilePage() {
     currentUser,
     offers,
     products,
+    orders,
   });
 
   const profileUrl = typeof window !== "undefined" ? window.location.href : `/seller/${slug}`;
+
+  const hasRealTransactions = profile.reputation.completed_transactions > 0;
+  const hasRating = profile.reputation.rating_average !== null && profile.reputation.rating_average !== undefined && (profile.reputation.rating_count || 0) > 0;
+  const hasTrustScore = profile.reputation.trust_score !== null && profile.reputation.trust_score !== undefined;
+  const hasOnTime = profile.reputation.on_time_delivery_rate !== null && profile.reputation.on_time_delivery_rate !== undefined;
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 font-sans pb-28 text-neutral-900 dark:text-neutral-100">
@@ -182,7 +188,7 @@ export default function SellerPublicProfilePage() {
           </div>
         </div>
 
-        {/* 3. SYSTEM-GENERATED REPUTATION METRICS */}
+        {/* 3. SYSTEM-GENERATED REPUTATION METRICS (ZERO MOCK) */}
         <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200/90 dark:border-neutral-800 space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -191,46 +197,58 @@ export default function SellerPublicProfilePage() {
                 Chỉ Số Tín Nhiệm & Độ Tin Cậy
               </h3>
             </div>
-            <span className="text-[11px] text-neutral-400">Được hệ thống kiểm chứng tự động</span>
+            <span className="text-[11px] text-neutral-400">Kiểm chứng tự động</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center">
-            {/* Metric 1: Trust Score */}
-            <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 space-y-1">
-              <div className="flex items-center justify-center gap-1 text-blue-600 font-black text-2xl">
-                <span>{profile.reputation.trust_score}</span>
-                <span className="text-xs text-blue-400 font-normal">/100</span>
+          {hasRealTransactions ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center">
+              {/* Metric 1: Completed Transactions */}
+              <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 space-y-1">
+                <p className="text-2xl font-black text-emerald-600">
+                  {profile.reputation.completed_transactions}
+                </p>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 font-bold">Giao Dịch Hoàn Thành</p>
               </div>
-              <p className="text-xs text-neutral-600 dark:text-neutral-400 font-bold">Điểm Tín Nhiệm</p>
-            </div>
 
-            {/* Metric 2: Completed Transactions */}
-            <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 space-y-1">
-              <p className="text-2xl font-black text-emerald-600">
-                {profile.reputation.completed_transactions}
-              </p>
-              <p className="text-xs text-neutral-600 dark:text-neutral-400 font-bold">Giao Dịch Hoàn Thành</p>
-            </div>
+              {/* Metric 2: Trust Score */}
+              {hasTrustScore && (
+                <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 space-y-1">
+                  <div className="flex items-center justify-center gap-1 text-blue-600 font-black text-2xl">
+                    <span>{profile.reputation.trust_score}</span>
+                    <span className="text-xs text-blue-400 font-normal">/100</span>
+                  </div>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400 font-bold">Điểm Tín Nhiệm</p>
+                </div>
+              )}
 
-            {/* Metric 3: Star Rating */}
-            <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 space-y-1">
-              <div className="flex items-center justify-center gap-1 text-amber-500 font-black text-2xl">
-                <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
-                <span>{profile.reputation.rating_average.toFixed(1)}</span>
-              </div>
-              <p className="text-xs text-neutral-600 dark:text-neutral-400 font-bold">
-                Đánh Giá ({profile.reputation.rating_count})
-              </p>
-            </div>
+              {/* Metric 3: Star Rating */}
+              {hasRating && (
+                <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 space-y-1">
+                  <div className="flex items-center justify-center gap-1 text-amber-500 font-black text-2xl">
+                    <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
+                    <span>{profile.reputation.rating_average?.toFixed(1)}</span>
+                  </div>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400 font-bold">
+                    Đánh Giá ({profile.reputation.rating_count})
+                  </p>
+                </div>
+              )}
 
-            {/* Metric 4: On-time Delivery */}
-            <div className="p-4 rounded-2xl bg-purple-50/50 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40 space-y-1">
-              <p className="text-2xl font-black text-purple-600">
-                {profile.reputation.on_time_delivery_rate}%
-              </p>
-              <p className="text-xs text-neutral-600 dark:text-neutral-400 font-bold">Giao Đúng Hạn</p>
+              {/* Metric 4: On-time Delivery */}
+              {hasOnTime && (
+                <div className="p-4 rounded-2xl bg-purple-50/50 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40 space-y-1">
+                  <p className="text-2xl font-black text-purple-600">
+                    {profile.reputation.on_time_delivery_rate}%
+                  </p>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400 font-bold">Giao Đúng Hạn</p>
+                </div>
+              )}
             </div>
-          </div>
+          ) : (
+            <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/70 dark:border-neutral-800 text-xs text-neutral-500">
+              Chưa có đủ dữ liệu giao dịch để tính các chỉ số uy tín. Các chỉ số sẽ được cập nhật tự động khi người bán hoàn tất đơn hàng trên nền tảng.
+            </div>
+          )}
         </div>
 
         {/* 4. PUBLIC STORES */}

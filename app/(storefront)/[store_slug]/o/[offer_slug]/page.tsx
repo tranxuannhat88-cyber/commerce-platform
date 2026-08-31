@@ -45,6 +45,8 @@ import { ShippingCalculationService } from "@/lib/shipping/engine";
 import { PaymentSettingsService } from "@/lib/services/payment-settings-service";
 import { FulfillmentService } from "@/lib/services/fulfillment-service";
 import { ProductAvailabilityService } from "@/lib/inventory/availability";
+import { OfferHeader } from "@/components/storefront/offer-header";
+import { OfferPolicySummary } from "@/components/storefront/offer-policy-summary";
 import { SellerMiniCard } from "@/components/storefront/seller-mini-card";
 import { SellerTrustSummary } from "@/components/storefront/seller-trust-summary";
 import { StorePoliciesModal } from "@/components/storefront/store-policies-modal";
@@ -60,7 +62,7 @@ function DirectOfferContent() {
   const storeSlug = (params?.store_slug as string) || "auto";
   const offerSlug = params?.offer_slug as string;
 
-  const { offers, store, organization, products, createOrder, shippingMethods, shippingZones, paymentAccounts } = useCommerceStore();
+  const { offers, store, organization, products, orders, createOrder, shippingMethods, shippingZones, paymentAccounts } = useCommerceStore();
   const { addToCart } = useCart();
 
   // Server-side fallback state for public visitors on mobile / Zalo
@@ -124,6 +126,7 @@ function DirectOfferContent() {
         store: currentStore,
         organization,
         products,
+        orders,
       })
     : null;
 
@@ -417,126 +420,19 @@ function DirectOfferContent() {
         {/* ========================================================================= */}
         {isMenuMode ? (
           <div className="space-y-6">
-            {/* Catalog Header Card (Unified with Seller Trust & Brand) */}
-            <div className="overflow-hidden rounded-3xl bg-linear-to-r from-neutral-900 via-neutral-800 to-indigo-950 text-white shadow-xl border border-white/10">
-              {/* Unified Store Branding & Seller Trust Header Bar */}
-              <div className="px-5 sm:px-6 py-3.5 bg-black/40 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                {/* Left: Identity, Verified Badge, Rating, Location */}
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="relative shrink-0">
-                    {publicOffer?.seller_mini_card.logo_url || store.logo_url ? (
-                      <img
-                        src={publicOffer?.seller_mini_card.logo_url || store.logo_url}
-                        alt={publicOffer?.seller_mini_card.seller_display_name || store.store_name}
-                        className="w-10 h-10 rounded-xl object-cover border border-white/20"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-400">
-                        <StoreIcon className="w-5 h-5" />
-                      </div>
-                    )}
-                    {publicOffer?.seller_mini_card.is_verified && (
-                      <div
-                        className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs"
-                        title={publicOffer.seller_mini_card.badge_text}
-                      >
-                        <ShieldCheck className="w-2.5 h-2.5 stroke-[3]" />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-sm text-white truncate">
-                        {publicOffer?.seller_mini_card.seller_display_name || store.store_name}
-                      </span>
-                      <span className="inline-flex items-center gap-0.5 px-2 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
-                        ✓ {publicOffer?.seller_mini_card.badge_text || "Doanh nghiệp Xác thực"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-[11px] text-neutral-300 flex-wrap">
-                      <span className="flex items-center gap-0.5 font-bold text-amber-400">
-                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                        {(publicOffer?.seller_mini_card.rating_average || 4.9).toFixed(1)}
-                      </span>
-                      <span>•</span>
-                      <span>{publicOffer?.seller_mini_card.transaction_count || 326} giao dịch</span>
-                      <span>•</span>
-                      <span>{publicOffer?.seller_mini_card.location_summary || "Hải Phòng"}</span>
-                      {store.phone && (
-                        <>
-                          <span>•</span>
-                          <a href={`tel:${store.phone}`} className="hover:text-emerald-300 transition-colors">
-                            Hotline: <strong>{store.phone}</strong>
-                          </a>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right: CTA View Store */}
-                <Link
-                  href={`/${storeSlug}`}
-                  className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 transition-all active:scale-95 border border-white/20 self-start sm:self-center cursor-pointer"
-                >
-                  <span>Xem Cửa Hàng</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-
-              {/* Catalog Title & Attachments */}
-              <div className="p-6 md:p-8 space-y-4">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold flex items-center gap-1.5 backdrop-blur-md">
-                      <ListOrdered className="w-3.5 h-3.5" />
-                      <span>DANH MỤC & BẢNG GIÁ ĐẶT HÀNG TRỰC TIẾP</span>
-                    </span>
-                    <span className="text-xs text-neutral-400">● {menuItems.length} sản phẩm/dịch vụ</span>
-                  </div>
-
-                  <h1 className="text-2xl md:text-3xl font-black tracking-tight">{offer.name}</h1>
-                </div>
-
-                {/* Catalog Attachments */}
-                {offer.attachments && offer.attachments.length > 0 && (
-                  <div className="pt-3 border-t border-white/10 space-y-2">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-300">
-                      <Paperclip className="w-3.5 h-3.5" />
-                      <span>Tài Liệu Đính Kèm Của Bảng Giá ({offer.attachments.length}):</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                      {offer.attachments.map((att) => (
-                        <a
-                          key={att.id}
-                          href={att.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          download={att.file_type !== "LINK"}
-                          className="p-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 flex items-center justify-between text-xs transition-all text-white group"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            {att.file_type === "LINK" ? (
-                              <Globe className="w-4 h-4 text-emerald-400 shrink-0" />
-                            ) : (
-                              <FileDown className="w-4 h-4 text-emerald-400 shrink-0" />
-                            )}
-                            <span className="font-bold text-neutral-100 group-hover:text-emerald-300 truncate">
-                              {att.name}
-                            </span>
-                          </div>
-                          <span className="text-[10px] text-neutral-400 group-hover:underline shrink-0">
-                            {att.file_size || "Tải về"} ↗
-                          </span>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Redesigned Compact Offer Header (OFFER FIRST, SELLER SECOND) */}
+            <OfferHeader
+              offer={offer}
+              store={currentStore}
+              organization={organization}
+              sellerType={publicOffer?.seller_mini_card.actor_type}
+              sellerDisplayName={publicOffer?.seller_mini_card.seller_display_name}
+              sellerAvatarUrl={publicOffer?.seller_mini_card.logo_url}
+              isVerified={publicOffer?.seller_mini_card.is_verified}
+              publicLocation={publicOffer?.seller_mini_card.location_summary}
+              itemCount={menuItems.length}
+              customization={currentStore.customization}
+            />
 
             {/* Category Filter Pills (if multiple categories) */}
             {menuCategories.length > 2 && (
@@ -699,73 +595,22 @@ function DirectOfferContent() {
           </div>
         ) : (
           /* ========================================================================= */
-          <div className="space-y-4">
-            {/* Unified Store Branding & Seller Trust Header Bar */}
-            <div className="p-4 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200/90 dark:border-neutral-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              {/* Left: Identity, Verified Badge, Rating, Location */}
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="relative shrink-0">
-                  {publicOffer?.seller_mini_card.logo_url || store.logo_url ? (
-                    <img
-                      src={publicOffer?.seller_mini_card.logo_url || store.logo_url}
-                      alt={publicOffer?.seller_mini_card.seller_display_name || store.store_name}
-                      className="w-10 h-10 rounded-xl object-cover border border-neutral-100 dark:border-neutral-800"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center font-bold text-xs">
-                      <Building className="w-5 h-5" />
-                    </div>
-                  )}
-                  {publicOffer?.seller_mini_card.is_verified && (
-                    <div
-                      className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs"
-                      title={publicOffer.seller_mini_card.badge_text}
-                    >
-                      <ShieldCheck className="w-2.5 h-2.5 stroke-[3]" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="min-w-0 space-y-0.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-bold text-sm text-neutral-900 dark:text-neutral-100 truncate">
-                      {publicOffer?.seller_mini_card.seller_display_name || store.store_name}
-                    </h4>
-                    <span className="inline-flex items-center gap-0.5 px-2 py-0.2 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800">
-                      ✓ {publicOffer?.seller_mini_card.badge_text || "Doanh nghiệp Xác thực"}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-[11px] text-neutral-500 dark:text-neutral-400 flex-wrap">
-                    <span className="flex items-center gap-0.5 font-bold text-amber-500">
-                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                      {(publicOffer?.seller_mini_card.rating_average || 4.9).toFixed(1)}
-                    </span>
-                    <span>•</span>
-                    <span>{publicOffer?.seller_mini_card.transaction_count || 326} giao dịch</span>
-                    <span>•</span>
-                    <span>{publicOffer?.seller_mini_card.location_summary || "Hải Phòng"}</span>
-                    {store.phone && (
-                      <>
-                        <span>•</span>
-                        <a href={`tel:${store.phone}`} className="hover:text-blue-600 transition-colors">
-                          Hotline: <strong>{store.phone}</strong>
-                        </a>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: CTA View Store */}
-              <Link
-                href={`/${storeSlug}`}
-                className="px-3.5 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 transition-all active:scale-95 self-start sm:self-center cursor-pointer"
-              >
-                <span>Xem Cửa Hàng</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
+          /* MODE B: SINGLE PRODUCT / SERVICE / COMBO OFFER                            */
+          /* ========================================================================= */
+          <div className="space-y-6">
+            {/* Redesigned Compact Offer Header (OFFER FIRST, SELLER SECOND) */}
+            <OfferHeader
+              offer={offer}
+              store={currentStore}
+              organization={organization}
+              sellerType={publicOffer?.seller_mini_card.actor_type}
+              sellerDisplayName={publicOffer?.seller_mini_card.seller_display_name}
+              sellerAvatarUrl={publicOffer?.seller_mini_card.logo_url}
+              isVerified={publicOffer?.seller_mini_card.is_verified}
+              publicLocation={publicOffer?.seller_mini_card.location_summary}
+              itemCount={offer.items?.length || (offer.offer_type === "PRODUCT" ? 1 : 0)}
+              customization={currentStore.customization}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white dark:bg-neutral-900 rounded-3xl p-6 md:p-8 border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
             {/* Image & Gallery */}
@@ -981,56 +826,19 @@ function DirectOfferContent() {
         </div>
       )}
 
-        {/* Store Policy Quick Badges */}
-        <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/90 dark:border-neutral-800 flex flex-wrap items-center justify-around gap-2 text-xs shadow-2xs">
-          <button
-            type="button"
-            onClick={() => {
-              setPolicyInitialTab("shipping");
-              setShowPoliciesModal(true);
-            }}
-            className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 font-bold transition-colors cursor-pointer"
-          >
-            <Truck className="w-4 h-4 text-blue-600" />
-            <span>Vận chuyển toàn quốc</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setPolicyInitialTab("returns");
-              setShowPoliciesModal(true);
-            }}
-            className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300 hover:text-emerald-600 font-bold transition-colors cursor-pointer"
-          >
-            <RotateCcw className="w-4 h-4 text-emerald-600" />
-            <span>Đổi trả 7 ngày</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setPolicyInitialTab("warranty");
-              setShowPoliciesModal(true);
-            }}
-            className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300 hover:text-purple-600 font-bold transition-colors cursor-pointer"
-          >
-            <ShieldCheck className="w-4 h-4 text-purple-600" />
-            <span>Bảo hành chính hãng</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setPolicyInitialTab("payment");
-              setShowPoliciesModal(true);
-            }}
-            className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300 hover:text-amber-600 font-bold transition-colors cursor-pointer"
-          >
-            <CreditCard className="w-4 h-4 text-amber-600" />
-            <span>VietQR & COD</span>
-          </button>
-        </div>
+        {/* Real Store & Offer Policy Summary (No Fake Claims!) */}
+        <OfferPolicySummary
+          paymentSettings={currentStore.advanced_payment_settings || PaymentSettingsService.getStorePaymentSettings(currentStore)}
+          fulfillmentSettings={currentStore.fulfillment_settings || FulfillmentService.getStoreFulfillmentSettings(currentStore)}
+          policies={publicOffer?.policies}
+          onOpenPolicyModal={(tab) => {
+            setPolicyInitialTab(tab);
+            setShowPoliciesModal(true);
+          }}
+        />
 
-        {/* Seller Trust Summary Block */}
-        {publicOffer?.trust_summary && (
+        {/* Real Seller Trust Summary Block (Only Real Database Data) */}
+        {publicOffer && (
           <SellerTrustSummary
             sellerDisplayName={publicOffer.seller_mini_card.seller_display_name}
             sellerSlug={publicOffer.seller_mini_card.seller_slug}
@@ -1038,6 +846,9 @@ function DirectOfferContent() {
             completionRate={publicOffer.trust_summary.completion_rate}
             onTimeRate={publicOffer.trust_summary.on_time_delivery_rate}
             completedTransactions={publicOffer.trust_summary.completed_transactions}
+            ratingAverage={publicOffer.seller_mini_card.rating_average}
+            ratingCount={publicOffer.seller_mini_card.rating_count}
+            isVerified={publicOffer.seller_mini_card.is_verified}
             memberSince={publicOffer.trust_summary.member_since}
           />
         )}

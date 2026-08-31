@@ -15,21 +15,31 @@ export interface SellerMiniCardDTO {
   seller_display_name: string;
   logo_url?: string;
   is_verified: boolean;
-  badge_text: string;
-  rating_average: number;
-  rating_count: number;
+  badge_text?: string;
+  rating_average?: number | null;
+  rating_count?: number;
   transaction_count: number;
-  location_summary: string;
-  trust_score: number;
+  location_summary?: string;
+  trust_score?: number | null;
   has_store: boolean;
   store_slug?: string;
-  seller_slug: string;
+  seller_slug?: string;
+}
+
+export interface PublicTrustSummaryDTO {
+  trust_score?: number | null;
+  completion_rate?: number | null;
+  on_time_delivery_rate?: number | null;
+  completed_transactions: number;
+  member_since?: string;
+  is_phone_verified?: boolean;
+  is_verified_business?: boolean;
 }
 
 export interface PublicOfferDTO {
   id: string;
-  organization_id: string;
-  store_id: string;
+  organization_id?: string;
+  store_id?: string;
   name: string;
   slug: string;
   short_description?: string;
@@ -47,13 +57,7 @@ export interface PublicOfferDTO {
   status: import("@/types").OfferStatus;
   visibility: import("@/types").OfferVisibility;
   seller_mini_card: SellerMiniCardDTO;
-  trust_summary: {
-    trust_score: number;
-    completion_rate: number;
-    on_time_delivery_rate: number;
-    completed_transactions: number;
-    member_since: string;
-  };
+  trust_summary: PublicTrustSummaryDTO;
   policies: StorePolicySettings;
   related_products: Array<{
     id: string;

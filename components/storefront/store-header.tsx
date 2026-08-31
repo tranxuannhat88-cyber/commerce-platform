@@ -78,30 +78,38 @@ export function StoreHeader({ storefront }: StoreHeaderProps) {
                   <h1 className="text-lg sm:text-2xl font-black tracking-tight text-neutral-900 dark:text-neutral-100">
                     {storefront.store_name}
                   </h1>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
-                    ✓ Verified Business
-                  </span>
+                  {storefront.seller_reputation.is_verified_business && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
+                      ✓ Đã xác minh
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-neutral-600 dark:text-neutral-400">
-                  <span className="flex items-center gap-1 font-bold text-amber-500">
-                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                    {storefront.seller_reputation.rating_average.toFixed(1)}
-                  </span>
-                  <span>•</span>
-                  <span className="font-bold text-blue-600">
-                    {storefront.seller_reputation.trust_score}/100 Uy tín
-                  </span>
-                  <span>•</span>
-                  <span>{storefront.seller_reputation.completed_transactions} giao dịch</span>
-                  {storefront.region && (
+                  {storefront.seller_reputation.rating_average !== null && storefront.seller_reputation.rating_average !== undefined && (
                     <>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-neutral-400" />
-                        {storefront.region}
+                      <span className="flex items-center gap-1 font-bold text-amber-500">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        {storefront.seller_reputation.rating_average.toFixed(1)}
                       </span>
+                      <span>•</span>
                     </>
+                  )}
+
+                  {storefront.seller_reputation.completed_transactions > 0 && (
+                    <>
+                      <span className="font-semibold text-neutral-800 dark:text-neutral-200">
+                        {storefront.seller_reputation.completed_transactions} giao dịch
+                      </span>
+                      <span>•</span>
+                    </>
+                  )}
+
+                  {storefront.region && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-neutral-400" />
+                      {storefront.region}
+                    </span>
                   )}
                 </div>
               </div>

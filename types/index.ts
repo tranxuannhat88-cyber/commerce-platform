@@ -42,6 +42,7 @@ export interface Organization {
   phone?: string;
   email?: string;
   address?: string;
+  verification_status?: 'UNVERIFIED' | 'VERIFIED' | 'SUSPENDED';
   settings?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -70,6 +71,8 @@ export interface Store {
   phone?: string;
   email?: string;
   address?: string;
+  website_url?: string;
+  verification_status?: 'UNVERIFIED' | 'VERIFIED' | 'SUSPENDED';
   social_links?: Record<string, string>;
   business_hours?: Record<string, string>;
   // Legacy / Quick settings
@@ -93,6 +96,7 @@ export interface Store {
   // Advanced Normalized Settings
   advanced_payment_settings?: StorePaymentSettings;
   advanced_fulfillment_settings?: StoreFulfillmentSettings;
+  fulfillment_settings?: StoreFulfillmentSettings;
   product_visibility_settings?: {
     show_out_of_stock_products: boolean;
     show_low_stock_badge?: boolean;
@@ -254,18 +258,18 @@ export interface StorePolicySettings {
 
 export interface SellerReputationMetrics {
   actor_id: string;
-  rating_average: number;
-  rating_count: number;
-  trust_score: number;
+  rating_average?: number | null;
+  rating_count?: number;
+  trust_score?: number | null;
   completed_transactions: number;
-  completion_rate: number;
-  on_time_delivery_rate: number;
+  completion_rate?: number | null;
+  on_time_delivery_rate?: number | null;
   response_rate?: number;
   dispute_rate?: number;
-  verified_transaction_count: number;
-  platform_member_since: string;
-  is_verified_business: boolean;
-  is_phone_verified: boolean;
+  verified_transaction_count?: number;
+  platform_member_since?: string;
+  is_verified_business?: boolean;
+  is_phone_verified?: boolean;
 }
 
 export interface SellerPublicProfileDTO {
@@ -461,6 +465,7 @@ export interface Offer {
   cost_price?: number;
   status: OfferStatus;
   visibility?: OfferVisibility;
+  expires_at?: string;
   product_status?: ProductStatus;
   availability_status?: AvailabilityStatus;
   low_stock_threshold?: number;
@@ -671,6 +676,7 @@ export interface Order {
   };
   has_physical_items: boolean;
   order_status: OrderStatus;
+  payment_status?: PaymentStatus;
   subtotal: number;
   discount_amount: number;
   shipping_fee: number;
