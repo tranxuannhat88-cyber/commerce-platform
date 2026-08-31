@@ -32,7 +32,8 @@ export class OfferPublicService {
     if (!offer) return null;
 
     // 1. Resolve Seller Actor Type & Identity
-    const accountName = (personalActor?.display_name || user?.full_name || "").trim();
+    const rawAccount = (user?.full_name || personalActor?.display_name || "").replace(/\s*\(Cá nhân\)\s*/gi, "").trim();
+    const accountName = rawAccount.toLowerCase() === "cá nhân" ? "" : rawAccount;
     const orgName = (organization?.name && organization.name !== "Chưa có tổ chức" ? organization.name : "").trim();
     const storeName = (store.store_name && store.store_name !== "auto" && store.store_name !== "Cửa Hàng Trực Tuyến" ? store.store_name : "").trim();
 
@@ -42,14 +43,14 @@ export class OfferPublicService {
 
     let sellerDisplayName = "";
     if (isOrg) {
-      if (orgName && storeName) {
-        sellerDisplayName = orgName.toLowerCase() === storeName.toLowerCase() ? orgName : `${orgName} / ${storeName}`;
+      if (orgName && storeName && orgName.toLowerCase() !== storeName.toLowerCase()) {
+        sellerDisplayName = `${orgName} / ${storeName}`;
       } else {
         sellerDisplayName = orgName || storeName || "Tổ chức bán hàng";
       }
     } else {
-      if (accountName && storeName) {
-        sellerDisplayName = accountName.toLowerCase() === storeName.toLowerCase() ? accountName : `${accountName} / ${storeName}`;
+      if (accountName && storeName && accountName.toLowerCase() !== storeName.toLowerCase()) {
+        sellerDisplayName = `${accountName} / ${storeName}`;
       } else {
         sellerDisplayName = accountName || storeName || "Nhà bán hàng cá nhân";
       }
@@ -73,7 +74,6 @@ export class OfferPublicService {
         (od.order_status === "COMPLETED" || od.payment?.payment_status === "PAID")
     );
     const completedCount = completedOrders.length;
-    const trustScore = completedCount > 0 ? Math.min(100, 70 + completedCount * 10 + (isVerified ? 10 : 0)) : null;
 
     // Member since date
     const creationDate = store.created_at || organization?.created_at;
@@ -97,16 +97,16 @@ export class OfferPublicService {
       rating_count: 0,
       transaction_count: completedCount,
       location_summary: locationSummary,
-      trust_score: trustScore,
+      trust_score: null, // Zero mock / fabricated scores
       has_store: hasStore,
       store_slug: store.slug || "auto",
       seller_slug: isOrg && organization?.slug ? organization.slug : store.slug || "auto",
     };
 
     const trustSummary: PublicTrustSummaryDTO = {
-      trust_score: trustScore,
-      completion_rate: completedCount > 0 ? 100 : null,
-      on_time_delivery_rate: completedCount > 0 ? 100 : null,
+      trust_score: null,
+      completion_rate: null,
+      on_time_delivery_rate: null,
       completed_transactions: completedCount,
       member_since: memberSince,
       is_phone_verified: Boolean(store.phone),

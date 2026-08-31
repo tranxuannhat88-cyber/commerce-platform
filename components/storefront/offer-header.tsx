@@ -75,7 +75,8 @@ export function OfferHeader({
   const isDarkTech = templateCode === "PREMIUM_DARK_TECH";
 
   // 2. Resolve Seller Identity (Account Name / Org Name / Store Name)
-  const accountName = (personalActor?.display_name || user?.full_name || "").trim();
+  const rawAccount = (user?.full_name || personalActor?.display_name || "").replace(/\s*\(Cá nhân\)\s*/gi, "").trim();
+  const accountName = rawAccount.toLowerCase() === "cá nhân" ? "" : rawAccount;
   const orgName = (organization?.name && organization.name !== "Chưa có tổ chức" ? organization.name : "").trim();
   const storeName = (store.store_name && store.store_name !== "auto" && store.store_name !== "Cửa Hàng Trực Tuyến" ? store.store_name : "").trim();
 
@@ -85,16 +86,16 @@ export function OfferHeader({
   // - For Personal: AccountName / StoreName (or 1 name if identical or only 1 exists)
   // - For Org: OrgName / StoreName (or 1 name if identical or only 1 exists)
   let resolvedName = sellerDisplayName || "";
-  if (!resolvedName) {
+  if (!resolvedName || resolvedName.toLowerCase() === "cá nhân (cá nhân)" || resolvedName.toLowerCase() === "cá nhân (cá nhân) / cá nhân" || resolvedName.toLowerCase() === "cá nhân") {
     if (isOrg) {
-      if (orgName && storeName) {
-        resolvedName = orgName.toLowerCase() === storeName.toLowerCase() ? orgName : `${orgName} / ${storeName}`;
+      if (orgName && storeName && orgName.toLowerCase() !== storeName.toLowerCase()) {
+        resolvedName = `${orgName} / ${storeName}`;
       } else {
         resolvedName = orgName || storeName || "Tổ chức bán hàng";
       }
     } else {
-      if (accountName && storeName) {
-        resolvedName = accountName.toLowerCase() === storeName.toLowerCase() ? accountName : `${accountName} / ${storeName}`;
+      if (accountName && storeName && accountName.toLowerCase() !== storeName.toLowerCase()) {
+        resolvedName = `${accountName} / ${storeName}`;
       } else {
         resolvedName = accountName || storeName || "Nhà bán hàng cá nhân";
       }

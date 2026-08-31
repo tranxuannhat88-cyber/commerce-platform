@@ -30,7 +30,7 @@ import {
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND, formatDateTime, isValidVietnamesePhone, getPhoneValidationError, cleanPhoneNumber } from "@/lib/utils";
 import { GuestClaimCard } from "@/components/auth/guest-claim-card";
-import { Order, OrderItem } from "@/types";
+import { Order, OrderItem, Store, ActorPaymentAccount } from "@/types";
 import confetti from "canvas-confetti";
 
 export default function OrderStatusPage() {
@@ -62,7 +62,10 @@ export default function OrderStatusPage() {
   const [otpCountdown, setOtpCountdown] = useState(60);
   const [canResendOtp, setCanResendOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [serverOrder, setServerOrder] = useState<Order | null>(null);
+  const [serverStore, setServerStore] = useState<Store | null>(null);
+  const [serverPaymentAccounts, setServerPaymentAccounts] = useState<ActorPaymentAccount[]>([]);
 
   const localOrder = orders.find((o) => o.order_number === orderNumber || o.id === orderNumber);
   const order = localOrder || serverOrder;
@@ -82,6 +85,18 @@ export default function OrderStatusPage() {
         .catch(() => {});
     }
   }, [localOrder, orderNumber]);
+
+  useEffect(() => {
+    if (storeSlug) {
+      fetch(`/api/sync/store?slug=${encodeURIComponent(storeSlug)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.store) setServerStore(data.store);
+          if (data?.paymentAccounts) setServerPaymentAccounts(data.paymentAccounts);
+        })
+        .catch(() => {});
+    }
+  }, [storeSlug]);
 
   useEffect(() => {
     if (order) {
@@ -119,6 +134,51 @@ export default function OrderStatusPage() {
 
   const depositPayable = order?.payment_snapshot?.deposit_amount || (order ? order.total_amount * 0.3 : 0);
   const remainingBalance = order?.payment_snapshot?.remaining_amount || (order ? order.total_amount - depositPayable : 0);
+
+  // Extract accurate bank account from snapshot, payment QR url, or server store
+  const qrUrl = order?.payment?.qr_code_url || "";
+  let qrBankBin = "";
+  let qrAccountNo = "";
+  let qrAccountName = "";
+
+  if (qrUrl.includes("vietqr.io/image/")) {
+    const match = qrUrl.match(/vietqr\.io\/image\/(\d+)-([a-zA-Z0-9]+)-/);
+    if (match) {
+      qrBankBin = match[1];
+      qrAccountNo = match[2];
+    }
+    const nameMatch = qrUrl.match(/accountName=([^&]+)/);
+    if (nameMatch) {
+      qrAccountName = decodeURIComponent(nameMatch[1]);
+    }
+  }
+
+  const defaultServerAcc = serverPaymentAccounts.find((a) => a.is_default) || serverPaymentAccounts[0];
+  const targetStore = serverStore || store;
+
+  const bankAccount =
+    order?.payment_snapshot?.bank_account_snapshot?.account_number ||
+    qrAccountNo ||
+    defaultServerAcc?.account_number ||
+    targetStore.payment_settings?.bank_account_no ||
+    "";
+
+  const bankName =
+    order?.payment_snapshot?.bank_account_snapshot?.bank_short_name ||
+    order?.payment_snapshot?.bank_account_snapshot?.bank_name ||
+    (qrBankBin === "970436" ? "Vietcombank" : qrBankBin === "970422" ? "MBBank" : "") ||
+    defaultServerAcc?.bank_short_name ||
+    defaultServerAcc?.bank_name ||
+    targetStore.payment_settings?.bank_name ||
+    "Ngân hàng";
+
+  const accountHolder =
+    order?.payment_snapshot?.bank_account_snapshot?.account_name ||
+    qrAccountName ||
+    defaultServerAcc?.account_name ||
+    targetStore.payment_settings?.bank_account_name ||
+    targetStore.store_name ||
+    "";
 
   // Trigger confetti when paid
   useEffect(() => {
@@ -166,27 +226,6 @@ export default function OrderStatusPage() {
     setPhoneError(getPhoneValidationError(cleaned));
   };
 
-  // Step 1: Submit Form -> Validate Phone & Send OTP
-  const handleRequestOTP = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const err = getPhoneValidationError(regPhone);
-    if (err) {
-      setPhoneError(err);
-      return;
-    }
-    setPhoneError(null);
-
-    // Mock send OTP
-    const mockOTP = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOTP(mockOTP);
-    setOtpCountdown(60);
-    setCanResendOtp(false);
-    setEnteredOTP("");
-    setOtpError(null);
-    setModalStep("OTP");
-  };
-
   // Resend OTP
   const handleResendOTP = () => {
     const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -195,6 +234,29 @@ export default function OrderStatusPage() {
     setOtpError(null);
     setOtpCountdown(60);
     setCanResendOtp(false);
+  };
+
+  // Step 1: Request OTP
+  const handleRequestOTP = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleaned = cleanPhoneNumber(regPhone);
+    const err = getPhoneValidationError(cleaned);
+    if (err) {
+      setPhoneError(err);
+      return;
+    }
+    setPhoneError(null);
+    setIsSendingOtp(true);
+
+    const mockCode = "123456";
+    setGeneratedOTP(mockCode);
+
+    setTimeout(() => {
+      setIsSendingOtp(false);
+      setModalStep("OTP");
+      setOtpCountdown(60);
+      setCanResendOtp(false);
+    }, 600);
   };
 
   // Step 2: Verify OTP
@@ -218,10 +280,6 @@ export default function OrderStatusPage() {
       });
     }, 800);
   };
-
-  const bankAccount = order.payment_snapshot?.bank_account_snapshot?.account_number || store.payment_settings?.bank_account_no || "098812345688";
-  const bankName = order.payment_snapshot?.bank_account_snapshot?.bank_short_name || order.payment_snapshot?.bank_account_snapshot?.bank_name || store.payment_settings?.bank_name || "MBBank";
-  const accountHolder = order.payment_snapshot?.bank_account_snapshot?.account_name || store.payment_settings?.bank_account_name || "CONG TY TNHH KY THUAT 2K";
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 font-sans pb-24 text-neutral-900 dark:text-neutral-100">

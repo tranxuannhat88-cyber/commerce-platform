@@ -17,15 +17,16 @@ export async function GET(req: NextRequest) {
     }
 
     const store = ServerDbManager.getStoreBySlug(offer.store_slug || storeSlug || offer.store_id);
-    const paymentAccounts = ServerDbManager.getPaymentAccounts(store?.owner_actor_id);
+    const paymentAccounts = ServerDbManager.getPaymentAccounts(store?.owner_actor_id || store?.id);
+    const sellerProfile = ServerDbManager.getSellerProfile(store?.id || store?.owner_actor_id || offer.store_id);
 
     // Resolve active bank info
     const defaultAcc = paymentAccounts.find((a) => a.is_default) || paymentAccounts[0];
     const bankInfo = {
       is_configured: Boolean(defaultAcc?.account_number || store?.payment_settings?.bank_account_no),
       bank_name: defaultAcc?.bank_name || store?.payment_settings?.bank_name || "",
-      bank_short_name: defaultAcc?.bank_short_name || store?.payment_settings?.bank_name || "",
-      bank_bin: defaultAcc?.bank_bin || "970422",
+      bank_short_name: defaultAcc?.bank_short_name || defaultAcc?.bank_name || store?.payment_settings?.bank_name || "",
+      bank_bin: defaultAcc?.bank_bin || store?.payment_settings?.bank_bin || "970422",
       account_number: defaultAcc?.account_number || store?.payment_settings?.bank_account_no || "",
       account_name: defaultAcc?.account_name || store?.payment_settings?.bank_account_name || "",
       qr_image_url: defaultAcc?.qr_image_url || "",
@@ -40,6 +41,7 @@ export async function GET(req: NextRequest) {
         slug: offer.store_slug || storeSlug || "auto",
         status: "ACTIVE",
       },
+      sellerProfile,
       paymentAccounts,
       bankInfo,
     });

@@ -2,6 +2,17 @@ import fs from "fs";
 import path from "path";
 import { Offer, Store, Product, ActorPaymentAccount, Order, Organization, TemplateLicense } from "@/types";
 
+export interface ServerSellerProfile {
+  actor_id?: string;
+  actor_type?: "PERSONAL" | "ORGANIZATION";
+  display_name?: string;
+  full_name?: string;
+  org_name?: string;
+  avatar_url?: string;
+  phone?: string;
+  email?: string;
+}
+
 export interface ServerDatabase {
   stores: Store[];
   offers: Offer[];
@@ -10,6 +21,7 @@ export interface ServerDatabase {
   orders: Order[];
   organizations: Organization[];
   template_licenses: TemplateLicense[];
+  sellerProfiles?: Record<string, ServerSellerProfile>;
   last_updated_at: string;
 }
 
@@ -38,6 +50,7 @@ function getInitialDb(): ServerDatabase {
     orders: [],
     organizations: [],
     template_licenses: [],
+    sellerProfiles: {},
     last_updated_at: new Date().toISOString(),
   };
 }
@@ -65,6 +78,7 @@ export class ServerDbManager {
           orders: parsed.orders || [],
           organizations: parsed.organizations || [],
           template_licenses: parsed.template_licenses || [],
+          sellerProfiles: parsed.sellerProfiles || {},
           last_updated_at: parsed.last_updated_at || new Date().toISOString(),
         };
         return memoryDb;
@@ -96,7 +110,7 @@ export class ServerDbManager {
   }
 
   // =========================================================================
-  // STORE ACTIONS
+  // STORE & SELLER PROFILE ACTIONS
   // =========================================================================
   public static getStoreBySlug(slug: string): Store | null {
     const db = this.getDb();
@@ -104,7 +118,25 @@ export class ServerDbManager {
     return db.stores.find((s) => s.slug?.toLowerCase() === cleanSlug || s.id === slug) || db.stores[0] || null;
   }
 
-  public static upsertStore(store: Store): Store {
+  public static getSellerProfile(storeIdOrActorId?: string): ServerSellerProfile | undefined {
+    const db = this.getDb();
+    if (!storeIdOrActorId) {
+      const firstKey = Object.keys(db.sellerProfiles || {})[0];
+      return firstKey ? db.sellerProfiles?.[firstKey] : undefined;
+    }
+    if (db.sellerProfiles?.[storeIdOrActorId]) {
+      return db.sellerProfiles[storeIdOrActorId];
+    }
+    // Search by actor_id
+    const found = Object.values(db.sellerProfiles || {}).find(
+      (p) => p.actor_id === storeIdOrActorId
+    );
+    if (found) return found;
+    const firstKey = Object.keys(db.sellerProfiles || {})[0];
+    return firstKey ? db.sellerProfiles?.[firstKey] : undefined;
+  }
+
+  public static upsertStore(store: Store, sellerProfile?: ServerSellerProfile): Store {
     const db = this.getDb();
     const existingIndex = db.stores.findIndex((s) => s.id === store.id || s.slug === store.slug);
 
@@ -112,6 +144,15 @@ export class ServerDbManager {
       db.stores[existingIndex] = { ...db.stores[existingIndex], ...store, updated_at: new Date().toISOString() };
     } else {
       db.stores.push({ ...store, created_at: store.created_at || new Date().toISOString() });
+    }
+
+    if (!db.sellerProfiles) {
+      db.sellerProfiles = {};
+    }
+    if (sellerProfile) {
+      if (store.id) db.sellerProfiles[store.id] = sellerProfile;
+      if (store.owner_actor_id) db.sellerProfiles[store.owner_actor_id] = sellerProfile;
+      if (sellerProfile.actor_id) db.sellerProfiles[sellerProfile.actor_id] = sellerProfile;
     }
 
     this.saveDb(db);
@@ -183,12 +224,14 @@ export class ServerDbManager {
   public static getPaymentAccounts(actorId?: string): ActorPaymentAccount[] {
     const db = this.getDb();
     if (!actorId) return db.paymentAccounts;
-    return db.paymentAccounts.filter((a) => a.actor_id === actorId || a.is_default);
+    const matched = db.paymentAccounts.filter((a) => a.actor_id === actorId || a.is_default);
+    if (matched.length > 0) return matched;
+    return db.paymentAccounts;
   }
 
   public static upsertPaymentAccount(account: ActorPaymentAccount): ActorPaymentAccount {
     const db = this.getDb();
-    const existingIndex = db.paymentAccounts.findIndex((a) => a.id === account.id);
+    const existingIndex = db.paymentAccounts.findIndex((a) => a.id === account.id || (a.account_number === account.account_number && a.bank_bin === account.bank_bin));
 
     if (account.is_default) {
       // Set all other accounts of this actor to non-default
@@ -205,6 +248,19 @@ export class ServerDbManager {
 
     this.saveDb(db);
     return account;
+  }
+
+  public static upsertPaymentAccounts(accounts: ActorPaymentAccount[]): void {
+    const db = this.getDb();
+    accounts.forEach((acc) => {
+      const idx = db.paymentAccounts.findIndex((a) => a.id === acc.id || (a.account_number === acc.account_number && a.bank_bin === acc.bank_bin));
+      if (idx >= 0) {
+        db.paymentAccounts[idx] = { ...db.paymentAccounts[idx], ...acc, updated_at: new Date().toISOString() };
+      } else {
+        db.paymentAccounts.push({ ...acc, created_at: acc.created_at || new Date().toISOString() });
+      }
+    });
+    this.saveDb(db);
   }
 
   public static deletePaymentAccount(accountId: string): boolean {

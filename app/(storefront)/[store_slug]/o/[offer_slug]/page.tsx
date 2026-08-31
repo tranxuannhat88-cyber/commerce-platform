@@ -54,7 +54,10 @@ import {
   Store,
   ActorPaymentAccount,
   Product,
+  Organization,
+  PersonalActor,
 } from "@/types";
+import { UserIdentity } from "@/lib/auth/types";
 import { ShippingCalculationService } from "@/lib/shipping/engine";
 import { PaymentSettingsService } from "@/lib/services/payment-settings-service";
 import { FulfillmentService } from "@/lib/services/fulfillment-service";
@@ -78,6 +81,7 @@ interface ResolvedItem {
   category?: string;
   availability_status?: string;
   available_quantity?: number;
+  is_available?: boolean;
   inventory_tracking?: boolean;
   variants?: OfferVariant[];
   attachments?: import("@/types").OfferAttachment[];
@@ -87,27 +91,38 @@ function DirectOfferContent() {
   const params = useParams();
   const router = useRouter();
   const storeSlug = (params?.store_slug as string) || "auto";
-  const offerSlug = params?.offer_slug as string;
+  const offerSlug = (params?.offer_slug as string) || "";
 
   const {
     offers,
     store,
+    products,
     organization,
     personalActor,
     currentUser,
-    products,
-    orders,
-    createOrder,
+    paymentAccounts,
     shippingMethods,
     shippingZones,
-    paymentAccounts,
+    createOrder,
+    orders,
   } = useCommerceStore();
+
   const { addToCart } = useCart();
 
   // Server-side fallback state for public visitors on mobile / Zalo
   const [serverData, setServerData] = useState<{
     offer: Offer;
     store: Store;
+    sellerProfile?: {
+      actor_id?: string;
+      actor_type?: "PERSONAL" | "ORGANIZATION";
+      display_name?: string;
+      full_name?: string;
+      org_name?: string;
+      avatar_url?: string;
+      phone?: string;
+      email?: string;
+    };
     paymentAccounts: ActorPaymentAccount[];
     bankInfo?: {
       is_configured: boolean;
@@ -161,14 +176,31 @@ function DirectOfferContent() {
   const offer = effectiveOffer;
   const currentStore = effectiveStore;
 
+  const sellerInfo = serverData?.sellerProfile;
+  const sellerFullName = sellerInfo?.full_name || sellerInfo?.display_name || (currentUser?.full_name && currentUser.full_name !== "Guest" ? currentUser.full_name : "");
+  const sellerOrgName = sellerInfo?.org_name || (organization.name && organization.name !== "Chưa có tổ chức" ? organization.name : "");
+
+  const effectiveOrganization: Organization = sellerOrgName
+    ? { ...organization, name: sellerOrgName }
+    : organization;
+
+  const effectiveUser: UserIdentity | null = sellerFullName
+    ? ({ ...(currentUser || {}), full_name: sellerFullName, id: sellerInfo?.actor_id || currentUser?.id || "usr_seller" } as UserIdentity)
+    : currentUser;
+
+  const effectivePersonalActor: PersonalActor = {
+    ...personalActor,
+    display_name: sellerFullName || personalActor.display_name,
+  };
+
   const publicOffer = offer
     ? OfferPublicService.getPublicOffer({
         offerSlug,
         offers: [offer, ...offers],
         store: currentStore,
-        organization,
-        personalActor,
-        user: currentUser,
+        organization: effectiveOrganization,
+        personalActor: effectivePersonalActor,
+        user: effectiveUser,
         products,
         orders,
       })

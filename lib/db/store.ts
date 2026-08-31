@@ -446,12 +446,27 @@ export function useCommerceStore() {
     const initialOffers = getStored<Offer[]>(STORAGE_KEYS.OFFERS, INITIAL_OFFERS);
     const initialStore = getStored<Store>(STORAGE_KEYS.STORE, INITIAL_STORE);
     const initialAccounts = getStored<ActorPaymentAccount[]>(STORAGE_KEYS.PAYMENT_ACCOUNTS, INITIAL_PAYMENT_ACCOUNTS);
+    const initialUser = getStored<UserIdentity | null>(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY);
+    const initialPersonal = getStored<PersonalActor>(STORAGE_KEYS.PERSONAL_ACTOR, INITIAL_PERSONAL_ACTOR);
+    const initialOrg = getStored<Organization>(STORAGE_KEYS.ORGANIZATION, INITIAL_ORGANIZATION);
+
+    const isOrgInit = Boolean(initialOrg?.name && initialOrg.name !== "Chưa có tổ chức");
+    const initSellerProfile = {
+      actor_id: isOrgInit ? initialOrg.id : (initialUser?.id || initialPersonal?.id || "personal"),
+      actor_type: isOrgInit ? ("ORGANIZATION" as const) : ("PERSONAL" as const),
+      display_name: isOrgInit ? initialOrg.name : (initialUser?.full_name || initialPersonal?.display_name || initialStore?.store_name),
+      full_name: initialUser?.full_name || initialPersonal?.display_name,
+      org_name: isOrgInit ? initialOrg.name : undefined,
+      avatar_url: initialStore?.logo_url || (isOrgInit ? initialOrg.logo_url : (initialUser?.avatar_url || initialPersonal?.avatar_url)),
+      phone: initialStore?.phone || initialUser?.primary_phone,
+      email: initialStore?.email || initialUser?.primary_email,
+    };
 
     if (initialOffers && initialOffers.length > 0) {
       SyncBridgeService.syncAllOffersToServer(initialOffers);
     }
     if (initialStore) {
-      SyncBridgeService.syncStoreToServer(initialStore, initialAccounts);
+      SyncBridgeService.syncStoreToServer(initialStore, initialAccounts, initSellerProfile);
     }
 
     const checkServerOrders = () => {
@@ -713,6 +728,20 @@ export function useCommerceStore() {
     }
   };
 
+  const getActiveSellerProfile = () => {
+    const isOrg = currentContext.context_type === "ORGANIZATION" || (organization.name && organization.name !== "Chưa có tổ chức");
+    return {
+      actor_id: currentContext.actor_id,
+      actor_type: isOrg ? ("ORGANIZATION" as const) : ("PERSONAL" as const),
+      display_name: isOrg ? organization.name : (currentUser?.full_name || personalActor.display_name || store.store_name),
+      full_name: currentUser?.full_name || personalActor.display_name,
+      org_name: organization.name && organization.name !== "Chưa có tổ chức" ? organization.name : undefined,
+      avatar_url: store.logo_url || (isOrg ? organization.logo_url : (currentUser?.avatar_url || personalActor.avatar_url)),
+      phone: store.phone || currentUser?.primary_phone,
+      email: store.email || currentUser?.primary_email,
+    };
+  };
+
   const updateStore = (newStore: Partial<Store>) => {
     const current = getStored<Store>(STORAGE_KEYS.STORE, store) || store;
     const storeId = newStore.id || current.id || store.id || `store_${Date.now()}`;
@@ -727,7 +756,7 @@ export function useCommerceStore() {
     };
     setStoreState(updated);
     setStored(STORAGE_KEYS.STORE, updated);
-    SyncBridgeService.syncStoreToServer(updated, paymentAccounts);
+    SyncBridgeService.syncStoreToServer(updated, paymentAccounts, getActiveSellerProfile());
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key: STORAGE_KEYS.STORE } }));
     }
@@ -1154,9 +1183,9 @@ export function useCommerceStore() {
       };
       setStoreState(updatedStore);
       setStored(STORAGE_KEYS.STORE, updatedStore);
-      SyncBridgeService.syncStoreToServer(updatedStore, updated);
+      SyncBridgeService.syncStoreToServer(updatedStore, updated, getActiveSellerProfile());
     } else {
-      SyncBridgeService.syncStoreToServer(store, updated);
+      SyncBridgeService.syncStoreToServer(store, updated, getActiveSellerProfile());
     }
     return account;
   };
@@ -1189,9 +1218,9 @@ export function useCommerceStore() {
       };
       setStoreState(updatedStore);
       setStored(STORAGE_KEYS.STORE, updatedStore);
-      SyncBridgeService.syncStoreToServer(updatedStore, updated);
+      SyncBridgeService.syncStoreToServer(updatedStore, updated, getActiveSellerProfile());
     } else {
-      SyncBridgeService.syncStoreToServer(store, updated);
+      SyncBridgeService.syncStoreToServer(store, updated, getActiveSellerProfile());
     }
   };
 
@@ -1222,9 +1251,9 @@ export function useCommerceStore() {
       };
       setStoreState(updatedStore);
       setStored(STORAGE_KEYS.STORE, updatedStore);
-      SyncBridgeService.syncStoreToServer(updatedStore, updated);
+      SyncBridgeService.syncStoreToServer(updatedStore, updated, getActiveSellerProfile());
     } else {
-      SyncBridgeService.syncStoreToServer(store, updated);
+      SyncBridgeService.syncStoreToServer(store, updated, getActiveSellerProfile());
     }
   };
 
@@ -1258,9 +1287,9 @@ export function useCommerceStore() {
       };
       setStoreState(updatedStore);
       setStored(STORAGE_KEYS.STORE, updatedStore);
-      SyncBridgeService.syncStoreToServer(updatedStore, updated);
+      SyncBridgeService.syncStoreToServer(updatedStore, updated, getActiveSellerProfile());
     } else {
-      SyncBridgeService.syncStoreToServer(store, updated);
+      SyncBridgeService.syncStoreToServer(store, updated, getActiveSellerProfile());
     }
   };
 
@@ -1273,7 +1302,7 @@ export function useCommerceStore() {
     };
     setStoreState(updatedStore);
     setStored(STORAGE_KEYS.STORE, updatedStore);
-    SyncBridgeService.syncStoreToServer(updatedStore, paymentAccounts);
+    SyncBridgeService.syncStoreToServer(updatedStore, paymentAccounts, getActiveSellerProfile());
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key: STORAGE_KEYS.STORE } }));
     }
@@ -1290,7 +1319,7 @@ export function useCommerceStore() {
     };
     setStoreState(updatedStore);
     setStored(STORAGE_KEYS.STORE, updatedStore);
-    SyncBridgeService.syncStoreToServer(updatedStore, paymentAccounts);
+    SyncBridgeService.syncStoreToServer(updatedStore, paymentAccounts, getActiveSellerProfile());
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key: STORAGE_KEYS.STORE } }));
     }

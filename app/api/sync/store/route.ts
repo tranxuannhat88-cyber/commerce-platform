@@ -12,8 +12,9 @@ export async function GET(req: NextRequest) {
       if (!store) {
         return NextResponse.json({ success: false, error: "Store not found" }, { status: 404 });
       }
-      const paymentAccounts = ServerDbManager.getPaymentAccounts(store.owner_actor_id);
-      return NextResponse.json({ success: true, store, paymentAccounts });
+      const paymentAccounts = ServerDbManager.getPaymentAccounts(store.owner_actor_id || store.id);
+      const sellerProfile = ServerDbManager.getSellerProfile(store.id || store.owner_actor_id);
+      return NextResponse.json({ success: true, store, sellerProfile, paymentAccounts });
     }
 
     const db = ServerDbManager.getDb();
@@ -27,23 +28,22 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { store, paymentAccounts } = body;
+    const { store, paymentAccounts, sellerProfile } = body;
 
     let savedStore: Store | null = null;
     if (store) {
-      savedStore = ServerDbManager.upsertStore(store as Store);
+      savedStore = ServerDbManager.upsertStore(store as Store, sellerProfile);
     }
 
-    if (Array.isArray(paymentAccounts)) {
-      paymentAccounts.forEach((acc: ActorPaymentAccount) => {
-        ServerDbManager.upsertPaymentAccount(acc);
-      });
+    if (Array.isArray(paymentAccounts) && paymentAccounts.length > 0) {
+      ServerDbManager.upsertPaymentAccounts(paymentAccounts);
     }
 
     return NextResponse.json({
       success: true,
       store: savedStore,
-      paymentAccounts: ServerDbManager.getPaymentAccounts(store?.owner_actor_id),
+      sellerProfile: ServerDbManager.getSellerProfile(store?.id || store?.owner_actor_id),
+      paymentAccounts: ServerDbManager.getPaymentAccounts(store?.owner_actor_id || store?.id),
     });
   } catch (err: unknown) {
     console.error("POST /api/sync/store error:", err);

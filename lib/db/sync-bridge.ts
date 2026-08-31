@@ -53,12 +53,25 @@ export class SyncBridgeService {
   /**
    * Đồng bộ Cửa hàng và Danh sách Tài khoản Ngân hàng lên máy chủ
    */
-  public static async syncStoreToServer(store: Store, paymentAccounts?: ActorPaymentAccount[]): Promise<boolean> {
+  public static async syncStoreToServer(
+    store: Store,
+    paymentAccounts?: ActorPaymentAccount[],
+    sellerProfile?: {
+      actor_id?: string;
+      actor_type?: "PERSONAL" | "ORGANIZATION";
+      display_name?: string;
+      full_name?: string;
+      org_name?: string;
+      avatar_url?: string;
+      phone?: string;
+      email?: string;
+    }
+  ): Promise<boolean> {
     try {
       const res = await fetch("/api/sync/store", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ store, paymentAccounts }),
+        body: JSON.stringify({ store, paymentAccounts, sellerProfile }),
       });
       return res.ok;
     } catch (err) {
