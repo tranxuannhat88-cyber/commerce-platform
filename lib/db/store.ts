@@ -1029,6 +1029,28 @@ export function useCommerceStore() {
     const updated = [account, ...current];
     setPaymentAccountsState(updated);
     setStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, updated);
+
+    if (isFirst) {
+      const updatedStore: Store = {
+        ...store,
+        payment_settings: {
+          ...store.payment_settings,
+          bank_bin: account.bank_bin,
+          bank_name: account.bank_short_name || account.bank_name,
+          bank_account_no: account.account_number,
+          bank_account_name: account.account_name,
+          enable_bank_transfer: true,
+          enable_cod: store.payment_settings?.enable_cod ?? true,
+        },
+        advanced_payment_settings: {
+          ...(store.advanced_payment_settings || PaymentSettingsService.getStorePaymentSettings(store)),
+          default_payment_account_id: account.id,
+        },
+        updated_at: new Date().toISOString(),
+      };
+      setStoreState(updatedStore);
+      setStored(STORAGE_KEYS.STORE, updatedStore);
+    }
     return account;
   };
 
@@ -1038,12 +1060,59 @@ export function useCommerceStore() {
     );
     setPaymentAccountsState(updated);
     setStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, updated);
+
+    const updatedAccount = updated.find((a) => a.id === id);
+    if (updatedAccount && (updatedAccount.is_default || updated.length === 1)) {
+      const updatedStore: Store = {
+        ...store,
+        payment_settings: {
+          ...store.payment_settings,
+          bank_bin: updatedAccount.bank_bin,
+          bank_name: updatedAccount.bank_short_name || updatedAccount.bank_name,
+          bank_account_no: updatedAccount.account_number,
+          bank_account_name: updatedAccount.account_name,
+          enable_bank_transfer: true,
+          enable_cod: store.payment_settings?.enable_cod ?? true,
+        },
+        advanced_payment_settings: {
+          ...(store.advanced_payment_settings || PaymentSettingsService.getStorePaymentSettings(store)),
+          default_payment_account_id: updatedAccount.id,
+        },
+        updated_at: new Date().toISOString(),
+      };
+      setStoreState(updatedStore);
+      setStored(STORAGE_KEYS.STORE, updatedStore);
+    }
   };
 
   const deletePaymentAccount = (id: string) => {
     const updated = paymentAccounts.filter((a) => a.id !== id);
+    if (updated.length > 0 && !updated.some((a) => a.is_default)) {
+      updated[0].is_default = true;
+    }
     setPaymentAccountsState(updated);
     setStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, updated);
+
+    const newDefault = updated.find((a) => a.is_default);
+    if (newDefault) {
+      const updatedStore: Store = {
+        ...store,
+        payment_settings: {
+          ...store.payment_settings,
+          bank_bin: newDefault.bank_bin,
+          bank_name: newDefault.bank_short_name || newDefault.bank_name,
+          bank_account_no: newDefault.account_number,
+          bank_account_name: newDefault.account_name,
+        },
+        advanced_payment_settings: {
+          ...(store.advanced_payment_settings || PaymentSettingsService.getStorePaymentSettings(store)),
+          default_payment_account_id: newDefault.id,
+        },
+        updated_at: new Date().toISOString(),
+      };
+      setStoreState(updatedStore);
+      setStored(STORAGE_KEYS.STORE, updatedStore);
+    }
   };
 
   const setDefaultPaymentAccount = (id: string) => {
@@ -1055,12 +1124,27 @@ export function useCommerceStore() {
     setPaymentAccountsState(updated);
     setStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, updated);
 
-    // Also update default account in store payment settings
-    if (store.advanced_payment_settings) {
-      updateStorePaymentSettings({
-        ...store.advanced_payment_settings,
-        default_payment_account_id: id,
-      });
+    const selected = updated.find((a) => a.id === id);
+    if (selected) {
+      const updatedStore: Store = {
+        ...store,
+        payment_settings: {
+          ...store.payment_settings,
+          bank_bin: selected.bank_bin,
+          bank_name: selected.bank_short_name || selected.bank_name,
+          bank_account_no: selected.account_number,
+          bank_account_name: selected.account_name,
+          enable_bank_transfer: true,
+          enable_cod: store.payment_settings?.enable_cod ?? true,
+        },
+        advanced_payment_settings: {
+          ...(store.advanced_payment_settings || PaymentSettingsService.getStorePaymentSettings(store)),
+          default_payment_account_id: id,
+        },
+        updated_at: new Date().toISOString(),
+      };
+      setStoreState(updatedStore);
+      setStored(STORAGE_KEYS.STORE, updatedStore);
     }
   };
 

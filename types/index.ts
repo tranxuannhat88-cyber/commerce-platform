@@ -120,6 +120,7 @@ export interface ActorPaymentAccount {
   bank_short_name: string;
   account_number: string;
   account_name: string;
+  qr_image_url?: string;
   qr_template?: 'compact' | 'qr_only' | 'print';
   is_default: boolean;
   verification_status: 'UNVERIFIED' | 'VERIFIED' | 'SUSPENDED';

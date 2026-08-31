@@ -42,7 +42,7 @@ import {
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND, slugify, formatThousands, parseThousands, compressImageFile } from "@/lib/utils";
 import { CopyButton } from "@/components/shared/copy-button";
-import { QRModal } from "@/components/shared/qr-modal";
+import { QRModal, BankInfo } from "@/components/shared/qr-modal";
 import { ConfirmModal } from "@/components/shared/confirm-modal";
 import { AppUrlService } from "@/lib/services/url";
 import {
@@ -58,19 +58,109 @@ import {
   ShippingFeeRuleType,
   OfferPaymentOverride,
   OfferFulfillmentOverride,
+  ActorPaymentAccount,
+  Store,
 } from "@/types";
 
-const POPULAR_BANKS = [
-  { bin: "970422", name: "MBBank (Ngân Hàng Quân Đội)" },
-  { bin: "970436", name: "Vietcombank" },
-  { bin: "970407", name: "Techcombank" },
-  { bin: "970415", name: "VietinBank" },
-  { bin: "970418", name: "BIDV" },
-  { bin: "970432", name: "VPBank" },
-  { bin: "970416", name: "ACB" },
-  { bin: "970423", name: "TPBank" },
-  { bin: "970403", name: "Sacombank" },
+export const POPULAR_BANKS = [
+  { bin: "970422", name: "MBBank (Ngân Hàng TMCP Quân Đội)", shortName: "MBBank" },
+  { bin: "970436", name: "Vietcombank (Ngoại Thương VN)", shortName: "Vietcombank" },
+  { bin: "970407", name: "Techcombank (Kỹ Thương VN)", shortName: "Techcombank" },
+  { bin: "970415", name: "VietinBank (Công Thương VN)", shortName: "VietinBank" },
+  { bin: "970418", name: "BIDV (Đầu Tư & Phát Triển VN)", shortName: "BIDV" },
+  { bin: "970432", name: "VPBank (Việt Nam Thịnh Vượng)", shortName: "VPBank" },
+  { bin: "970416", name: "ACB (Á Châu)", shortName: "ACB" },
+  { bin: "970423", name: "TPBank (Tiên Phong)", shortName: "TPBank" },
+  { bin: "970403", name: "Sacombank (Sài Gòn Thương Tín)", shortName: "Sacombank" },
+  { bin: "970448", name: "OCB (Phương Đông)", shortName: "OCB" },
+  { bin: "970425", name: "ABBANK (An Bình)", shortName: "ABBANK" },
+  { bin: "970437", name: "HDBank (Phát Triển TP.HCM)", shortName: "HDBank" },
+  { bin: "970454", name: "VietCapitalBank (Bản Việt / BVBank)", shortName: "BVBank" },
+  { bin: "970428", name: "NamABank (Nam Á)", shortName: "NamABank" },
+  { bin: "970440", name: "SeABank (Đông Nam Á)", shortName: "SeABank" },
+  { bin: "970441", name: "VIB (Quốc Tế)", shortName: "VIB" },
+  { bin: "970405", name: "Agribank (Nông Nghiệp & PTNT)", shortName: "Agribank" },
+  { bin: "970443", name: "SHB (Sài Gòn - Hà Nội)", shortName: "SHB" },
+  { bin: "970431", name: "Eximbank (Xuất Nhập Khẩu)", shortName: "Eximbank" },
+  { bin: "970426", name: "MSB (Hàng Hải)", shortName: "MSB" },
+  { bin: "970430", name: "PGBank (Thịnh Vượng & Phát Triển)", shortName: "PGBank" },
+  { bin: "970427", name: "VietABank (Việt Á)", shortName: "VietABank" },
+  { bin: "970433", name: "VietBank (Việt Nam Thương Tín)", shortName: "VietBank" },
+  { bin: "970449", name: "LPBank (Lộc Phát VN)", shortName: "LPBank" },
 ];
+
+export function resolveOfferBankInfo(
+  offer: Offer | null | undefined,
+  store: Store,
+  paymentAccounts: ActorPaymentAccount[] = []
+) {
+  // 1. Check custom payment account override in offer
+  if (offer?.payment_override?.mode === "OFFER_OVERRIDE" && offer.payment_override.custom_payment_account_id) {
+    const matched = paymentAccounts.find((a) => a.id === offer.payment_override?.custom_payment_account_id);
+    if (matched && matched.account_number) {
+      return {
+        bank_bin: matched.bank_bin || "970422",
+        bank_name: matched.bank_name || matched.bank_short_name || "Ngân hàng",
+        bank_short_name: matched.bank_short_name || matched.bank_name || "Ngân hàng",
+        account_number: matched.account_number,
+        account_name: matched.account_name || "",
+        qr_image_url: matched.qr_image_url,
+        is_configured: true,
+      };
+    }
+  }
+
+  // 2. Check embedded legacy payment_settings in offer
+  if (offer?.payment_settings?.bank_account_no) {
+    return {
+      bank_bin: offer.payment_settings.bank_bin || "970422",
+      bank_name: offer.payment_settings.bank_name || "Ngân hàng",
+      bank_short_name: offer.payment_settings.bank_name?.split("(")[0]?.trim() || "Ngân hàng",
+      account_number: offer.payment_settings.bank_account_no,
+      account_name: offer.payment_settings.bank_account_name || "",
+      qr_image_url: undefined,
+      is_configured: true,
+    };
+  }
+
+  // 3. Check default payment account in actor payment accounts
+  const defaultAcc = paymentAccounts.find((a) => a.is_default) || paymentAccounts[0];
+  if (defaultAcc && defaultAcc.account_number) {
+    return {
+      bank_bin: defaultAcc.bank_bin || "970422",
+      bank_name: defaultAcc.bank_name || defaultAcc.bank_short_name || "Ngân hàng",
+      bank_short_name: defaultAcc.bank_short_name || defaultAcc.bank_name || "Ngân hàng",
+      account_number: defaultAcc.account_number,
+      account_name: defaultAcc.account_name || "",
+      qr_image_url: defaultAcc.qr_image_url,
+      is_configured: true,
+    };
+  }
+
+  // 4. Check store payment settings
+  if (store.payment_settings?.bank_account_no) {
+    return {
+      bank_bin: store.payment_settings.bank_bin || "970422",
+      bank_name: store.payment_settings.bank_name || "Ngân hàng",
+      bank_short_name: store.payment_settings.bank_name?.split("(")[0]?.trim() || "Ngân hàng",
+      account_number: store.payment_settings.bank_account_no,
+      account_name: store.payment_settings.bank_account_name || "",
+      qr_image_url: undefined,
+      is_configured: true,
+    };
+  }
+
+  // 5. Unconfigured (No fake fallback!)
+  return {
+    bank_bin: "",
+    bank_name: "",
+    bank_short_name: "",
+    account_number: "",
+    account_name: "",
+    qr_image_url: undefined,
+    is_configured: false,
+  };
+}
 
 export interface FormVariantState {
   id: string;
@@ -133,6 +223,10 @@ function OffersContent() {
     deleteProduct,
     syncProductsFromOfferItems,
     paymentAccounts,
+    addPaymentAccount,
+    updatePaymentAccount,
+    deletePaymentAccount,
+    setDefaultPaymentAccount,
   } = useCommerceStore();
 
   const [activeTab, setActiveTab] = useState<"ALL" | "SINGLE" | "CATALOG" | "LIBRARY">("ALL");
@@ -141,7 +235,19 @@ function OffersContent() {
   const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
   const [deletingOffer, setDeletingOffer] = useState<Offer | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
-  const [selectedQR, setSelectedQR] = useState<{ url: string; title: string; subtitle?: string } | null>(null);
+  const [selectedQR, setSelectedQR] = useState<{ url: string; title: string; subtitle?: string; bankInfo?: BankInfo } | null>(null);
+
+  // Bank Accounts & VietQR Modal Management State
+  const [isBankAccountsModalOpen, setIsBankAccountsModalOpen] = useState(false);
+  const [isEditingBankAcc, setIsEditingBankAcc] = useState(false);
+  const [editingBankAccId, setEditingBankAccId] = useState<string | null>(null);
+  const [bankAccBin, setBankAccBin] = useState("970422");
+  const [bankAccName, setBankAccName] = useState("MBBank (Ngân Hàng TMCP Quân Đội)");
+  const [bankAccShortName, setBankAccShortName] = useState("MBBank");
+  const [bankAccNumber, setBankAccNumber] = useState("");
+  const [bankAccHolder, setBankAccHolder] = useState("");
+  const [bankAccQrImage, setBankAccQrImage] = useState("");
+  const [bankAccIsDefault, setBankAccIsDefault] = useState(false);
 
   // Product Library Picker Modal State
   const [isProductLibraryPickerOpen, setIsProductLibraryPickerOpen] = useState(false);
@@ -239,6 +345,122 @@ function OffersContent() {
       setFormBankAccountName(store.payment_settings.bank_account_name || "");
     }
   }, [store.payment_settings]);
+
+  // Bank Account Modal Handlers
+  const handleOpenManageBankAccounts = (accToEdit?: ActorPaymentAccount) => {
+    if (accToEdit) {
+      setIsEditingBankAcc(true);
+      setEditingBankAccId(accToEdit.id);
+      setBankAccBin(accToEdit.bank_bin || "970422");
+      const foundBank = POPULAR_BANKS.find((b) => b.bin === accToEdit.bank_bin);
+      setBankAccName(accToEdit.bank_name || foundBank?.name || "Ngân hàng");
+      setBankAccShortName(accToEdit.bank_short_name || foundBank?.shortName || "Ngân hàng");
+      setBankAccNumber(accToEdit.account_number || "");
+      setBankAccHolder(accToEdit.account_name || "");
+      setBankAccQrImage(accToEdit.qr_image_url || "");
+      setBankAccIsDefault(accToEdit.is_default);
+    } else if (paymentAccounts.length === 0) {
+      setIsEditingBankAcc(true);
+      setEditingBankAccId(null);
+      setBankAccBin("970422");
+      setBankAccName("MBBank (Ngân Hàng TMCP Quân Đội)");
+      setBankAccShortName("MBBank");
+      setBankAccNumber(store.payment_settings?.bank_account_no || "");
+      setBankAccHolder(store.payment_settings?.bank_account_name || "");
+      setBankAccQrImage("");
+      setBankAccIsDefault(true);
+    } else {
+      setIsEditingBankAcc(false);
+      setEditingBankAccId(null);
+    }
+    setIsBankAccountsModalOpen(true);
+  };
+
+  const handleStartAddNewBankAccount = () => {
+    setIsEditingBankAcc(true);
+    setEditingBankAccId(null);
+    setBankAccBin("970422");
+    setBankAccName("MBBank (Ngân Hàng TMCP Quân Đội)");
+    setBankAccShortName("MBBank");
+    setBankAccNumber("");
+    setBankAccHolder("");
+    setBankAccQrImage("");
+    setBankAccIsDefault(paymentAccounts.length === 0);
+  };
+
+  const handleSaveBankAccountForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bankAccNumber.trim() || !bankAccHolder.trim()) {
+      alert("Vui lòng nhập đầy đủ Số tài khoản và Tên chủ tài khoản");
+      return;
+    }
+
+    const bankObj = POPULAR_BANKS.find((b) => b.bin === bankAccBin);
+    const shortName = bankAccShortName || bankObj?.shortName || "Ngân hàng";
+    const fullName = bankAccName || bankObj?.name || shortName;
+
+    if (editingBankAccId) {
+      updatePaymentAccount(editingBankAccId, {
+        bank_bin: bankAccBin,
+        bank_name: fullName,
+        bank_short_name: shortName,
+        account_number: bankAccNumber.trim(),
+        account_name: bankAccHolder.trim().toUpperCase(),
+        qr_image_url: bankAccQrImage.trim() || undefined,
+        is_default: bankAccIsDefault,
+      });
+      if (bankAccIsDefault) {
+        setDefaultPaymentAccount(editingBankAccId);
+      }
+      setToastMessage("✓ Đã cập nhật tài khoản ngân hàng thành công!");
+    } else {
+      const created = addPaymentAccount({
+        actor_id: store.owner_actor_id || "personal_actor",
+        actor_type: store.owner_actor_type || "PERSONAL",
+        bank_bin: bankAccBin,
+        bank_name: fullName,
+        bank_short_name: shortName,
+        account_number: bankAccNumber.trim(),
+        account_name: bankAccHolder.trim().toUpperCase(),
+        qr_image_url: bankAccQrImage.trim() || undefined,
+        is_default: bankAccIsDefault || paymentAccounts.length === 0,
+        verification_status: "VERIFIED",
+      });
+      if (bankAccIsDefault) {
+        setDefaultPaymentAccount(created.id);
+      }
+      setToastMessage("✓ Đã thêm tài khoản nhận tiền mới thành công!");
+    }
+
+    setTimeout(() => setToastMessage(null), 3000);
+    setIsEditingBankAcc(false);
+    setEditingBankAccId(null);
+  };
+
+  const handleDeleteBankAcc = (id: string) => {
+    if (confirm("Bạn có chắc chắn muốn xóa tài khoản ngân hàng này?")) {
+      deletePaymentAccount(id);
+      setToastMessage("✓ Đã xóa tài khoản ngân hàng");
+      setTimeout(() => setToastMessage(null), 2500);
+    }
+  };
+
+  const handleSetDefaultBankAcc = (id: string) => {
+    setDefaultPaymentAccount(id);
+    setToastMessage("✓ Đã đặt làm tài khoản nhận tiền mặc định");
+    setTimeout(() => setToastMessage(null), 2500);
+  };
+
+  const handleCustomQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageFile(file, 600, 0.7);
+      setBankAccQrImage(compressed);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // =========================================================================
   // PRODUCT LIBRARY ACTIONS
@@ -1025,7 +1247,26 @@ function OffersContent() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => handleOpenManageBankAccounts()}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+            title="Quản lý tài khoản ngân hàng và mã VietQR nhận tiền"
+          >
+            <CreditCard className="w-4 h-4 text-emerald-600" />
+            <span>Tài Khoản VietQR</span>
+            {resolveOfferBankInfo(null, store, paymentAccounts).is_configured ? (
+              <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono">
+                {resolveOfferBankInfo(null, store, paymentAccounts).bank_short_name}
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[10px]">
+                Chưa thêm
+              </span>
+            )}
+          </button>
+
           {activeTab === "LIBRARY" ? (
             <button
               onClick={() => handleOpenCreateProductInLibrary()}
@@ -1240,9 +1481,10 @@ function OffersContent() {
           {filteredOffers.map((offer) => {
             const offerUrl = AppUrlService.getOfferUrl(store.slug, offer.slug);
             const isCatalog = offer.offer_structure === "MENU_CATALOG" || (offer.items && offer.items.length > 1);
-            const bankDisplay = offer.payment_settings?.bank_account_no
-              ? `${offer.payment_settings.bank_name || "Ngân hàng"} - ${offer.payment_settings.bank_account_no}`
-              : `${store.payment_settings?.bank_name || "MBBank"} - ${store.payment_settings?.bank_account_no || "098812345688"}`;
+            const resolvedBank = resolveOfferBankInfo(offer, store, paymentAccounts);
+            const vietQrImgUrl = resolvedBank.is_configured
+              ? `https://img.vietqr.io/image/${resolvedBank.bank_bin}-${resolvedBank.account_number}-compact2.png?amount=${offer.price || 0}&addInfo=${encodeURIComponent(offer.name)}&accountName=${encodeURIComponent(resolvedBank.account_name)}`
+              : "";
 
             return (
               <div
@@ -1329,10 +1571,43 @@ function OffersContent() {
                       {offer.short_description || offer.description}
                     </p>
 
-                    <div className="pt-1 flex items-center gap-1.5 text-[11px] text-neutral-500 font-medium truncate">
-                      <CreditCard className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span className="truncate">VietQR: {bankDisplay}</span>
-                    </div>
+                    {resolvedBank.is_configured ? (
+                      <div className="pt-1 flex items-center justify-between gap-1.5 text-[11px] text-neutral-600 dark:text-neutral-400 font-medium">
+                        <div className="flex items-center gap-1.5 min-w-0 truncate">
+                          <CreditCard className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span className="truncate">
+                            VietQR: <strong className="text-neutral-800 dark:text-neutral-200">{resolvedBank.bank_short_name}</strong> • <span className="font-mono font-semibold">{resolvedBank.account_number}</span>
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenManageBankAccounts();
+                          }}
+                          className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-bold shrink-0 ml-1 cursor-pointer"
+                        >
+                          Đổi/Sửa
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="pt-1 flex items-center justify-between gap-1.5 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                        <div className="flex items-center gap-1.5 min-w-0 truncate">
+                          <CreditCard className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                          <span className="truncate">Chưa cấu hình TK VietQR</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenManageBankAccounts();
+                          }}
+                          className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] cursor-pointer shadow-xs"
+                        >
+                          + Thêm TK
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1348,11 +1623,20 @@ function OffersContent() {
                         setSelectedQR({
                           url: offerUrl,
                           title: offer.name,
-                          subtitle: formatVND(offer.price),
+                          subtitle: isCatalog ? `Từ ${formatVND(offer.price)}` : formatVND(offer.price),
+                          bankInfo: {
+                            bank_name: resolvedBank.bank_name,
+                            bank_short_name: resolvedBank.bank_short_name,
+                            bank_bin: resolvedBank.bank_bin,
+                            account_number: resolvedBank.account_number,
+                            account_name: resolvedBank.account_name,
+                            qr_image_url: resolvedBank.qr_image_url,
+                            vietqr_url: vietQrImgUrl,
+                          },
                         })
                       }
                       className="p-1.5 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
-                      title="Mã QR Offer"
+                      title="Mã QR Offer & VietQR Thanh Toán"
                     >
                       <QrCode className="w-4 h-4" />
                     </button>
@@ -2006,85 +2290,127 @@ function OffersContent() {
                   </div>
 
                   {/* READ-ONLY SUMMARY WHEN STORE_DEFAULT */}
-                  {paymentOverrideMode === "STORE_DEFAULT" && (
-                    <div className="p-3.5 rounded-xl bg-white/90 dark:bg-neutral-900 border border-blue-200 dark:border-blue-800/80 space-y-2.5 text-xs animate-in fade-in">
-                      <div className="flex items-center justify-between pb-1.5 border-b border-neutral-100 dark:border-neutral-800">
-                        <span className="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
-                          <ShieldCheck className="w-4 h-4 text-blue-600" />
-                          <span>Chi tiết thiết lập thanh toán mặc định của Cửa hàng:</span>
-                        </span>
-                        <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold text-[10px]">
-                          Đang áp dụng
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
-                        <div className="space-y-0.5">
-                          <p className="text-[11px] text-neutral-500 font-medium">Tài khoản nhận tiền VietQR:</p>
-                          <div className="font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                            <CreditCard className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                            <span className="truncate">
-                              {store.payment_settings?.bank_name || "MBBank"} • {store.payment_settings?.bank_account_no || "098812345688"}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-neutral-400">
-                            Chủ TK: {store.payment_settings?.bank_account_name || "NGUYEN VAN A"}
-                          </p>
+                  {paymentOverrideMode === "STORE_DEFAULT" && (() => {
+                    const defaultBank = resolveOfferBankInfo(null, store, paymentAccounts);
+                    return (
+                      <div className="p-3.5 rounded-xl bg-white/90 dark:bg-neutral-900 border border-blue-200 dark:border-blue-800/80 space-y-2.5 text-xs animate-in fade-in">
+                        <div className="flex items-center justify-between pb-1.5 border-b border-neutral-100 dark:border-neutral-800">
+                          <span className="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                            <ShieldCheck className="w-4 h-4 text-blue-600" />
+                            <span>Chi tiết thiết lập thanh toán mặc định của Cửa hàng:</span>
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold text-[10px]">
+                            Đang áp dụng
+                          </span>
                         </div>
 
-                        <div className="space-y-1">
-                          <p className="text-[11px] text-neutral-500 font-medium">Phương thức thanh toán được hỗ trợ:</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 font-bold text-[10px] text-emerald-700 dark:text-emerald-300">
-                              ✓ VietQR / Chuyển khoản
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 font-bold text-[10px] text-neutral-700 dark:text-neutral-300">
-                              ✓ Thu tiền COD
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 font-bold text-[10px] text-neutral-700 dark:text-neutral-300">
-                              ✓ Tại cửa hàng
-                            </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
+                          <div className="space-y-1">
+                            <p className="text-[11px] text-neutral-500 font-medium">Tài khoản nhận tiền VietQR:</p>
+                            {defaultBank.is_configured ? (
+                              <div>
+                                <div className="font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                                  <CreditCard className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                  <span className="truncate">
+                                    {defaultBank.bank_short_name} • <span className="font-mono">{defaultBank.account_number}</span>
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-neutral-400">
+                                  Chủ TK: {defaultBank.account_name}
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <span className="text-[11px] text-amber-600 font-bold block">Chưa cấu hình tài khoản ngân hàng</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenManageBankAccounts()}
+                                  className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer shadow-xs"
+                                >
+                                  + Thêm tài khoản ngân hàng
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="space-y-1">
+                            <p className="text-[11px] text-neutral-500 font-medium">Phương thức thanh toán được hỗ trợ:</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 font-bold text-[10px] text-emerald-700 dark:text-emerald-300">
+                                ✓ VietQR / Chuyển khoản
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 font-bold text-[10px] text-neutral-700 dark:text-neutral-300">
+                                ✓ Thu tiền COD
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 font-bold text-[10px] text-neutral-700 dark:text-neutral-300">
+                                ✓ Tại cửa hàng
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="pt-1.5 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-[11px] text-neutral-500">
-                        <span>💡 Đang kế thừa chính sách thanh toán chung của cửa hàng.</span>
-                        <button
-                          type="button"
-                          onClick={() => setPaymentOverrideMode("OFFER_OVERRIDE")}
-                          className="font-bold text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
-                        >
-                          <span>Chỉnh sửa riêng cho Offer này</span>
-                          <span>→</span>
-                        </button>
+                        <div className="pt-1.5 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-[11px] text-neutral-500">
+                          <div className="flex items-center gap-2">
+                            <span>💡 Đang kế thừa chính sách thanh toán chung của cửa hàng.</span>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenManageBankAccounts()}
+                              className="font-bold text-blue-600 hover:underline cursor-pointer"
+                            >
+                              (Sửa tài khoản ngân hàng)
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentOverrideMode("OFFER_OVERRIDE")}
+                            className="font-bold text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                          >
+                            <span>Chỉnh sửa riêng cho Offer này</span>
+                            <span>→</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* INTERACTIVE CONTROLS WHEN OFFER_OVERRIDE */}
                   {paymentOverrideMode === "OFFER_OVERRIDE" && (
                     <div className="pt-3 border-t border-blue-200 dark:border-blue-900/60 space-y-3 animate-in fade-in text-xs">
                       {/* Choose Payment Account */}
-                      {paymentAccounts && paymentAccounts.length > 0 && (
-                        <div>
-                          <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300">
                             Tài khoản ngân hàng nhận tiền VietQR:
                           </label>
-                          <select
-                            value={customPaymentAccountId}
-                            onChange={(e) => setCustomPaymentAccountId(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 font-bold"
+                          <button
+                            type="button"
+                            onClick={() => handleOpenManageBankAccounts()}
+                            className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-bold flex items-center gap-0.5 cursor-pointer"
                           >
-                            <option value="">-- Dùng tài khoản mặc định của Cửa hàng --</option>
-                            {paymentAccounts.map((acc) => (
-                              <option key={acc.id} value={acc.id}>
-                                {acc.bank_short_name} - {acc.account_number} ({acc.account_name}) {acc.is_default ? "★ Mặc định" : ""}
-                              </option>
-                            ))}
-                          </select>
+                            <Plus className="w-3 h-3" />
+                            <span>Quản lý / Thêm tài khoản</span>
+                          </button>
                         </div>
-                      )}
+                        <select
+                          value={customPaymentAccountId}
+                          onChange={(e) => {
+                            if (e.target.value === "__ADD_NEW__") {
+                              handleOpenManageBankAccounts();
+                            } else {
+                              setCustomPaymentAccountId(e.target.value);
+                            }
+                          }}
+                          className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 font-bold"
+                        >
+                          <option value="">-- Dùng tài khoản mặc định của Cửa hàng --</option>
+                          {paymentAccounts.map((acc) => (
+                            <option key={acc.id} value={acc.id}>
+                              {acc.bank_short_name} - {acc.account_number} ({acc.account_name}) {acc.is_default ? "★ Mặc định" : ""}
+                            </option>
+                          ))}
+                          <option value="__ADD_NEW__">+ Thêm tài khoản ngân hàng mới...</option>
+                        </select>
+                      </div>
 
                       {/* Payment Methods Checkboxes */}
                       <div className="space-y-1.5">
@@ -2988,6 +3314,312 @@ function OffersContent() {
         </div>
       )}
 
+      {/* BANK ACCOUNTS & VIETQR MANAGEMENT MODAL */}
+      {isBankAccountsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden my-8 max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-800/40">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-emerald-600">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-neutral-900 dark:text-neutral-100">
+                    {isEditingBankAcc
+                      ? editingBankAccId
+                        ? "Chỉnh Sửa Tài Khoản Ngân Hàng"
+                        : "Thêm Tài Khoản Ngân Hàng Mới"
+                      : "Quản Lý Tài Khoản Ngân Hàng & VietQR"}
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    {isEditingBankAcc
+                      ? "Điền thông tin tài khoản ngân hàng nhận tiền và mã QR thanh toán"
+                      : `Danh sách các tài khoản ngân hàng nhận tiền (${paymentAccounts.length})`}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsBankAccountsModalOpen(false);
+                  setIsEditingBankAcc(false);
+                  setEditingBankAccId(null);
+                }}
+                className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {isEditingBankAcc ? (
+                /* FORM ADD / EDIT BANK ACCOUNT */
+                <form onSubmit={handleSaveBankAccountForm} className="space-y-4">
+                  {/* Select Bank */}
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                      Ngân hàng thụ hưởng: <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={bankAccBin}
+                      onChange={(e) => {
+                        const bin = e.target.value;
+                        setBankAccBin(bin);
+                        const b = POPULAR_BANKS.find((item) => item.bin === bin);
+                        if (b) {
+                          setBankAccName(b.name);
+                          setBankAccShortName(b.shortName);
+                        }
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+                    >
+                      {POPULAR_BANKS.map((b) => (
+                        <option key={b.bin} value={b.bin}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Account Number */}
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                        Số tài khoản: <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ví dụ: 0988123456 hoặc 1029384756"
+                        value={bankAccNumber}
+                        onChange={(e) => setBankAccNumber(e.target.value.replace(/\s+/g, ""))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-xs font-mono font-bold focus:ring-2 focus:ring-blue-500 focus:outline-hidden tracking-wide"
+                      />
+                    </div>
+
+                    {/* Account Name */}
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                        Tên chủ tài khoản: <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ví dụ: NGUYEN VAN A"
+                        value={bankAccHolder}
+                        onChange={(e) => setBankAccHolder(e.target.value.toUpperCase())}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-xs font-bold uppercase focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  {/* QR Image Upload / Auto Preview */}
+                  <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-700 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 block">
+                          Mã VietQR thanh toán tự động
+                        </span>
+                        <p className="text-[11px] text-neutral-400">
+                          Hệ thống tự động sinh mã VietQR theo chuẩn Napas247, hoặc bạn có thể tải lên ảnh mã QR riêng.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                      <div className="w-32 h-32 rounded-2xl bg-white p-2 border border-neutral-200 shadow-xs flex items-center justify-center shrink-0">
+                        {bankAccQrImage ? (
+                          <img src={bankAccQrImage} alt="QR" className="w-full h-full object-contain" />
+                        ) : bankAccNumber ? (
+                          <img
+                            src={`https://img.vietqr.io/image/${bankAccBin}-${bankAccNumber}-compact2.png?accountName=${encodeURIComponent(bankAccHolder)}`}
+                            alt="VietQR"
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <div className="text-center text-neutral-400 p-2 text-[10px]">
+                            <QrCode className="w-8 h-8 mx-auto mb-1 opacity-40" />
+                            <span>Nhập STK để sinh mã VietQR</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2 flex-1 text-xs">
+                        <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-50 text-neutral-700 dark:text-neutral-200 font-bold cursor-pointer shadow-xs transition-all">
+                          <Upload className="w-4 h-4 text-blue-600" />
+                          <span>Tải ảnh mã QR riêng (tùy chọn)</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleCustomQrUpload}
+                            className="hidden"
+                          />
+                        </label>
+                        {bankAccQrImage && (
+                          <button
+                            type="button"
+                            onClick={() => setBankAccQrImage("")}
+                            className="block text-red-500 hover:underline text-[11px]"
+                          >
+                            Xóa ảnh QR riêng (dùng VietQR tự động)
+                          </button>
+                        )}
+                        <p className="text-[10px] text-neutral-400">
+                          Định dạng hỗ trợ: JPG, PNG. Ảnh sẽ được tự động tối ưu hóa hiển thị sắc nét.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Is Default Checkbox */}
+                  <label className="flex items-center gap-2.5 p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={bankAccIsDefault}
+                      onChange={(e) => setBankAccIsDefault(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                    <div className="text-xs">
+                      <span className="font-bold text-blue-950 dark:text-blue-200 block">
+                        Đặt làm tài khoản nhận tiền mặc định cho toàn bộ Cửa hàng & Offer
+                      </span>
+                      <span className="text-[11px] text-blue-700 dark:text-blue-400">
+                        Tất cả các Offer mới và mặc định sẽ tự động nhận tiền về tài khoản này.
+                      </span>
+                    </div>
+                  </label>
+
+                  {/* Form Footer Buttons */}
+                  <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+                    {paymentAccounts.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditingBankAcc(false);
+                          setEditingBankAccId(null);
+                        }}
+                        className="px-4 py-2 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 rounded-xl cursor-pointer"
+                      >
+                        Quay lại danh sách
+                      </button>
+                    )}
+                    <button
+                      type="submit"
+                      className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md cursor-pointer transition-all"
+                    >
+                      {editingBankAccId ? "Lưu Cập Nhật Tài Khoản" : "Thêm Tài Khoản Ngay"}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* ACCOUNTS LIST VIEW */
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400">
+                      Tài khoản đang hoạt động:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleStartAddNewBankAccount}
+                      className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Thêm Tài Khoản Mới</span>
+                    </button>
+                  </div>
+
+                  {paymentAccounts.length === 0 ? (
+                    <div className="p-8 text-center bg-neutral-50 dark:bg-neutral-800/40 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 space-y-3">
+                      <CreditCard className="w-10 h-10 text-neutral-400 mx-auto opacity-50" />
+                      <div className="space-y-1">
+                        <p className="font-bold text-sm text-neutral-800 dark:text-neutral-200">
+                          Chưa có tài khoản ngân hàng nào được thiết lập
+                        </p>
+                        <p className="text-xs text-neutral-500">
+                          Thêm tài khoản ngân hàng để tạo mã VietQR tự động và nhận tiền từ khách hàng.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleStartAddNewBankAccount}
+                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs cursor-pointer shadow-xs"
+                      >
+                        + Thêm Tài Khoản Ngân Hàng Đầu Tiên
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {paymentAccounts.map((acc) => (
+                        <div
+                          key={acc.id}
+                          className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                            acc.is_default
+                              ? "bg-blue-50/40 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800 ring-1 ring-blue-500/20"
+                              : "bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300"
+                          }`}
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-black text-xs text-neutral-900 dark:text-neutral-100">
+                                {acc.bank_short_name || acc.bank_name}
+                              </span>
+                              {acc.is_default ? (
+                                <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-bold">
+                                  ★ Mặc định
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetDefaultBankAcc(acc.id)}
+                                  className="text-[10px] text-neutral-500 hover:text-blue-600 hover:underline font-semibold cursor-pointer"
+                                >
+                                  Đặt làm mặc định
+                                </button>
+                              )}
+                            </div>
+
+                            <p className="font-mono text-base font-black text-blue-600 dark:text-blue-400 tracking-wider">
+                              {acc.account_number}
+                            </p>
+
+                            <div className="text-[11px] text-neutral-600 dark:text-neutral-300">
+                              <span className="text-neutral-400">Chủ TK: </span>
+                              <strong className="uppercase">{acc.account_name}</strong>
+                            </div>
+                          </div>
+
+                          <div className="pt-3 mt-3 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-xs">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenManageBankAccounts(acc)}
+                              className="text-blue-600 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                              <span>Sửa</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteBankAcc(acc.id)}
+                              className="text-red-500 hover:text-red-700 font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Xóa</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* QR MODAL */}
       {selectedQR && (
         <QRModal
@@ -2996,6 +3628,7 @@ function OffersContent() {
           url={selectedQR.url}
           title={selectedQR.title}
           subtitle={selectedQR.subtitle}
+          bankInfo={selectedQR.bankInfo}
         />
       )}
     </div>
