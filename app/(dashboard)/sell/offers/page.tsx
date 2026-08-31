@@ -1151,6 +1151,7 @@ function OffersContent() {
         updateOffer(editingOffer.id, {
           name: resolvedName,
           slug: slugify(resolvedName),
+          store_slug: store.slug || "2k-store",
           category_id: formCategory.trim() || "Chung",
           short_description: formShortDesc.trim() || (isMultiple ? `Bảng giá gồm ${validItems.length} sản phẩm/dịch vụ.` : validItems[0]?.description || ""),
           description: formShortDesc.trim() || (isMultiple ? `Bảng giá gồm ${validItems.length} sản phẩm/dịch vụ.` : validItems[0]?.description || ""),
@@ -1171,6 +1172,7 @@ function OffersContent() {
         createOffer({
           organization_id: orgId,
           store_id: storeId,
+          store_slug: store.slug || "2k-store",
           offer_type: "PRODUCT",
           offer_structure: isMultiple ? "MENU_CATALOG" : "SINGLE",
           name: resolvedName,
@@ -1652,15 +1654,16 @@ function OffersContent() {
                       <span className="hidden sm:inline">Sửa</span>
                     </button>
 
-                    <Link
-                      href={`/${store.slug}/o/${offer.slug}`}
+                    <a
+                      href={offerUrl}
                       target="_blank"
+                      rel="noopener noreferrer"
                       className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer"
                       title="Mở trang Offer"
                     >
                       <span>Mở Link</span>
                       <ExternalLink className="w-3.5 h-3.5" />
-                    </Link>
+                    </a>
 
                     <button
                       onClick={() => setDeletingOffer(offer)}

@@ -22,21 +22,31 @@ export class AppUrlService {
    * Tạo Storefront URL
    * Ví dụ: https://go.invamax.com/2k-store
    */
-  public static getStoreUrl(storeSlug: string): string {
+  public static getStoreUrl(storeSlug?: string): string {
     const base = this.getBaseUrl();
-    const cleanSlug = storeSlug.trim().replace(/^\/+/, "");
+    const cleanSlug = (storeSlug && storeSlug.trim()) ? storeSlug.trim().replace(/^\/+|\/+$/g, "") : "2k-store";
     return `${base}/${cleanSlug}`;
   }
 
   /**
-   * Tạo Offer / Bảng Giá Public URL
-   * Ví dụ: https://go.invamax.com/2k-store/o/combo-che-2k
+   * Tạo Offer / Bảng Giá Public URL chuẩn
+   * Ví dụ: https://go.invamax.com/2k-store/o/tu-trang-tri
    */
-  public static getOfferUrl(storeSlug: string, offerSlug: string): string {
+  public static getOfferUrl(storeSlug?: string, offerSlug?: string): string {
     const base = this.getBaseUrl();
-    const cleanStore = storeSlug.trim().replace(/^\/+/, "");
-    const cleanOffer = offerSlug.trim().replace(/^\/+/, "");
+    const cleanStore = (storeSlug && storeSlug.trim()) ? storeSlug.trim().replace(/^\/+|\/+$/g, "") : "2k-store";
+    const cleanOffer = (offerSlug && offerSlug.trim()) ? offerSlug.trim().replace(/^\/+|\/+$/g, "") : "offer";
     return `${base}/${cleanStore}/o/${cleanOffer}`;
+  }
+
+  /**
+   * Tạo Short Offer URL (Dành cho Zalo / SMS / QR Code gọn)
+   * Ví dụ: https://go.invamax.com/o/tu-trang-tri
+   */
+  public static getShortOfferUrl(offerSlug?: string): string {
+    const base = this.getBaseUrl();
+    const cleanOffer = (offerSlug && offerSlug.trim()) ? offerSlug.trim().replace(/^\/+|\/+$/g, "") : "offer";
+    return `${base}/o/${cleanOffer}`;
   }
 
   /**

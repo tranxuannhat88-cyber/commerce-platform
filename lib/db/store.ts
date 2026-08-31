@@ -778,6 +778,7 @@ export function useCommerceStore() {
     const offer: Offer = {
       ...newOffer,
       id: offerId,
+      store_slug: newOffer.store_slug || store.slug || "2k-store",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
