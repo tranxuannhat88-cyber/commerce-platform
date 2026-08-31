@@ -62,13 +62,13 @@ export function OfferHeader({
     customization?.brand_color ||
     store.customization?.brand_color ||
     activeTemplate?.design_tokens.color_palette_default.primary ||
-    "#2563eb";
+    "#10b981";
 
   const accentColor =
     customization?.accent_color ||
     store.customization?.accent_color ||
     activeTemplate?.design_tokens.color_palette_default.accent ||
-    "#f59e0b";
+    "#059669";
 
   const templateCode = activeTemplate?.code || "FREE_MODERN";
   const isLuxury = templateCode === "PREMIUM_FLAGSHIP_LUXURY";
@@ -132,24 +132,51 @@ export function OfferHeader({
 
   const isExpired = offer.expires_at && new Date(offer.expires_at).getTime() < Date.now();
 
-  // Theme styling for container and top bar
-  let containerThemeClass = "bg-white dark:bg-neutral-900 border-neutral-200/90 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100";
-  let topBarThemeClass = "bg-neutral-50/80 dark:bg-neutral-800/50 border-neutral-200/80 dark:border-neutral-800/80";
+  // Dynamic Template-Adaptive Background & Colors
+  const containerStyle: React.CSSProperties = isLuxury
+    ? {
+        background: "radial-gradient(ellipse at top left, #261f14 0%, #0c0a09 100%)",
+        borderColor: "rgba(245, 158, 11, 0.35)",
+        color: "#fef3c7",
+      }
+    : isDarkTech
+    ? {
+        background: "radial-gradient(ellipse at top left, #082f49 0%, #030712 100%)",
+        borderColor: "rgba(6, 182, 212, 0.35)",
+        color: "#ecfeff",
+      }
+    : {
+        background: `linear-gradient(180deg, ${brandColor}18 0%, ${brandColor}06 45%, #ffffff 100%)`,
+        borderColor: `${brandColor}35`,
+      };
 
-  if (isLuxury) {
-    containerThemeClass = "bg-neutral-950 text-neutral-100 border-amber-500/30 shadow-2xl font-serif";
-    topBarThemeClass = "bg-neutral-900/90 border-amber-500/20 text-neutral-200";
-  } else if (isDarkTech) {
-    containerThemeClass = "bg-black text-cyan-50 border-cyan-500/30 shadow-2xl font-mono";
-    topBarThemeClass = "bg-neutral-950/90 border-cyan-500/20 text-cyan-200";
-  }
+  const topBarStyle: React.CSSProperties = isLuxury
+    ? {
+        backgroundColor: "rgba(17, 14, 9, 0.75)",
+        borderBottomColor: "rgba(245, 158, 11, 0.25)",
+      }
+    : isDarkTech
+    ? {
+        backgroundColor: "rgba(3, 15, 23, 0.75)",
+        borderBottomColor: "rgba(6, 182, 212, 0.25)",
+      }
+    : {
+        backgroundColor: `${brandColor}12`,
+        borderBottomColor: `${brandColor}25`,
+      };
 
   return (
     <div
-      className={`rounded-3xl border shadow-xs overflow-hidden transition-all ${containerThemeClass} ${className}`}
+      style={containerStyle}
+      className={`rounded-3xl border shadow-md overflow-hidden transition-all text-neutral-900 dark:text-neutral-100 ${
+        isLuxury ? "font-serif" : isDarkTech ? "font-mono" : ""
+      } ${className}`}
     >
       {/* 1. SELLER MINI PROFILE ROW */}
-      <div className={`p-4 sm:px-6 py-3.5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${topBarThemeClass}`}>
+      <div
+        style={topBarStyle}
+        className="p-4 sm:px-6 py-3.5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs backdrop-blur-xs"
+      >
         {/* Left: Avatar, Name, Entity Type, Verified Badge, Public Location */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="relative shrink-0">
@@ -163,8 +190,8 @@ export function OfferHeader({
               <div
                 className="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-xs border"
                 style={{
-                  backgroundColor: isLuxury ? "#1e1e1e" : isDarkTech ? "#051e28" : "#eff6ff",
-                  borderColor: isLuxury ? "#d97706" : isDarkTech ? "#06b6d4" : "#bfdbfe",
+                  backgroundColor: isLuxury ? "#1e1e1e" : isDarkTech ? "#051e28" : `${brandColor}15`,
+                  borderColor: isLuxury ? "#d97706" : isDarkTech ? "#06b6d4" : `${brandColor}40`,
                   color: isLuxury ? "#f59e0b" : isDarkTech ? "#22d3ee" : brandColor,
                 }}
               >
@@ -189,7 +216,7 @@ export function OfferHeader({
               </h3>
             </div>
 
-            <div className="flex items-center gap-2 text-[11px] opacity-75 flex-wrap">
+            <div className="flex items-center gap-2 text-[11px] opacity-80 flex-wrap">
               <span className="font-semibold">
                 {isOrg ? "Tổ chức" : "Cá nhân"}
               </span>
@@ -217,7 +244,7 @@ export function OfferHeader({
         {/* Right: CTA View Store (ALWAYS DISPLAYED) */}
         <Link
           href={`/${storeSlug}`}
-          className="px-4 py-2 rounded-xl text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 transition-all border shadow-xs self-start sm:self-center cursor-pointer hover:opacity-90 active:scale-95 text-white"
+          className="px-4 py-2 rounded-xl text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 transition-all border shadow-sm self-start sm:self-center cursor-pointer hover:opacity-90 active:scale-95 text-white"
           style={{
             backgroundColor: brandColor,
             borderColor: brandColor,
@@ -234,7 +261,7 @@ export function OfferHeader({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="inline-flex items-center gap-2">
             <span
-              className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider text-white shadow-2xs"
+              className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider text-white shadow-xs"
               style={{ backgroundColor: brandColor }}
             >
               {offerTypeLabel}
@@ -256,15 +283,18 @@ export function OfferHeader({
 
         {/* Description (If exists) */}
         {(offer.short_description || offer.description) && (
-          <p className="text-xs sm:text-sm opacity-80 leading-relaxed max-w-3xl line-clamp-3">
+          <p className="text-xs sm:text-sm opacity-85 leading-relaxed max-w-3xl line-clamp-3">
             {offer.short_description || offer.description}
           </p>
         )}
 
         {/* Metadata Badges Bar */}
-        <div className="flex flex-wrap items-center gap-3 text-xs pt-1 border-t border-neutral-100 dark:border-neutral-800/80">
+        <div
+          style={{ borderColor: `${brandColor}20` }}
+          className="flex flex-wrap items-center gap-3 text-xs pt-1 border-t"
+        >
           {itemCount > 0 && (
-            <div className="inline-flex items-center gap-1.5 opacity-80">
+            <div className="inline-flex items-center gap-1.5 opacity-85">
               <Package className="w-3.5 h-3.5" style={{ color: brandColor }} />
               <span>{itemCount} sản phẩm/dịch vụ</span>
             </div>
@@ -273,8 +303,8 @@ export function OfferHeader({
           {formattedUpdate && (
             <>
               {itemCount > 0 && <span>•</span>}
-              <div className="inline-flex items-center gap-1.5 opacity-80">
-                <Calendar className="w-3.5 h-3.5 text-neutral-400" />
+              <div className="inline-flex items-center gap-1.5 opacity-85">
+                <Calendar className="w-3.5 h-3.5 opacity-70" />
                 <span>Cập nhật {formattedUpdate}</span>
               </div>
             </>
