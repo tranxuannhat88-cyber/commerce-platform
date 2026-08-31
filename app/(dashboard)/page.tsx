@@ -32,6 +32,8 @@ export default function DashboardPage() {
   const {
     store,
     organization,
+    currentContext,
+    currentUser,
     offers,
     requests,
     quotations,
@@ -76,7 +78,9 @@ export default function DashboardPage() {
               <span>Dual-Sided Commerce Platform</span>
             </div>
             <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-              {organization.name || "Không Gian Thương Mại Cá Nhân"}
+              {currentContext.context_type === "PERSONAL"
+                ? (currentUser?.full_name ? `Không Gian Cá Nhân — ${currentUser.full_name}` : "Không Gian Thương Mại Cá Nhân")
+                : (organization.name && organization.name !== "Chưa có tổ chức" ? organization.name : "Không Gian Tổ Chức")}
             </h2>
             <p className="text-sm text-neutral-300">
               Mô hình: <span className="font-semibold text-white">CREATE AN OFFER</span> hoặc <span className="font-semibold text-white">CREATE A REQUEST</span> → Gửi link → Giao dịch & Sổ cái tài chính.

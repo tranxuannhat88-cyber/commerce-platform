@@ -176,9 +176,11 @@ export function MobileDashboardDrawer({
   onClose: () => void;
 }) {
   const pathname = usePathname();
-  const { store, organization } = useCommerceStore();
+  const { store, organization, currentContext, currentUser } = useCommerceStore();
 
   if (!isOpen) return null;
+
+  const isPersonal = currentContext.context_type === "PERSONAL";
 
   const navSections: NavSection[] = [
     {
@@ -214,9 +216,9 @@ export function MobileDashboardDrawer({
     {
       title: "HỆ THỐNG",
       items: [
-        { href: "/store", label: "Cửa hàng & Kênh bán", icon: StoreIcon },
+        { href: "/store", label: isPersonal ? "Cửa hàng của tôi" : "Cửa hàng & Kênh bán", icon: StoreIcon },
         { href: "/settings/security", label: "Tài khoản & Passkey", icon: KeyRound },
-        { href: "/settings", label: "Thiết lập Doanh nghiệp", icon: Settings },
+        { href: "/settings", label: isPersonal ? "Cài đặt & Chuyển đổi" : "Thiết lập Doanh nghiệp", icon: Settings },
       ],
     },
   ];
@@ -247,7 +249,7 @@ export function MobileDashboardDrawer({
                 COMMERCE PLATFORM
               </h1>
               <p className="text-[11px] text-neutral-500 truncate max-w-[130px]">
-                {organization.name}
+                {isPersonal ? (currentUser?.full_name || "Tài khoản cá nhân") : (organization.name && organization.name !== "Chưa có tổ chức" ? organization.name : "Tổ chức")}
               </p>
             </div>
           </div>

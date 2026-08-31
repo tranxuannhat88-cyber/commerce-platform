@@ -293,29 +293,59 @@ export function useCommerceStore() {
     // Proactively clean bloated storage on first load
     clearBloatedLocalStorage();
 
-    const storedPersonal = getStored(STORAGE_KEYS.PERSONAL_ACTOR, INITIAL_PERSONAL_ACTOR);
-    const storedOrgs = getStored(STORAGE_KEYS.ORGANIZATIONS, INITIAL_ORGANIZATIONS);
-    const storedMembers = getStored(STORAGE_KEYS.ORGANIZATION_MEMBERS, INITIAL_ORGANIZATION_MEMBERS);
-    const storedSubs = getStored(STORAGE_KEYS.SUBSCRIPTIONS, INITIAL_SUBSCRIPTIONS);
+    const storedUser = getStored<UserIdentity | null>(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY);
+    const storedPersonal = getStored<PersonalActor>(STORAGE_KEYS.PERSONAL_ACTOR, INITIAL_PERSONAL_ACTOR);
+    const storedOrgs = getStored<Organization[]>(STORAGE_KEYS.ORGANIZATIONS, INITIAL_ORGANIZATIONS);
+    const storedMembers = getStored<OrganizationMember[]>(STORAGE_KEYS.ORGANIZATION_MEMBERS, INITIAL_ORGANIZATION_MEMBERS);
+    const storedSubs = getStored<Subscription[]>(STORAGE_KEYS.SUBSCRIPTIONS, INITIAL_SUBSCRIPTIONS);
     const storedActiveContext = getStored<WorkContext | null>(STORAGE_KEYS.ACTIVE_CONTEXT, null);
 
-    setPersonalActorState(storedPersonal);
+    setCurrentUserState(storedUser);
+
+    const effectiveUserName = storedUser?.full_name || storedPersonal.display_name || "Cá nhân";
+    const effectivePersonalActor: PersonalActor = {
+      ...storedPersonal,
+      user_id: storedUser?.id || storedPersonal.user_id,
+      display_name: `${effectiveUserName} (Cá nhân)`,
+      phone: storedUser?.primary_phone || storedPersonal.phone,
+      email: storedUser?.primary_email || storedPersonal.email,
+    };
+
+    setPersonalActorState(effectivePersonalActor);
     setOrganizationsState(storedOrgs);
     setOrgMembersState(storedMembers);
     setSubscriptionsState(storedSubs);
 
     if (storedActiveContext) {
-      setCurrentContextState(storedActiveContext);
-      if (storedActiveContext.context_type === "ORGANIZATION" && storedActiveContext.organization_id) {
-        const matchingOrg = storedOrgs.find((o) => o.id === storedActiveContext.organization_id) || storedOrgs[0];
-        if (matchingOrg) setOrgState(matchingOrg);
-        const sub = storedSubs.find((s) => s.actor_id === matchingOrg?.id);
-        if (sub) setSubscriptionState(sub);
-      } else {
+      if (storedActiveContext.context_type === "PERSONAL") {
+        const updatedPersonalCtx: WorkContext = {
+          ...storedActiveContext,
+          display_name: effectiveUserName,
+        };
+        setCurrentContextState(updatedPersonalCtx);
         const sub = storedSubs.find((s) => s.actor_id === storedPersonal.id) || INITIAL_SUBSCRIPTION_PERSONAL;
         setSubscriptionState(sub);
+      } else if (storedActiveContext.organization_id) {
+        const matchingOrg = storedOrgs.find((o) => o.id === storedActiveContext.organization_id) || storedOrgs[0];
+        if (matchingOrg) {
+          setOrgState(matchingOrg);
+          setCurrentContextState({
+            ...storedActiveContext,
+            display_name: matchingOrg.short_name || matchingOrg.name,
+          });
+        }
+        const sub = storedSubs.find((s) => s.actor_id === matchingOrg?.id);
+        if (sub) setSubscriptionState(sub);
       }
     } else {
+      const defaultCtx: WorkContext = {
+        actor_id: effectivePersonalActor.id,
+        context_type: "PERSONAL",
+        display_name: effectiveUserName,
+        plan_code: "FREE",
+        is_active: true,
+      };
+      setCurrentContextState(defaultCtx);
       setOrgState(getStored(STORAGE_KEYS.ORGANIZATION, INITIAL_ORGANIZATION));
       setSubscriptionState(getStored(STORAGE_KEYS.SUBSCRIPTION, INITIAL_SUBSCRIPTION_PERSONAL));
     }
@@ -344,7 +374,6 @@ export function useCommerceStore() {
     setShippingMethodsState(getStored(STORAGE_KEYS.SHIPPING_METHODS, INITIAL_SHIPPING_METHODS));
     setShippingZonesState(getStored(STORAGE_KEYS.SHIPPING_ZONES, INITIAL_SHIPPING_ZONES));
     setPaymentAccountsState(getStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, INITIAL_PAYMENT_ACCOUNTS));
-    setCurrentUserState(getStored(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY));
     setCurrentSessionState(getStored(STORAGE_KEYS.SESSION, INITIAL_AUTH_SESSION));
     setPasskeysState(getStored(STORAGE_KEYS.PASSKEYS, INITIAL_PASSKEYS));
     setBillingOrdersState(getStored(STORAGE_KEYS.BILLING_ORDERS, INITIAL_BILLING_ORDERS));
@@ -352,17 +381,33 @@ export function useCommerceStore() {
     setIsLoaded(true);
 
     const handleStorageUpdate = () => {
-      const p = getStored(STORAGE_KEYS.PERSONAL_ACTOR, INITIAL_PERSONAL_ACTOR);
-      const oList = getStored(STORAGE_KEYS.ORGANIZATIONS, INITIAL_ORGANIZATIONS);
-      const mList = getStored(STORAGE_KEYS.ORGANIZATION_MEMBERS, INITIAL_ORGANIZATION_MEMBERS);
-      const sList = getStored(STORAGE_KEYS.SUBSCRIPTIONS, INITIAL_SUBSCRIPTIONS);
+      const u = getStored<UserIdentity | null>(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY);
+      const p = getStored<PersonalActor>(STORAGE_KEYS.PERSONAL_ACTOR, INITIAL_PERSONAL_ACTOR);
+      const oList = getStored<Organization[]>(STORAGE_KEYS.ORGANIZATIONS, INITIAL_ORGANIZATIONS);
+      const mList = getStored<OrganizationMember[]>(STORAGE_KEYS.ORGANIZATION_MEMBERS, INITIAL_ORGANIZATION_MEMBERS);
+      const sList = getStored<Subscription[]>(STORAGE_KEYS.SUBSCRIPTIONS, INITIAL_SUBSCRIPTIONS);
       const ctx = getStored<WorkContext | null>(STORAGE_KEYS.ACTIVE_CONTEXT, null);
 
-      setPersonalActorState(p);
+      setCurrentUserState(u);
+
+      const name = u?.full_name || p.display_name || "Cá nhân";
+      const personalActorObj: PersonalActor = {
+        ...p,
+        user_id: u?.id || p.user_id,
+        display_name: `${name} (Cá nhân)`,
+      };
+      setPersonalActorState(personalActorObj);
       setOrganizationsState(oList);
       setOrgMembersState(mList);
       setSubscriptionsState(sList);
-      if (ctx) setCurrentContextState(ctx);
+
+      if (ctx) {
+        if (ctx.context_type === "PERSONAL") {
+          setCurrentContextState({ ...ctx, display_name: name });
+        } else {
+          setCurrentContextState(ctx);
+        }
+      }
 
       setOrgState(getStored(STORAGE_KEYS.ORGANIZATION, INITIAL_ORGANIZATION));
       setStoreState(getStored(STORAGE_KEYS.STORE, INITIAL_STORE));
@@ -389,7 +434,6 @@ export function useCommerceStore() {
       setShippingMethodsState(getStored(STORAGE_KEYS.SHIPPING_METHODS, INITIAL_SHIPPING_METHODS));
       setShippingZonesState(getStored(STORAGE_KEYS.SHIPPING_ZONES, INITIAL_SHIPPING_ZONES));
       setPaymentAccountsState(getStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, INITIAL_PAYMENT_ACCOUNTS));
-      setCurrentUserState(getStored(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY));
       setCurrentSessionState(getStored(STORAGE_KEYS.SESSION, INITIAL_AUTH_SESSION));
       setPasskeysState(getStored(STORAGE_KEYS.PASSKEYS, INITIAL_PASSKEYS));
       setSubscriptionState(getStored(STORAGE_KEYS.SUBSCRIPTION, INITIAL_SUBSCRIPTION));
@@ -2224,6 +2268,30 @@ export function useCommerceStore() {
     };
     setCurrentUserState(updated);
     setStored(STORAGE_KEYS.USER, updated);
+
+    // Update Personal Actor
+    if (profile.full_name) {
+      const updatedPersonalActor: PersonalActor = {
+        ...personalActor,
+        display_name: `${profile.full_name} (Cá nhân)`,
+        user_id: updated.id,
+        phone: updated.primary_phone,
+        email: updated.primary_email,
+        updated_at: new Date().toISOString(),
+      };
+      setPersonalActorState(updatedPersonalActor);
+      setStored(STORAGE_KEYS.PERSONAL_ACTOR, updatedPersonalActor);
+
+      // If active context is PERSONAL, update active context display_name
+      if (currentContext.context_type === "PERSONAL") {
+        const updatedCtx: WorkContext = {
+          ...currentContext,
+          display_name: profile.full_name,
+        };
+        setCurrentContextState(updatedCtx);
+        setStored(STORAGE_KEYS.ACTIVE_CONTEXT, updatedCtx);
+      }
+    }
   };
 
   const performStepUpAuth = (method: AuthMethodType = "PASSKEY") => {

@@ -20,7 +20,7 @@ interface ContextSwitcherProps {
 }
 
 export function ContextSwitcher({ className = "", isCompact = false }: ContextSwitcherProps) {
-  const { currentContext, getWorkContexts, switchContext } = useCommerceStore();
+  const { currentContext, getWorkContexts, switchContext, currentUser, personalActor } = useCommerceStore();
   const [isOpen, setIsOpen] = useState(false);
   const [showCreateOrg, setShowCreateOrg] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -28,6 +28,11 @@ export function ContextSwitcher({ className = "", isCompact = false }: ContextSw
   const contexts = getWorkContexts();
   const personalContext = contexts.find((c) => c.context_type === "PERSONAL");
   const orgContexts = contexts.filter((c) => c.context_type === "ORGANIZATION");
+
+  const currentDisplayName =
+    currentContext.context_type === "PERSONAL"
+      ? (currentUser?.full_name || personalActor.display_name?.replace(/\s*\(Cá nhân\)$/, "") || currentContext.display_name || "Tài khoản cá nhân")
+      : currentContext.display_name;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -80,9 +85,9 @@ export function ContextSwitcher({ className = "", isCompact = false }: ContextSw
             <div className="min-w-0 flex-1">
               <div
                 className="font-bold text-xs text-neutral-900 dark:text-neutral-100 truncate group-hover:text-blue-600 transition-colors leading-snug"
-                title={currentContext.display_name}
+                title={currentDisplayName}
               >
-                {currentContext.display_name}
+                {currentDisplayName}
               </div>
             </div>
 
@@ -133,7 +138,9 @@ export function ContextSwitcher({ className = "", isCompact = false }: ContextSw
                       <User className="w-3.5 h-3.5" />
                     </div>
                     <div className="text-left min-w-0">
-                      <p className="truncate">{personalContext.display_name}</p>
+                      <p className="truncate font-bold text-neutral-900 dark:text-neutral-100">
+                        {currentUser?.full_name || personalContext.display_name?.replace(/\s*\(Cá nhân\)$/, "") || "Tài khoản cá nhân"}
+                      </p>
                       <p className="text-[10px] text-neutral-400 font-normal">Một người tự vận hành</p>
                     </div>
                   </div>

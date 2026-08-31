@@ -27,6 +27,11 @@ export function DashboardHeader() {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
   const storeUrl = AppUrlService.getStoreUrl(store.slug);
 
+  const headerDisplayName =
+    currentContext.context_type === "PERSONAL"
+      ? (currentUser?.full_name || currentContext.display_name || "Cá nhân")
+      : currentContext.display_name;
+
   return (
     <>
       <header className="h-16 border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
@@ -42,7 +47,7 @@ export function DashboardHeader() {
 
           <div className="flex items-center gap-2 text-xs text-neutral-500">
             <span className="font-bold text-neutral-900 dark:text-neutral-100 truncate max-w-[140px] sm:max-w-[220px]">
-              {currentContext.display_name}
+              {headerDisplayName}
             </span>
             <span className="hidden sm:inline text-neutral-300 dark:text-neutral-700">•</span>
             <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hidden sm:inline">
