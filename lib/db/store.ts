@@ -2613,6 +2613,11 @@ export function useCommerceStore() {
       ...store,
       active_template_id: targetTemplate.id,
       template_version: targetTemplate.version,
+      customization: {
+        ...(store.customization || {}),
+        brand_color: targetTemplate.design_tokens.color_palette_default.primary,
+        accent_color: targetTemplate.design_tokens.color_palette_default.accent,
+      },
       updated_at: new Date().toISOString(),
     };
 

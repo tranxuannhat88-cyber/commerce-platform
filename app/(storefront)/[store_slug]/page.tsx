@@ -136,10 +136,7 @@ function StorefrontContent() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 font-sans pb-28 text-neutral-900 dark:text-neutral-100">
-      {/* 1. STOREFRONT HEADER */}
-      <StoreHeader storefront={storefrontData} customization={effectiveStore.customization} />
-
-      {/* 2. DYNAMIC STORE TEMPLATE ENGINE */}
+      {/* DYNAMIC STORE TEMPLATE ENGINE */}
       <TemplateEngine
         template={activeTemplate}
         store={effectiveStore}
