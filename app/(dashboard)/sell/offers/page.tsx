@@ -151,16 +151,11 @@ function OffersContent() {
   // Master Product Modal State (for creating directly in library)
   const [isCreateProductModalOpen, setIsCreateProductModalOpen] = useState(false);
   const [editingLibraryProduct, setEditingLibraryProduct] = useState<Product | null>(null);
-  const [libProdName, setLibProdName] = useState("");
-  const [libProdPrice, setLibProdPrice] = useState("");
-  const [libProdComparePrice, setLibProdComparePrice] = useState("");
-  const [libProdUnit, setLibProdUnit] = useState("cái");
-  const [libProdCategory, setLibProdCategory] = useState("Chung");
-  const [libProdDesc, setLibProdDesc] = useState("");
-  const [libProdImage, setLibProdImage] = useState("");
+  const [libProdItem, setLibProdItem] = useState<FormItemState>(createDefaultItem());
 
   // Unified Form State
   const [formName, setFormName] = useState("");
+  const [formCategory, setFormCategory] = useState("Chung");
   const [formShortDesc, setFormShortDesc] = useState("");
   const [enableCustomCover, setEnableCustomCover] = useState(false);
   const [customCoverImage, setCustomCoverImage] = useState("");
@@ -260,61 +255,184 @@ function OffersContent() {
   const handleOpenCreateProductInLibrary = (prod?: Product) => {
     if (prod) {
       setEditingLibraryProduct(prod);
-      setLibProdName(prod.name);
-      setLibProdPrice(formatThousands(prod.price));
-      setLibProdComparePrice(prod.compare_at_price ? formatThousands(prod.compare_at_price) : "");
-      setLibProdUnit(prod.unit || "cái");
-      setLibProdCategory(prod.category || "Chung");
-      setLibProdDesc(prod.description || "");
-      setLibProdImage(prod.image_url || "");
+      setLibProdItem({
+        id: prod.id,
+        name: prod.name,
+        price: formatThousands(prod.price),
+        compare_price: prod.compare_at_price ? formatThousands(prod.compare_at_price) : "",
+        unit: prod.unit || "cái",
+        category: prod.category || "Chung",
+        description: prod.description || "",
+        image_url: prod.image_url || "",
+        enable_variants: Boolean(prod.variants && prod.variants.length > 0),
+        variants: prod.variants && prod.variants.length > 0
+          ? prod.variants.map((v) => ({
+              id: v.id,
+              name: v.name,
+              price: formatThousands(v.price),
+              compare_price: v.compare_at_price ? formatThousands(v.compare_at_price) : "",
+            }))
+          : [{ id: `var-lib-1`, name: "Phiên bản tiêu chuẩn", price: formatThousands(prod.price), compare_price: "" }],
+        enable_gallery: Boolean(prod.gallery && prod.gallery.length > 0),
+        gallery: prod.gallery || [],
+        enable_attachments: Boolean(prod.attachments && prod.attachments.length > 0),
+        attachments: prod.attachments || [],
+      });
     } else {
       setEditingLibraryProduct(null);
-      setLibProdName("");
-      setLibProdPrice("");
-      setLibProdComparePrice("");
-      setLibProdUnit("cái");
-      setLibProdCategory("Chung");
-      setLibProdDesc("");
-      setLibProdImage("");
+      setLibProdItem(createDefaultItem());
     }
     setIsCreateProductModalOpen(true);
   };
 
+  const handleUpdateLibProdField = (field: keyof FormItemState, value: any) => {
+    const finalVal = (field === "price" || field === "compare_price") ? formatThousands(value) : value;
+    setLibProdItem((prev) => ({ ...prev, [field]: finalVal }));
+  };
+
+  const handleLibProdImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    try {
+      const compressed = await compressImageFile(file, 800, 0.75);
+      setLibProdItem((prev) => ({ ...prev, image_url: compressed }));
+    } catch (err) {
+      console.error("Error reading image:", err);
+    }
+  };
+
+  const handleAddLibProdGalleryFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const filesArray = Array.from(files);
+    e.target.value = "";
+    try {
+      const base64List = await Promise.all(
+        filesArray.map((file) => compressImageFile(file, 800, 0.75))
+      );
+      setLibProdItem((prev) => {
+        const existing = prev.gallery || [];
+        const uniqueNew = base64List.filter((img) => !existing.includes(img));
+        return { ...prev, gallery: [...existing, ...uniqueNew].slice(0, 5) };
+      });
+    } catch (err) {
+      console.error("Error reading gallery:", err);
+    }
+  };
+
+  const handleRemoveLibProdGallery = (photoIndex: number) => {
+    setLibProdItem((prev) => ({
+      ...prev,
+      gallery: prev.gallery.filter((_, idx) => idx !== photoIndex),
+    }));
+  };
+
+  const handleLibProdAttachmentFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const sizeKb = Math.round(file.size / 1024);
+      const newAttachment: OfferAttachment = {
+        id: `att-lib-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
+        name: file.name,
+        file_url: (event.target?.result as string) || "",
+        file_type: file.type || file.name.split(".").pop() || "file",
+        file_size: `${sizeKb} KB`,
+      };
+      setLibProdItem((prev) => {
+        const existing = prev.attachments || [];
+        if (!existing.some((a) => a.name === file.name)) {
+          return { ...prev, attachments: [...existing, newAttachment] };
+        }
+        return prev;
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLibProdAttachment = (attId: string) => {
+    setLibProdItem((prev) => ({
+      ...prev,
+      attachments: prev.attachments.filter((a) => a.id !== attId),
+    }));
+  };
+
+  const handleAddLibProdVariantRow = () => {
+    setLibProdItem((prev) => {
+      const nextNum = prev.variants.length + 1;
+      return {
+        ...prev,
+        variants: [
+          ...prev.variants,
+          { id: `var-lib-${Date.now()}-${nextNum}`, name: `Phiên bản ${nextNum}`, price: prev.price || "", compare_price: "" },
+        ],
+      };
+    });
+  };
+
+  const handleUpdateLibProdVariantField = (varIndex: number, field: keyof FormVariantState, value: string) => {
+    setLibProdItem((prev) => {
+      const copyVars = [...prev.variants];
+      const finalVal = (field === "price" || field === "compare_price") ? formatThousands(value) : value;
+      copyVars[varIndex] = { ...copyVars[varIndex], [field]: finalVal };
+      return { ...prev, variants: copyVars };
+    });
+  };
+
+  const handleRemoveLibProdVariantRow = (varIndex: number) => {
+    setLibProdItem((prev) => {
+      if (prev.variants.length <= 1) return prev;
+      return {
+        ...prev,
+        variants: prev.variants.filter((_, idx) => idx !== varIndex),
+      };
+    });
+  };
+
   const handleSaveProductInLibrary = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!libProdName.trim()) return;
+    if (!libProdItem.name.trim()) return;
 
-    const parsedPrice = parseThousands(libProdPrice) || 0;
-    const parsedCompare = libProdComparePrice ? parseThousands(libProdComparePrice) : undefined;
+    const parsedPrice = parseThousands(libProdItem.price) || 0;
+    const parsedCompare = libProdItem.compare_price ? parseThousands(libProdItem.compare_price) : undefined;
+    const itemVariants: OfferVariant[] = libProdItem.enable_variants
+      ? libProdItem.variants.map((v) => ({
+          id: v.id,
+          name: v.name.trim() || "Phiên bản",
+          price: parseThousands(v.price) || parsedPrice,
+          compare_at_price: v.compare_price ? parseThousands(v.compare_price) : undefined,
+          created_at: new Date().toISOString(),
+        }))
+      : [];
+
+    const productPayload = {
+      organization_id: organization.id,
+      store_id: store.id,
+      name: libProdItem.name.trim(),
+      price: parsedPrice,
+      compare_at_price: parsedCompare,
+      cost_price: parsedPrice * 0.5,
+      unit: libProdItem.unit.trim() || "cái",
+      category: libProdItem.category.trim() || "Chung",
+      description: libProdItem.description.trim(),
+      image_url: libProdItem.image_url.trim() || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500",
+      gallery: libProdItem.enable_gallery ? libProdItem.gallery : [],
+      attachments: libProdItem.enable_attachments ? libProdItem.attachments : [],
+      variants: itemVariants,
+      is_available: true,
+    };
 
     if (editingLibraryProduct) {
-      updateProduct(editingLibraryProduct.id, {
-        name: libProdName.trim(),
-        price: parsedPrice,
-        compare_at_price: parsedCompare,
-        unit: libProdUnit.trim(),
-        category: libProdCategory.trim(),
-        description: libProdDesc.trim(),
-        image_url: libProdImage.trim() || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500",
-      });
+      updateProduct(editingLibraryProduct.id, productPayload);
+      setToastMessage(`Đã cập nhật sản phẩm "${libProdItem.name}" trong Thư viện!`);
     } else {
-      addProduct({
-        organization_id: organization.id,
-        store_id: store.id,
-        name: libProdName.trim(),
-        price: parsedPrice,
-        compare_at_price: parsedCompare,
-        cost_price: parsedPrice * 0.5,
-        unit: libProdUnit.trim(),
-        category: libProdCategory.trim(),
-        description: libProdDesc.trim(),
-        image_url: libProdImage.trim() || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500",
-        gallery: [],
-        attachments: [],
-        variants: [],
-        is_available: true,
-      });
+      addProduct(productPayload);
+      setToastMessage(`Đã thêm sản phẩm "${libProdItem.name}" vào Thư viện thành công!`);
     }
+    setTimeout(() => setToastMessage(null), 3000);
     setIsCreateProductModalOpen(false);
   };
 
@@ -504,6 +622,7 @@ function OffersContent() {
   const handleOpenEdit = (offer: Offer) => {
     setEditingOffer(offer);
     setFormName(offer.name);
+    setFormCategory(offer.category_id || offer.items?.[0]?.category || "Chung");
     setFormShortDesc(offer.short_description || "");
 
     if (offer.items && offer.items.length > 0) {
@@ -618,6 +737,7 @@ function OffersContent() {
     setIsCreateOpen(false);
     setEditingOffer(null);
     setFormName("");
+    setFormCategory("Chung");
     setFormShortDesc("");
     setEnableCustomCover(false);
     setCustomCoverImage("");
@@ -748,6 +868,7 @@ function OffersContent() {
         updateOffer(editingOffer.id, {
           name: resolvedName,
           slug: slugify(resolvedName),
+          category_id: formCategory.trim() || "Chung",
           short_description: formShortDesc.trim() || (isMultiple ? `Bảng giá gồm ${validItems.length} sản phẩm/dịch vụ.` : validItems[0]?.description || ""),
           description: formShortDesc.trim() || (isMultiple ? `Bảng giá gồm ${validItems.length} sản phẩm/dịch vụ.` : validItems[0]?.description || ""),
           price: basePrice,
@@ -771,6 +892,7 @@ function OffersContent() {
           offer_structure: isMultiple ? "MENU_CATALOG" : "SINGLE",
           name: resolvedName,
           slug: slugify(resolvedName),
+          category_id: formCategory.trim() || "Chung",
           short_description: formShortDesc.trim() || (isMultiple ? `Bảng giá gồm ${validItems.length} sản phẩm/dịch vụ.` : validItems[0]?.description || ""),
           description: formShortDesc.trim() || (isMultiple ? `Bảng giá gồm ${validItems.length} sản phẩm/dịch vụ.` : validItems[0]?.description || ""),
           price: basePrice,
@@ -1212,18 +1334,42 @@ function OffersContent() {
             {/* 2. SCROLLABLE MODAL BODY */}
             <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-5">
               <form onSubmit={handleFormSubmit} className="space-y-5">
-                {/* Offer Title */}
-                <div>
-                  <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                    Tên Offer / Sản Phẩm / Bảng Giá *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ví dụ: Bàn thao tác cơ khí chuyên dụng (hoặc Bảng Giá Thiết Bị Xưởng 2K)"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-bold focus:ring-2 focus:ring-blue-500"
-                  />
+                {/* Offer Title & Category Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                      Tên Offer / Sản Phẩm / Bảng Giá *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ví dụ: Bàn thao tác cơ khí chuyên dụng (hoặc Bảng Giá Thiết Bị Xưởng 2K)"
+                      value={formName}
+                      onChange={(e) => setFormName(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-bold focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                      Danh mục phân loại
+                    </label>
+                    <input
+                      type="text"
+                      list="offer-categories-datalist"
+                      placeholder="vd: Thiết bị xưởng, Cơ khí..."
+                      value={formCategory}
+                      onChange={(e) => setFormCategory(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-semibold focus:ring-2 focus:ring-blue-500"
+                    />
+                    <datalist id="offer-categories-datalist">
+                      <option value="Chung" />
+                      <option value="Thiết bị & Máy móc" />
+                      <option value="Vật tư & Linh kiện" />
+                      <option value="Gia công cơ khí" />
+                      <option value="Dịch vụ kỹ thuật" />
+                      <option value="Điện tử & Tự động hóa" />
+                      <option value="Nội thất xưởng" />
+                    </datalist>
+                  </div>
                 </div>
 
                 {/* Dynamic Product / Service Items List */}
@@ -1337,15 +1483,27 @@ function OffersContent() {
                           </button>
                         </div>
 
-                        {/* Description - Clean full width (Removed redundant buttons) */}
-                        <div className="pt-1 border-t border-neutral-100 dark:border-neutral-800">
-                          <input
-                            type="text"
-                            placeholder="Mô tả ngắn gọn (thông số kỹ thuật, quy cách, kích thước, bảo hành...)"
-                            value={item.description}
-                            onChange={(e) => handleUpdateCatalogItemField(idx, "description", e.target.value)}
-                            className="w-full px-3 py-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800 border text-[11px] text-neutral-700 dark:text-neutral-300"
-                          />
+                        {/* Description & Category Row */}
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                          <div className="sm:col-span-3">
+                            <input
+                              type="text"
+                              placeholder="Mô tả ngắn gọn (thông số kỹ thuật, quy cách, kích thước, bảo hành...)"
+                              value={item.description}
+                              onChange={(e) => handleUpdateCatalogItemField(idx, "description", e.target.value)}
+                              className="w-full px-3 py-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800 border text-[11px] text-neutral-700 dark:text-neutral-300"
+                            />
+                          </div>
+                          <div>
+                            <input
+                              type="text"
+                              list="offer-categories-datalist"
+                              placeholder="Phân loại (vd: Cơ khí...)"
+                              value={item.category || ""}
+                              onChange={(e) => handleUpdateCatalogItemField(idx, "category", e.target.value)}
+                              className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800 border text-[11px] text-neutral-600 dark:text-neutral-300"
+                            />
+                          </div>
                         </div>
 
                         {/* Advanced Options Checkboxes for this item */}
@@ -2151,180 +2309,387 @@ function OffersContent() {
       {/* ========================================================================= */}
       {isCreateProductModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl border border-neutral-200 dark:border-neutral-800 p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
-              <h3 className="text-base font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-                <FolderPlus className="w-5 h-5 text-purple-600" />
-                <span>{editingLibraryProduct ? "Chỉnh Sửa Sản Phẩm Trong Thư Viện" : "Thêm Sản Phẩm Mới Vào Thư Viện"}</span>
-              </h3>
+          <div className="relative w-full max-w-3xl bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl border border-neutral-200 dark:border-neutral-800 max-h-[90vh] flex flex-col overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between shrink-0 bg-white dark:bg-neutral-900 z-20">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-600 flex items-center justify-center font-bold">
+                  <FolderPlus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-neutral-900 dark:text-neutral-100">
+                    {editingLibraryProduct ? "Chỉnh Sửa Sản Phẩm Trong Thư Viện" : "Thêm Sản Phẩm Mới Vào Thư Viện"}
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    Lưu thông tin sản phẩm mẫu, bảng giá, hình ảnh, tài liệu kỹ thuật để tái sử dụng
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => setIsCreateProductModalOpen(false)}
-                className="p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded-full cursor-pointer"
+                className="p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveProductInLibrary} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                  Tên sản phẩm / dịch vụ *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Bàn thao tác cơ khí, Xe đẩy dụng cụ..."
-                  value={libProdName}
-                  onChange={(e) => setLibProdName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-bold"
-                />
-              </div>
+            {/* Scrollable Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4">
+              <form onSubmit={handleSaveProductInLibrary} className="space-y-4 text-xs">
+                <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700/80 space-y-3 text-xs shadow-xs">
+                  {/* Item Main Attributes Row */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5">
+                    {/* Thumbnail with Click to Upload / Camera */}
+                    <div className="relative group w-14 h-14 rounded-xl bg-neutral-100 dark:bg-neutral-800 border overflow-hidden shrink-0 flex items-center justify-center">
+                      {libProdItem.image_url ? (
+                        <img
+                          src={libProdItem.image_url}
+                          alt={libProdItem.name || "Preview"}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <ImageIcon className="w-6 h-6 text-neutral-400" />
+                      )}
 
-              <div className="grid grid-cols-3 gap-2.5">
-                <div>
-                  <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                    Giá bán (VNĐ) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="3.500.000"
-                    value={libProdPrice}
-                    onChange={(e) => setLibProdPrice(formatThousands(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-emerald-600 font-bold font-mono"
-                  />
-                </div>
+                      <label className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold">
+                        <Camera className="w-4 h-4" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLibProdImageFileChange}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
 
-                <div>
-                  <label className="block font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Giá gạch (VNĐ)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="4.500.000"
-                    value={libProdComparePrice}
-                    onChange={(e) => setLibProdComparePrice(formatThousands(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-400 font-mono"
-                  />
-                </div>
+                    {/* Name */}
+                    <div className="flex-1 w-full">
+                      <input
+                        type="text"
+                        required
+                        placeholder="Tên sản phẩm / dịch vụ * (vd: Bàn thao tác...)"
+                        value={libProdItem.name}
+                        onChange={(e) => handleUpdateLibProdField("name", e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Đơn vị tính
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="bàn, cái, bộ..."
-                    value={libProdUnit}
-                    onChange={(e) => setLibProdUnit(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  Danh mục phân loại
-                </label>
-                <input
-                  type="text"
-                  placeholder="Thiết bị xưởng, Hóa chất, Dụng cụ..."
-                  value={libProdCategory}
-                  onChange={(e) => setLibProdCategory(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-                />
-              </div>
-
-              <div>
-                <label className="block font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  Mô tả / Thông số kỹ thuật
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Khung thép sơn tĩnh điện, mặt bàn gỗ plywood..."
-                  value={libProdDesc}
-                  onChange={(e) => setLibProdDesc(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-                />
-              </div>
-
-              <div>
-                <label className="block font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  Hình ảnh đại diện sản phẩm
-                </label>
-                <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0">
-                    {libProdImage ? (
-                      <img src={libProdImage} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-neutral-400">
-                        <ImageIcon className="w-5 h-5" />
+                    {/* Price (VNĐ) */}
+                    <div className="w-full sm:w-32">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          inputMode="numeric"
+                          placeholder="3.500.000"
+                          value={libProdItem.price}
+                          onChange={(e) => handleUpdateLibProdField("price", e.target.value)}
+                          className="w-full px-3 py-2 pr-7 rounded-xl bg-neutral-50 dark:bg-neutral-800 border text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono text-right focus:ring-2 focus:ring-purple-500"
+                        />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400 font-semibold pointer-events-none">
+                          đ
+                        </span>
                       </div>
-                    )}
-                  </div>
-                  <div className="flex-1 flex items-center gap-2">
-                    <label className="px-3 py-1.5 rounded-xl bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 font-bold text-[11px] cursor-pointer flex items-center gap-1">
-                      <Upload className="w-3 h-3" />
-                      <span>Chọn ảnh</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          e.target.value = "";
-                          try {
-                            const compressed = await compressImageFile(file, 800, 0.75);
-                            setLibProdImage(compressed);
-                          } catch (err) {
-                            console.error("Error reading product image:", err);
-                          }
-                        }}
-                        className="hidden"
-                      />
-                    </label>
+                    </div>
 
-                    <label className="px-3 py-1.5 rounded-xl bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 font-bold text-[11px] cursor-pointer flex items-center gap-1">
-                      <Camera className="w-3 h-3 text-emerald-600" />
-                      <span>Chụp</span>
+                    {/* Giá gạch (Compare at price) */}
+                    <div className="w-full sm:w-32">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Giá gạch..."
+                          value={libProdItem.compare_price}
+                          onChange={(e) => handleUpdateLibProdField("compare_price", e.target.value)}
+                          className="w-full px-3 py-2 pr-7 rounded-xl bg-neutral-50 dark:bg-neutral-800 border text-xs text-neutral-400 dark:text-neutral-500 line-through font-mono text-right focus:ring-2 focus:ring-purple-500"
+                        />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400 font-semibold pointer-events-none">
+                          đ
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Unit */}
+                    <div className="w-full sm:w-20">
                       <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          e.target.value = "";
-                          try {
-                            const compressed = await compressImageFile(file, 800, 0.75);
-                            setLibProdImage(compressed);
-                          } catch (err) {
-                            console.error("Error reading product image:", err);
-                          }
-                        }}
-                        className="hidden"
+                        type="text"
+                        placeholder="Đơn vị"
+                        value={libProdItem.unit}
+                        onChange={(e) => handleUpdateLibProdField("unit", e.target.value)}
+                        className="w-full px-2.5 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border text-xs text-neutral-600 dark:text-neutral-300 text-center"
                       />
-                    </label>
+                    </div>
                   </div>
+
+                  {/* Description & Category Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                    <div className="sm:col-span-3">
+                      <input
+                        type="text"
+                        placeholder="Mô tả ngắn gọn (thông số kỹ thuật, quy cách, kích thước, bảo hành...)"
+                        value={libProdItem.description}
+                        onChange={(e) => handleUpdateLibProdField("description", e.target.value)}
+                        className="w-full px-3 py-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800 border text-[11px] text-neutral-700 dark:text-neutral-300"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        list="offer-categories-datalist"
+                        placeholder="Phân loại (vd: Cơ khí...)"
+                        value={libProdItem.category || ""}
+                        onChange={(e) => handleUpdateLibProdField("category", e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800 border text-[11px] text-neutral-600 dark:text-neutral-300"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Advanced Options Checkboxes for this item */}
+                  <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex flex-wrap items-center gap-4 text-[11px]">
+                    {/* Variants Toggle */}
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        id="lib-var-toggle"
+                        checked={libProdItem.enable_variants}
+                        onChange={(e) => handleUpdateLibProdField("enable_variants", e.target.checked)}
+                        className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <label
+                        htmlFor="lib-var-toggle"
+                        className={`cursor-pointer select-none ${libProdItem.enable_variants ? "font-bold text-blue-600 dark:text-blue-400" : "text-neutral-400"}`}
+                      >
+                        🏷️ Phiên bản / Mức giá riêng
+                      </label>
+                    </div>
+
+                    {/* Gallery Photos Toggle */}
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        id="lib-gal-toggle"
+                        checked={libProdItem.enable_gallery}
+                        onChange={(e) => handleUpdateLibProdField("enable_gallery", e.target.checked)}
+                        className="rounded text-purple-600 focus:ring-purple-500 cursor-pointer"
+                      />
+                      <label
+                        htmlFor="lib-gal-toggle"
+                        className={`cursor-pointer select-none ${libProdItem.enable_gallery ? "font-bold text-purple-600 dark:text-purple-400" : "text-neutral-400"}`}
+                      >
+                        🖼️ Bộ sưu tập ảnh ({libProdItem.gallery?.length || 0}/5)
+                      </label>
+                    </div>
+
+                    {/* Attachments Toggle */}
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        id="lib-att-toggle"
+                        checked={libProdItem.enable_attachments}
+                        onChange={(e) => handleUpdateLibProdField("enable_attachments", e.target.checked)}
+                        className="rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <label
+                        htmlFor="lib-att-toggle"
+                        className={`cursor-pointer select-none ${libProdItem.enable_attachments ? "font-bold text-amber-600 dark:text-amber-400" : "text-neutral-400"}`}
+                      >
+                        📎 File / Bản vẽ đính kèm ({libProdItem.attachments?.length || 0})
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* EXPANDED VARIANTS PANEL */}
+                  {libProdItem.enable_variants && (
+                    <div className="p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 space-y-2 animate-in fade-in">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-blue-900 dark:text-blue-200">
+                          Các Phiên Bản / Phân Loại & Mức Giá:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleAddLibProdVariantRow}
+                          className="px-2 py-1 rounded-lg bg-blue-600 text-white font-bold text-[10px] hover:bg-blue-700 cursor-pointer"
+                        >
+                          + Thêm phiên bản
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {libProdItem.variants.map((v, vIdx) => (
+                          <div key={v.id || vIdx} className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              placeholder="Tên phiên bản (vd: Màu đen / Size XL / Inox 304)"
+                              value={v.name}
+                              onChange={(e) => handleUpdateLibProdVariantField(vIdx, "name", e.target.value)}
+                              className="flex-1 px-2.5 py-1.5 rounded-lg bg-white dark:bg-neutral-900 border text-[11px] font-medium"
+                            />
+                            <div className="relative w-28">
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="Giá bán"
+                                value={v.price}
+                                onChange={(e) => handleUpdateLibProdVariantField(vIdx, "price", e.target.value)}
+                                className="w-full px-2.5 py-1.5 pr-6 rounded-lg bg-white dark:bg-neutral-900 border text-[11px] font-bold text-blue-600 text-right font-mono"
+                              />
+                              <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] text-neutral-400 font-semibold pointer-events-none">
+                                đ
+                              </span>
+                            </div>
+                            <div className="relative w-28">
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="Giá gạch"
+                                value={v.compare_price}
+                                onChange={(e) => handleUpdateLibProdVariantField(vIdx, "compare_price", e.target.value)}
+                                className="w-full px-2.5 py-1.5 pr-6 rounded-lg bg-white dark:bg-neutral-900 border text-[11px] text-neutral-400 line-through text-right font-mono"
+                              />
+                              <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] text-neutral-400 font-semibold pointer-events-none">
+                                đ
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveLibProdVariantRow(vIdx)}
+                              disabled={libProdItem.variants.length <= 1}
+                              className="p-1.5 text-neutral-400 hover:text-red-600 disabled:opacity-20 cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* EXPANDED GALLERY PANEL */}
+                  {libProdItem.enable_gallery && (
+                    <div className="p-3 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/60 space-y-2 animate-in fade-in">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-purple-900 dark:text-purple-200">
+                          Bộ Sưu Tập Ảnh Sản Phẩm ({libProdItem.gallery?.length || 0}/5):
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <label className="px-2 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-[10px] cursor-pointer flex items-center gap-1">
+                            <Upload className="w-3 h-3" />
+                            <span>+ Thêm ảnh</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={handleAddLibProdGalleryFile}
+                              className="hidden"
+                            />
+                          </label>
+                          <label className="px-2 py-1 rounded-lg bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 font-bold text-[10px] cursor-pointer flex items-center gap-1">
+                            <Camera className="w-3 h-3 text-emerald-600" />
+                            <span>Chụp</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              onChange={handleAddLibProdGalleryFile}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      </div>
+
+                      {libProdItem.gallery && libProdItem.gallery.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          {libProdItem.gallery.map((photo, pIdx) => (
+                            <div key={pIdx} className="relative group w-14 h-14 rounded-lg overflow-hidden border bg-white dark:bg-neutral-900 shrink-0">
+                              <img src={photo} alt="" className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveLibProdGallery(pIdx)}
+                                className="absolute inset-0 bg-red-600/70 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-neutral-400 italic">
+                          Chưa có ảnh phụ nào. Bấm nút "+ Thêm ảnh" hoặc "Chụp" để thêm tối đa 5 ảnh.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* EXPANDED ATTACHMENTS PANEL */}
+                  {libProdItem.enable_attachments && (
+                    <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 space-y-2 animate-in fade-in">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-amber-900 dark:text-amber-200">
+                          Tài Liệu / Bản Vẽ Kỹ Thuật Đính Kèm ({libProdItem.attachments?.length || 0}):
+                        </span>
+                        <label className="px-2 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10px] cursor-pointer flex items-center gap-1">
+                          <Paperclip className="w-3 h-3" />
+                          <span>+ Đính kèm file</span>
+                          <input
+                            type="file"
+                            onChange={handleLibProdAttachmentFileUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {libProdItem.attachments && libProdItem.attachments.length > 0 ? (
+                        <div className="space-y-1.5 pt-1">
+                          {libProdItem.attachments.map((att) => (
+                            <div
+                              key={att.id}
+                              className="p-2 rounded-lg bg-white dark:bg-neutral-900 border border-amber-200/80 dark:border-amber-900/40 flex items-center justify-between text-[11px]"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <FileText className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                <span className="font-bold text-neutral-800 dark:text-neutral-200 truncate">{att.name}</span>
+                                {att.file_size && (
+                                  <span className="text-[10px] text-neutral-400 shrink-0">({att.file_size})</span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveLibProdAttachment(att.id)}
+                                className="text-neutral-400 hover:text-red-600 p-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-neutral-400 italic">
+                          Chưa có tài liệu nào đính kèm (PDF catalogue, bản vẽ CAD/DXF, chứng chỉ CO/CQ...).
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100 dark:border-neutral-800">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateProductModalOpen(false)}
-                  className="px-4 py-2 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 rounded-xl cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl shadow-md cursor-pointer"
-                >
-                  Lưu Vào Thư Viện
-                </button>
-              </div>
-            </form>
+                {/* Modal Actions Footer */}
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateProductModalOpen(false)}
+                    className="px-4 py-2 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 rounded-xl cursor-pointer"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl shadow-md cursor-pointer transition-all"
+                  >
+                    {editingLibraryProduct ? "Lưu Cập Nhật Sản Phẩm" : "Lưu Vào Thư Viện"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
