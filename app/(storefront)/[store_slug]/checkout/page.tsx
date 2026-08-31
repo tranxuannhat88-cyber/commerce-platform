@@ -25,6 +25,7 @@ import { ShippingCalculationService } from "@/lib/shipping/engine";
 import { PaymentSettingsService } from "@/lib/services/payment-settings-service";
 import { ProductAvailabilityService } from "@/lib/inventory/availability";
 import { PaymentMethodType } from "@/types";
+import { SyncBridgeService } from "@/lib/db/sync-bridge";
 
 function CheckoutContent() {
   const params = useParams();
@@ -123,6 +124,8 @@ function CheckoutContent() {
       shipping_method_id: selectedShippingOption?.method_id,
       customer_notes: `${customerNotes.trim() ? `${customerNotes.trim()} ` : ""}${gpsCoords ? `[GPS: ${gpsCoords.lat.toFixed(5)},${gpsCoords.lng.toFixed(5)}]` : ""}`,
     });
+
+    SyncBridgeService.submitOrderToServer(newOrder);
 
     clearCart();
     router.push(`/${storeSlug}/order/${newOrder.order_number}`);

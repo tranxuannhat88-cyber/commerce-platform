@@ -108,6 +108,7 @@ import { canonicalizeVerificationPayload } from "@/core/verification/canonical";
 import { computeSHA256, quickSyncHash } from "@/core/verification/hasher";
 import { MerkleTree } from "@/core/verification/merkle";
 import { defaultBlockchainProvider } from "@/core/verification/blockchain-adapter";
+import { SyncBridgeService } from "./sync-bridge";
 
 const STORAGE_KEYS = {
   PERSONAL_ACTOR: "commerce_personal_actor",
@@ -411,6 +412,35 @@ export function useCommerceStore() {
     };
 
     window.addEventListener("commerce_storage_update", handleStorageUpdate);
+
+    // Initial background sync to Server Database
+    const initialOffers = getStored<Offer[]>(STORAGE_KEYS.OFFERS, INITIAL_OFFERS);
+    const initialStore = getStored<Store>(STORAGE_KEYS.STORE, INITIAL_STORE);
+    const initialAccounts = getStored<ActorPaymentAccount[]>(STORAGE_KEYS.PAYMENT_ACCOUNTS, INITIAL_PAYMENT_ACCOUNTS);
+
+    if (initialOffers && initialOffers.length > 0) {
+      SyncBridgeService.syncAllOffersToServer(initialOffers);
+    }
+    if (initialStore) {
+      SyncBridgeService.syncStoreToServer(initialStore, initialAccounts);
+    }
+
+    // Pull any new orders placed by public visitors
+    SyncBridgeService.pullServerOrders(initialStore?.id).then((serverOrders) => {
+      if (serverOrders && serverOrders.length > 0) {
+        setOrdersState((prev) => {
+          const existingIds = new Set(prev.map((o) => o.id));
+          const newOrders = serverOrders.filter((o) => !existingIds.has(o.id));
+          if (newOrders.length > 0) {
+            const merged = [...newOrders, ...prev];
+            setStored(STORAGE_KEYS.ORDERS, merged);
+            return merged;
+          }
+          return prev;
+        });
+      }
+    });
+
     return () => window.removeEventListener("commerce_storage_update", handleStorageUpdate);
   }, []);
 
@@ -636,6 +666,7 @@ export function useCommerceStore() {
     };
     setStoreState(updated);
     setStored(STORAGE_KEYS.STORE, updated);
+    SyncBridgeService.syncStoreToServer(updated, paymentAccounts);
   };
 
   // Helper to record verification proof
@@ -796,6 +827,7 @@ export function useCommerceStore() {
       link: `/sell/offers`,
     });
 
+    SyncBridgeService.syncOfferToServer(offer);
     return offer;
   };
 
@@ -805,12 +837,18 @@ export function useCommerceStore() {
     );
     setOffersState(updated);
     setStored(STORAGE_KEYS.OFFERS, updated);
+
+    const target = updated.find((o) => o.id === id);
+    if (target) {
+      SyncBridgeService.syncOfferToServer(target);
+    }
   };
 
   const deleteOffer = (id: string) => {
     const updated = offers.filter((o) => o.id !== id);
     setOffersState(updated);
     setStored(STORAGE_KEYS.OFFERS, updated);
+    SyncBridgeService.deleteOfferFromServer(id);
   };
 
   // PRODUCT LIBRARY ACTIONS
@@ -1050,6 +1088,9 @@ export function useCommerceStore() {
       };
       setStoreState(updatedStore);
       setStored(STORAGE_KEYS.STORE, updatedStore);
+      SyncBridgeService.syncStoreToServer(updatedStore, updated);
+    } else {
+      SyncBridgeService.syncStoreToServer(store, updated);
     }
     return account;
   };
@@ -1082,6 +1123,9 @@ export function useCommerceStore() {
       };
       setStoreState(updatedStore);
       setStored(STORAGE_KEYS.STORE, updatedStore);
+      SyncBridgeService.syncStoreToServer(updatedStore, updated);
+    } else {
+      SyncBridgeService.syncStoreToServer(store, updated);
     }
   };
 
@@ -1112,6 +1156,9 @@ export function useCommerceStore() {
       };
       setStoreState(updatedStore);
       setStored(STORAGE_KEYS.STORE, updatedStore);
+      SyncBridgeService.syncStoreToServer(updatedStore, updated);
+    } else {
+      SyncBridgeService.syncStoreToServer(store, updated);
     }
   };
 
@@ -1145,6 +1192,9 @@ export function useCommerceStore() {
       };
       setStoreState(updatedStore);
       setStored(STORAGE_KEYS.STORE, updatedStore);
+      SyncBridgeService.syncStoreToServer(updatedStore, updated);
+    } else {
+      SyncBridgeService.syncStoreToServer(store, updated);
     }
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -25,6 +25,7 @@ import {
   CreditCard,
   Building2,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND } from "@/lib/utils";
@@ -34,6 +35,7 @@ import { StoreActiveOffers } from "@/components/storefront/store-active-offers";
 import { SellerTrustSummary } from "@/components/storefront/seller-trust-summary";
 import { StorePoliciesModal } from "@/components/storefront/store-policies-modal";
 import { StorefrontService } from "@/lib/storefront/storefront-service";
+import { Store, Offer } from "@/types";
 
 function StorefrontContent() {
   const params = useParams();
@@ -41,20 +43,74 @@ function StorefrontContent() {
   const { store, organization, offers, categories, products } = useCommerceStore();
   const { addToCart, setIsCartOpen, totalItems, subtotal } = useCart();
 
+  const [serverStore, setServerStore] = useState<Store | null>(null);
+  const [serverOffers, setServerOffers] = useState<Offer[]>([]);
+  const [isLoadingServer, setIsLoadingServer] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (store && store.slug === storeSlug) {
+      setIsLoadingServer(false);
+      return;
+    }
+
+    setIsLoadingServer(true);
+    Promise.all([
+      fetch(`/api/sync/store?slug=${encodeURIComponent(storeSlug)}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/sync/offers?store_slug=${encodeURIComponent(storeSlug)}`).then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([storeRes, offersRes]) => {
+        if (!isMounted) return;
+        if (storeRes && storeRes.success && storeRes.store) {
+          setServerStore(storeRes.store);
+        }
+        if (offersRes && offersRes.success && offersRes.offers) {
+          setServerOffers(offersRes.offers);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching public store from server:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingServer(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [storeSlug, store]);
+
+  const effectiveStore = (store && store.slug === storeSlug) ? store : (serverStore || store);
+  const effectiveOffers = (offers && offers.length > 0) ? offers : serverOffers;
+
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [showPoliciesModal, setShowPoliciesModal] = useState(false);
   const [policyInitialTab, setPolicyInitialTab] = useState<"shipping" | "returns" | "warranty" | "payment">("shipping");
 
   const storefrontData = StorefrontService.getPublicStorefront({
-    store,
+    store: effectiveStore,
     organization,
-    offers,
+    offers: effectiveOffers,
     categories,
     products,
   });
 
-  if (!store.slug || (store.slug !== storeSlug && storeSlug !== "preview")) {
+  if (isLoadingServer && !effectiveStore?.slug) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-neutral-50 dark:bg-neutral-950 space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 flex items-center justify-center text-blue-600 animate-pulse">
+          <Loader2 className="w-7 h-7 animate-spin text-blue-600" />
+        </div>
+        <div className="space-y-1">
+          <p className="font-bold text-sm text-neutral-800 dark:text-neutral-200">Đang tải cửa hàng trực tuyến...</p>
+          <p className="text-xs text-neutral-400">Kết nối danh mục sản phẩm và ưu đãi</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!effectiveStore?.slug) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-neutral-50 dark:bg-neutral-950">
         <div className="w-16 h-16 rounded-3xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-2xl mb-4">

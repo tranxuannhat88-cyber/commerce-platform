@@ -445,6 +445,7 @@ export interface Offer {
   id: string;
   organization_id: string;
   store_id: string;
+  store_slug?: string;
   offer_type: OfferType;
   offer_structure?: OfferStructure;
   name: string;

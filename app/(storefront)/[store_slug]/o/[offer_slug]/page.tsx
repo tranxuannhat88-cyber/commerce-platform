@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -40,7 +40,7 @@ import { formatVND, getPhoneValidationError } from "@/lib/utils";
 import { CartProvider, CartDrawer, useCart } from "@/components/storefront/cart-drawer";
 import { QRModal } from "@/components/shared/qr-modal";
 import { CopyButton } from "@/components/shared/copy-button";
-import { Offer, OfferVariant, OfferItem, PaymentMethodType, FulfillmentMethodType } from "@/types";
+import { Offer, OfferVariant, OfferItem, PaymentMethodType, FulfillmentMethodType, Store, ActorPaymentAccount } from "@/types";
 import { ShippingCalculationService } from "@/lib/shipping/engine";
 import { PaymentSettingsService } from "@/lib/services/payment-settings-service";
 import { FulfillmentService } from "@/lib/services/fulfillment-service";
@@ -51,6 +51,7 @@ import { StorePoliciesModal } from "@/components/storefront/store-policies-modal
 import { RelatedProducts } from "@/components/storefront/related-products";
 import { OtherActiveOffers } from "@/components/storefront/other-active-offers";
 import { OfferPublicService } from "@/lib/storefront/offer-public-service";
+import { SyncBridgeService } from "@/lib/db/sync-bridge";
 import confetti from "canvas-confetti";
 
 function DirectOfferContent() {
@@ -62,14 +63,69 @@ function DirectOfferContent() {
   const { offers, store, organization, products, createOrder, shippingMethods, shippingZones, paymentAccounts } = useCommerceStore();
   const { addToCart } = useCart();
 
-  const offer = offers.find((o) => o.slug === offerSlug);
-  const publicOffer = OfferPublicService.getPublicOffer({
-    offerSlug,
-    offers,
-    store,
-    organization,
-    products,
-  });
+  // Server-side fallback state for public visitors on mobile / Zalo
+  const [serverData, setServerData] = useState<{
+    offer: Offer;
+    store: Store;
+    paymentAccounts: ActorPaymentAccount[];
+    bankInfo?: {
+      is_configured: boolean;
+      bank_name: string;
+      bank_short_name: string;
+      bank_bin: string;
+      account_number: string;
+      account_name: string;
+      qr_image_url?: string;
+    };
+  } | null>(null);
+  const [isLoadingServer, setIsLoadingServer] = useState<boolean>(true);
+
+  // Fetch offer and store data from server if client localStorage does not have it
+  useEffect(() => {
+    let isMounted = true;
+    const localOffer = offers.find((o) => o.slug === offerSlug);
+    if (localOffer) {
+      setIsLoadingServer(false);
+      return;
+    }
+
+    setIsLoadingServer(true);
+    fetch(`/api/storefront/offer?store_slug=${encodeURIComponent(storeSlug)}&offer_slug=${encodeURIComponent(offerSlug)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!isMounted) return;
+        if (data && data.success && data.offer) {
+          setServerData(data);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch public offer from server:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingServer(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [offerSlug, storeSlug, offers]);
+
+  const effectiveOffer = offers.find((o) => o.slug === offerSlug) || serverData?.offer;
+  const effectiveStore = (store && store.slug === storeSlug) ? store : (serverData?.store || store);
+  const effectivePaymentAccounts = (paymentAccounts && paymentAccounts.length > 0) ? paymentAccounts : (serverData?.paymentAccounts || []);
+
+  const offer = effectiveOffer;
+  const currentStore = effectiveStore;
+
+  const publicOffer = offer
+    ? OfferPublicService.getPublicOffer({
+        offerSlug,
+        offers: [offer, ...offers],
+        store: currentStore,
+        organization,
+        products,
+      })
+    : null;
 
   const [activeDisplayImage, setActiveDisplayImage] = useState<string | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<OfferVariant | undefined>(
@@ -103,7 +159,23 @@ function DirectOfferContent() {
   const [isLocatingGPS, setIsLocatingGPS] = useState(false);
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number; map_url: string } | null>(null);
 
-  if (!offer || !store) {
+  // 1. Loading State
+  if (isLoadingServer && !offer) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 dark:bg-neutral-950 p-6 text-center space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 flex items-center justify-center text-blue-600 animate-pulse">
+          <Loader2 className="w-7 h-7 animate-spin text-blue-600" />
+        </div>
+        <div className="space-y-1">
+          <p className="font-bold text-sm text-neutral-800 dark:text-neutral-200">Đang tải thông tin ưu đãi...</p>
+          <p className="text-xs text-neutral-400">Kết nối máy chủ và nạp dữ liệu bảo mật</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Not Found State
+  if (!offer || !currentStore) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950 p-6 text-center">
         <div className="space-y-4 max-w-md">
@@ -290,6 +362,8 @@ function DirectOfferContent() {
       shipping_method_id: selectedCatalogShippingOption?.method_id,
       customer_notes: `${deliveryLocation ? `[Địa chỉ/Khu vực: ${deliveryLocation}] ` : ""}${gpsCoords ? `[GPS: ${gpsCoords.lat.toFixed(5)},${gpsCoords.lng.toFixed(5)}] ` : ""}${orderNotes}`,
     });
+
+    SyncBridgeService.submitOrderToServer(order);
 
     confetti({
       particleCount: 150,
