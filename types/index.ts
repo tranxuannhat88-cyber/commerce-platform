@@ -7,14 +7,40 @@ export type UserRole =
   | 'ACCOUNTING' 
   | 'MEMBER';
 
+export type OrganizationType = 'HOUSEHOLD' | 'COMPANY' | 'OTHER';
+
+export interface PersonalActor {
+  id: string; // e.g. "actor_usr_xxx"
+  user_id: string;
+  display_name: string;
+  phone?: string;
+  email?: string;
+  avatar_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkContext {
+  actor_id: string;
+  context_type: 'PERSONAL' | 'ORGANIZATION';
+  organization_id?: string;
+  display_name: string;
+  role?: UserRole;
+  org_type?: OrganizationType;
+  plan_code?: import('@/lib/billing/types').BillingPlanCode;
+  is_active: boolean;
+}
+
 export interface Organization {
   id: string;
   name: string;
   slug: string;
+  org_type?: OrganizationType;
   tax_code?: string;
   logo_url?: string;
   phone?: string;
   email?: string;
+  address?: string;
   settings?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -25,12 +51,16 @@ export interface OrganizationMember {
   organization_id: string;
   user_id: string;
   role: UserRole;
+  status: 'ACTIVE' | 'PENDING' | 'SUSPENDED';
+  joined_at: string;
   created_at: string;
 }
 
 export interface Store {
   id: string;
-  organization_id: string;
+  organization_id?: string; // Optional if owned by Personal
+  owner_actor_id: string;   // Either PersonalActor ID or Organization ID
+  owner_actor_type: 'PERSONAL' | 'ORGANIZATION';
   store_name: string;
   slug: string;
   logo_url?: string;
@@ -1001,6 +1031,7 @@ export type MediaOwnerType =
   | 'TRANSACTION'
   | 'USER_PROFILE'
   | 'ORGANIZATION'
+  | 'PERSONAL'
   | 'DELIVERY'
   | 'INVOICE'
   | 'CONTRACT'

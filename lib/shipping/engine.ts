@@ -100,7 +100,7 @@ export class ShippingCalculationService {
       methods = [
         {
           id: 'sm-standard',
-          organization_id: store.organization_id,
+          organization_id: store.organization_id || store.owner_actor_id || store.id,
           store_id: store.id,
           name: 'Giao hàng tiêu chuẩn',
           method_type: 'FREE_THRESHOLD',
@@ -118,7 +118,7 @@ export class ShippingCalculationService {
       if (store.shipping_settings?.enable_store_pickup !== false) {
         methods.push({
           id: 'sm-pickup',
-          organization_id: store.organization_id,
+          organization_id: store.organization_id || store.owner_actor_id || store.id,
           store_id: store.id,
           name: 'Nhận tại cửa hàng / Xưởng',
           method_type: 'PICKUP',
@@ -135,7 +135,7 @@ export class ShippingCalculationService {
       if (store.shipping_settings?.enable_quote_later) {
         methods.push({
           id: 'sm-quote-later',
-          organization_id: store.organization_id,
+          organization_id: store.organization_id || store.owner_actor_id || store.id,
           store_id: store.id,
           name: 'Báo phí vận chuyển sau (Hàng cồng kềnh / Xe tải)',
           method_type: 'QUOTE_LATER',

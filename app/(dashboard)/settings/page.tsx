@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Settings,
-  Building,
+  Building2,
   ShieldCheck,
   Users,
   Save,
@@ -15,20 +15,57 @@ import {
   ArrowRight,
   Shield,
   CreditCard,
+  User,
+  ArrowRightLeft,
+  CheckCircle2,
+  Plus,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { UserRole } from "@/types";
 import { MediaUploadDropzone } from "@/components/shared/media-upload-dropzone";
+import { CreateOrgModal } from "@/components/dashboard/create-org-modal";
+import { PersonalTeamNoticeModal } from "@/components/dashboard/personal-team-notice-modal";
 
 export default function SettingsPage() {
-  const { organization, updateOrganization, subscription } = useCommerceStore();
+  const {
+    organization,
+    organizations,
+    updateOrganization,
+    currentUser,
+    updateUserProfile,
+    personalActor,
+    currentContext,
+    subscription,
+    store,
+    transferStoreToOrganization,
+  } = useCommerceStore();
+
+  const isPersonal = currentContext.context_type === "PERSONAL";
+
+  // Form states
+  const [personalName, setPersonalName] = useState(currentUser?.full_name || personalActor.display_name);
   const [orgName, setOrgName] = useState(organization.name);
   const [taxCode, setTaxCode] = useState(organization.tax_code || "");
   const [phone, setPhone] = useState(organization.phone || "");
   const [email, setEmail] = useState(organization.email || "");
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  // Store Transfer state
+  const [selectedTargetOrgId, setSelectedTargetOrgId] = useState(organizations[0]?.id || "");
+  const [transferSuccess, setTransferSuccess] = useState(false);
+
+  // Modals
+  const [showCreateOrgModal, setShowCreateOrgModal] = useState(false);
+  const [showPersonalTeamModal, setShowPersonalTeamModal] = useState(false);
+
+  const handleSavePersonal = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateUserProfile({ full_name: personalName });
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 2500);
+  };
+
+  const handleSaveOrg = (e: React.FormEvent) => {
     e.preventDefault();
     updateOrganization({
       name: orgName,
@@ -40,27 +77,55 @@ export default function SettingsPage() {
     setTimeout(() => setSavedSuccess(false), 2500);
   };
 
+  const handleTransferStore = () => {
+    if (!selectedTargetOrgId) return;
+    const ok = transferStoreToOrganization(store.id, selectedTargetOrgId);
+    if (ok) {
+      setTransferSuccess(true);
+      setTimeout(() => setTransferSuccess(false), 3000);
+    }
+  };
+
   const teamMembers = [
-    { name: "Nguyễn Văn Hùng", email: "hung.nv@2k-tech.vn", role: "OWNER" as UserRole, status: "Active" },
+    { name: currentUser?.full_name || "Trần Xuân Nhật", email: currentUser?.primary_phone || "nhat.tx@invamax.com", role: (currentContext.role || "OWNER") as UserRole, status: "Active" },
     { name: "Trần Thị Mai", email: "mai.tt@2k-tech.vn", role: "SALES" as UserRole, status: "Active" },
     { name: "Lê Hoàng Long", email: "long.lh@2k-tech.vn", role: "WAREHOUSE" as UserRole, status: "Active" },
   ];
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl pb-20">
       {/* Title */}
-      <div>
-        <h2 className="text-xl md:text-2xl font-black text-neutral-900 dark:text-neutral-100">
-          Thiết Lập Doanh Nghiệp & Phân Quyền (Organization)
-        </h2>
-        <p className="text-xs text-neutral-500 mt-0.5">
-          Quản lý thực thể cấp cao nhất (Multi-Tenant) và vai trò thành viên trong tổ chức
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl md:text-2xl font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-2.5">
+            {isPersonal ? <User className="w-6 h-6 text-blue-600" /> : <Building2 className="w-6 h-6 text-blue-600" />}
+            <span>
+              {isPersonal ? "Cài Đặt Tài Khoản Cá Nhân" : `Thiết Lập Tổ Chức (${organization.name})`}
+            </span>
+          </h2>
+          <p className="text-xs text-neutral-500 mt-0.5">
+            {isPersonal
+              ? "Quản lý thông tin định danh cá nhân, bảo mật Passkey và chuyển đổi cửa hàng"
+              : "Quản lý pháp nhân, thông tin doanh nghiệp, thành viên và phân quyền"}
+          </p>
+        </div>
+
+        {isPersonal && (
+          <button
+            type="button"
+            onClick={() => setShowCreateOrgModal(true)}
+            className="px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-white text-white dark:text-neutral-900 font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer self-start"
+          >
+            <Plus className="w-4 h-4 text-blue-500" />
+            <span>+ Tạo Tổ Chức Mới</span>
+          </button>
+        )}
       </div>
 
       {savedSuccess && (
-        <div className="p-3 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold animate-in fade-in">
-          ✓ Đã lưu thông tin Doanh nghiệp thành công!
+        <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold animate-in fade-in flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <span>Đã lưu thông tin thành công!</span>
         </div>
       )}
 
@@ -99,119 +164,259 @@ export default function SettingsPage() {
             <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-xs text-white shrink-0 group-hover:scale-110 transition-transform">
               <Fingerprint className="w-5 h-5" />
             </div>
-            <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-bold">
-              Passkey & OTP
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-400 text-neutral-950 text-[10px] font-black">
+              FIDO2 / WebAuthn
             </span>
           </div>
           <div className="space-y-1 mt-4">
             <h3 className="text-sm font-black flex items-center gap-1.5">
-              <span>Bảo Mật & Xác Thực</span>
+              <span>Bảo Mật & Passkey</span>
               <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
             </h3>
             <p className="text-[11px] text-neutral-300 leading-relaxed">
-              Face ID, Touch ID, Windows Hello, số điện thoại và phiên đăng nhập.
+              Đăng nhập không mật khẩu bằng vân tay / khuôn mặt và quản lý phiên đăng nhập.
             </p>
           </div>
         </Link>
       </div>
 
-      {/* RLS Security Status Badge */}
-      <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 flex items-center gap-3">
-        <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
-        <div className="text-xs">
-          <p className="font-bold text-emerald-900 dark:text-emerald-200">
-            PostgreSQL Row Level Security (RLS): Kích Hoạt
-          </p>
-          <p className="text-emerald-700 dark:text-emerald-400 text-[11px]">
-            Toàn bộ dữ liệu đơn hàng, kho bãi, sổ cái tài chính và báo giá được mã hóa và phân tách tuyệt đối theo mã định danh Tenant: <code className="font-mono bg-white/60 dark:bg-black/40 px-1 py-0.5 rounded">{organization.id}</code>
-          </p>
-        </div>
-      </div>
+      {/* PERSONAL CONTEXT SETTINGS */}
+      {isPersonal ? (
+        <div className="space-y-6">
+          {/* Profile Form */}
+          <form
+            onSubmit={handleSavePersonal}
+            className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4"
+          >
+            <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+              <User className="w-4 h-4 text-blue-600" />
+              <span>Hồ Sơ Cá Nhân</span>
+            </h3>
 
-      <form onSubmit={handleSave} className="space-y-6">
-        {/* Org Profile */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4">
-          <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-            <Building className="w-4 h-4 text-blue-600" />
-            <span>Thông tin Pháp nhân / Doanh nghiệp</span>
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                Tên Doanh nghiệp / Hộ kinh doanh / Tổ chức *
-              </label>
-              <input
-                type="text"
-                required
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 font-bold"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Mã số thuế (Tax Code)
-              </label>
-              <input
-                type="text"
-                value={taxCode}
-                onChange={(e) => setTaxCode(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Số điện thoại đại diện
-              </label>
-              <input
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-white text-white dark:text-neutral-900 font-bold text-xs shadow-md transition-all cursor-pointer"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>Lưu Thông Tin</span>
-            </button>
-          </div>
-        </div>
-      </form>
-
-      {/* Team Members List */}
-      <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4">
-        <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-          <Users className="w-4 h-4 text-blue-600" />
-          <span>Thành viên & Phân Quyền (RBAC)</span>
-        </h3>
-
-        <div className="divide-y divide-neutral-100 dark:divide-neutral-800 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden text-xs">
-          {teamMembers.map((member, idx) => (
-            <div key={idx} className="p-3.5 flex items-center justify-between">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="font-bold text-neutral-900 dark:text-neutral-100">{member.name}</p>
-                <p className="text-[11px] text-neutral-500">{member.email}</p>
+                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                  Họ và tên hiển thị
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={personalName}
+                  onChange={(e) => setPersonalName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
+                />
               </div>
 
-              <div className="flex items-center gap-3">
-                <span className="px-2.5 py-1 rounded-md text-[10px] font-black bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">
-                  {member.role}
-                </span>
-                <span className="text-[10px] text-emerald-600 font-semibold">● {member.status}</span>
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                  Số điện thoại đăng nhập
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={currentUser?.primary_phone || "+84988123456"}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-100 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 text-neutral-500 font-mono cursor-not-allowed"
+                />
               </div>
             </div>
-          ))}
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-white text-white dark:text-neutral-900 font-bold text-xs shadow-md transition-all cursor-pointer"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Lưu Hồ Sơ</span>
+              </button>
+            </div>
+          </form>
+
+          {/* Personal 1-Person Notice Card */}
+          <div className="p-6 rounded-3xl bg-linear-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-200 dark:border-amber-900/60 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-xs">
+                <Users className="w-4 h-4" />
+                <span>Mô hình vận hành Cá nhân (1 người)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPersonalTeamModal(true)}
+                className="text-xs font-bold text-blue-600 hover:underline"
+              >
+                Tìm hiểu thêm
+              </button>
+            </div>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
+              Hình thức <strong>Cá nhân</strong> dành cho 1 người tự quản lý và vận hành. Nếu bạn muốn nhiều người cùng tham gia và được phân quyền vai trò (Sales, Kho, Kế toán), hãy <strong>tạo Tổ chức</strong>.
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setShowCreateOrgModal(true)}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer"
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span>+ Tạo Tổ Chức Để Phân Quyền</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Store Transfer to Organization Card */}
+          <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4 text-purple-600" />
+                <span>Chuyển Cửa Hàng Sang Tổ Chức (Store Transfer)</span>
+              </h3>
+              <p className="text-xs text-neutral-500 leading-relaxed">
+                Bạn có thể chuyển cửa hàng <strong>{store.store_name}</strong> sang một Tổ chức bạn quản lý để cùng đội ngũ vận hành. Toàn bộ mã cửa hàng, link công khai, sản phẩm và lịch sử đơn hàng được giữ nguyên 100%.
+              </p>
+            </div>
+
+            {transferSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold">
+                ✓ Đã chuyển cửa hàng sang Tổ chức thành công!
+              </div>
+            )}
+
+            {organizations.length === 0 ? (
+              <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700 text-xs text-neutral-500">
+                Bạn chưa có Tổ chức nào. Hãy tạo Tổ chức trước khi thực hiện chuyển giao.
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+                <select
+                  value={selectedTargetOrgId}
+                  onChange={(e) => setSelectedTargetOrgId(e.target.value)}
+                  className="px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-medium text-neutral-900 dark:text-neutral-100 flex-1 outline-none"
+                >
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      Chuyển sang: {org.name}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={handleTransferStore}
+                  className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md shadow-purple-600/20 transition-all cursor-pointer shrink-0"
+                >
+                  Xác Nhận Chuyển Giao
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* ORGANIZATION CONTEXT SETTINGS */
+        <div className="space-y-6">
+          <form
+            onSubmit={handleSaveOrg}
+            className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4"
+          >
+            <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-blue-600" />
+              <span>Thông Tin Pháp Nhân / Tổ Chức</span>
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                  Tên Tổ chức / Doanh nghiệp
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                  Mã số thuế (Tax Code)
+                </label>
+                <input
+                  type="text"
+                  value={taxCode}
+                  onChange={(e) => setTaxCode(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                  Số điện thoại đại diện
+                </label>
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                  Email liên hệ
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-white text-white dark:text-neutral-900 font-bold text-xs shadow-md transition-all cursor-pointer"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Lưu Thông Tin Tổ Chức</span>
+              </button>
+            </div>
+          </form>
+
+          {/* Team Members List */}
+          <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                <Users className="w-4 h-4 text-blue-600" />
+                <span>Thành viên & Phân Quyền ({teamMembers.length} người)</span>
+              </h3>
+              <button
+                type="button"
+                className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all cursor-pointer"
+              >
+                + Mời Thành Viên
+              </button>
+            </div>
+
+            <div className="divide-y divide-neutral-100 dark:divide-neutral-800 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden text-xs">
+              {teamMembers.map((member, idx) => (
+                <div key={idx} className="p-3.5 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-neutral-900 dark:text-neutral-100">{member.name}</p>
+                    <p className="text-[11px] text-neutral-500">{member.email}</p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="px-2.5 py-1 rounded-md text-[10px] font-black bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">
+                      {member.role}
+                    </span>
+                    <span className="text-[10px] text-emerald-600 font-semibold">● {member.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cloudflare R2 Media & Document Storage Architecture Card */}
       <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-5">
@@ -222,48 +427,14 @@ export default function SettingsPage() {
               <span>Quản Lý Lưu Trữ Đám Mây (Cloud Object Storage)</span>
             </h3>
             <p className="text-xs text-neutral-500 mt-0.5">
-              Hạ tầng lưu trữ Cloudflare R2 / S3-compatible, không lưu nhị phân trong PostgreSQL
+              Hạ tầng lưu trữ Cloudflare R2 / S3-compatible, bảo mật bằng chữ ký SHA-256
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
-              Gói Hiện Tại: PRO (10 GB)
+              Gói Hiện Tại: {subscription.plan_code}
             </span>
-          </div>
-        </div>
-
-        {/* Quota Progress */}
-        <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/80 space-y-2.5">
-          <div className="flex items-center justify-between text-xs font-bold">
-            <span className="text-neutral-700 dark:text-neutral-300">Dung lượng đã sử dụng:</span>
-            <span className="text-blue-600 dark:text-blue-400 font-mono">1.24 GB / 10.00 GB (12.4%)</span>
-          </div>
-
-          <div className="w-full h-2.5 rounded-full bg-neutral-200 dark:bg-neutral-700 overflow-hidden flex">
-            <div className="bg-blue-600 h-full" style={{ width: "6%" }} title="Ảnh sản phẩm: 600MB" />
-            <div className="bg-emerald-500 h-full" style={{ width: "3.5%" }} title="Tài liệu & Báo giá: 350MB" />
-            <div className="bg-purple-600 h-full" style={{ width: "2.9%" }} title="Bằng chứng giao dịch & CAD: 290MB" />
-          </div>
-
-          {/* Breakdown Pills */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px]">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-              <span className="text-neutral-600 dark:text-neutral-400">Ảnh SP: <strong>600 MB</strong></span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              <span className="text-neutral-600 dark:text-neutral-400">Tài liệu: <strong>350 MB</strong></span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-purple-600" />
-              <span className="text-neutral-600 dark:text-neutral-400">Bằng chứng: <strong>290 MB</strong></span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600" />
-              <span className="text-neutral-600 dark:text-neutral-400">Trống: <strong>8.76 GB</strong></span>
-            </div>
           </div>
         </div>
 
@@ -273,8 +444,8 @@ export default function SettingsPage() {
             Tải Thử Nghiệm Trực Tiếp (Direct-to-Storage Upload):
           </p>
           <MediaUploadDropzone
-            ownerType="ORGANIZATION"
-            ownerId={organization.id}
+            ownerType={isPersonal ? "PERSONAL" : "ORGANIZATION"}
+            ownerId={currentContext.actor_id}
             visibility="TRANSACTION_EVIDENCE"
             label="Kéo thả tài liệu / bản vẽ để kiểm tra tải trực tiếp lên Storage"
             helperText="Hệ thống tự động cấp Pre-signed PUT URL và băm SHA-256 xác thực"
@@ -284,6 +455,17 @@ export default function SettingsPage() {
           />
         </div>
       </div>
+
+      {/* Modals */}
+      <CreateOrgModal
+        isOpen={showCreateOrgModal}
+        onClose={() => setShowCreateOrgModal(false)}
+      />
+      <PersonalTeamNoticeModal
+        isOpen={showPersonalTeamModal}
+        onClose={() => setShowPersonalTeamModal(false)}
+        onCreateOrg={() => setShowCreateOrgModal(true)}
+      />
     </div>
   );
 }

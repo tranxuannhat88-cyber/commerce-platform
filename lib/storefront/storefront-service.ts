@@ -84,7 +84,7 @@ export class StorefrontService {
 
     return {
       id: store.id,
-      organization_id: store.organization_id,
+      organization_id: store.organization_id || store.owner_actor_id || store.id,
       store_name: store.store_name,
       slug: store.slug,
       logo_url: publicSettings.show_logo ? (store.logo_url || organization.logo_url) : undefined,

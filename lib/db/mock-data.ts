@@ -1,5 +1,7 @@
 import { 
   Organization, 
+  OrganizationMember,
+  PersonalActor,
   Store, 
   BusinessParty, 
   Category, 
@@ -76,21 +78,52 @@ export const INITIAL_PAYMENT_ACCOUNTS: ActorPaymentAccount[] = [
   },
 ];
 
+export const INITIAL_PERSONAL_ACTOR: PersonalActor = {
+  id: "actor_usr_2k_admin",
+  user_id: "usr_2k_admin",
+  display_name: "Trần Xuân Nhật (Cá nhân)",
+  phone: "+84988123456",
+  email: "nhat.tx@invamax.com",
+  avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+  created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 export const INITIAL_ORGANIZATION: Organization = {
   id: "org-2k-tech",
   name: "CÔNG TY TNHH KỸ THUẬT & THƯƠNG MẠI 2K",
   slug: "cong-ty-2k",
+  org_type: "COMPANY",
   tax_code: "0109988776",
   phone: "0988.123.456",
   email: "contact@2k-tech.vn",
+  address: "Tòa nhà TechHub, Số 12 Khu Công Nghệ Cao, Q.9, TP.HCM",
   logo_url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80",
   created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
   updated_at: new Date().toISOString(),
 };
 
+export const INITIAL_ORGANIZATIONS: Organization[] = [
+  INITIAL_ORGANIZATION,
+];
+
+export const INITIAL_ORGANIZATION_MEMBERS: OrganizationMember[] = [
+  {
+    id: "mem_2k_owner",
+    organization_id: "org-2k-tech",
+    user_id: "usr_2k_admin",
+    role: "OWNER",
+    status: "ACTIVE",
+    joined_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+  },
+];
+
 export const INITIAL_STORE: Store = {
   id: "store-2k-official",
   organization_id: "org-2k-tech",
+  owner_actor_id: "org-2k-tech",
+  owner_actor_type: "ORGANIZATION",
   store_name: "2K Smart Commerce & Industrial Solutions",
   slug: "2k-store",
   logo_url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80",
@@ -1068,6 +1101,34 @@ export const INITIAL_AUTH_SESSION: AuthSession = {
   expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
 };
 
+export const INITIAL_SUBSCRIPTION_PERSONAL: Subscription = {
+  id: "sub-personal-usr-2k-admin",
+  actor_id: "actor_usr_2k_admin",
+  actor_type: "PERSONAL",
+  actor_name: "Trần Xuân Nhật (Cá nhân)",
+  plan_id: "plan-free",
+  plan_code: "FREE",
+  status: "ACTIVE",
+  billing_period: "MONTHLY",
+  current_period_start: new Date(Date.now() - 30 * 86400000).toISOString(),
+  current_period_end: new Date(Date.now() + 335 * 86400000).toISOString(),
+  cancel_at_period_end: false,
+  scheduled_downgrade_plan_id: null,
+  items: [
+    {
+      id: "sub-item-base-free",
+      subscription_id: "sub-personal-usr-2k-admin",
+      item_type: "BASE_PLAN",
+      quantity: 1,
+      unit_price: 0,
+      total_amount: 0,
+      effective_from: new Date(Date.now() - 30 * 86400000).toISOString(),
+    },
+  ],
+  activated_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 export const INITIAL_SUBSCRIPTION: Subscription = {
   id: "sub-org-2k-tech-01",
   actor_id: "org-2k-tech",
@@ -1095,6 +1156,11 @@ export const INITIAL_SUBSCRIPTION: Subscription = {
   activated_at: new Date(Date.now() - 45 * 86400000).toISOString(),
   updated_at: new Date().toISOString(),
 };
+
+export const INITIAL_SUBSCRIPTIONS: Subscription[] = [
+  INITIAL_SUBSCRIPTION_PERSONAL,
+  INITIAL_SUBSCRIPTION,
+];
 
 export const INITIAL_BILLING_ORDERS: BillingOrder[] = [
   {

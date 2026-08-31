@@ -42,7 +42,9 @@ function CheckoutContent() {
 
   const {
     currentUser,
+    personalActor,
     organization,
+    currentContext,
     subscription,
     createBillingOrder,
     confirmBillingOrder,
@@ -54,9 +56,9 @@ function CheckoutContent() {
     initialAddonCode ? [initialAddonCode] : []
   );
 
-  // Workspace Target
+  // Workspace Target (defaults to current active context)
   const [targetActorType, setTargetActorType] = useState<"ORGANIZATION" | "PERSONAL">(
-    "ORGANIZATION"
+    currentContext?.context_type || "ORGANIZATION"
   );
 
   // Promo Code
@@ -112,10 +114,14 @@ function CheckoutContent() {
       quantity: 1,
     }));
 
+    const isOrg = targetActorType === "ORGANIZATION";
+    const targetActorId = isOrg ? organization.id : personalActor.id;
+    const targetActorName = isOrg ? organization.name : (currentUser.full_name || personalActor.display_name);
+
     const order = createBillingOrder({
-      actorId: targetActorType === "ORGANIZATION" ? organization.id : currentUser.id,
+      actorId: targetActorId,
       actorType: targetActorType,
-      actorName: targetActorType === "ORGANIZATION" ? organization.name : currentUser.full_name,
+      actorName: targetActorName,
       orderType: isFreePlan ? "PLAN_CHANGE" : "NEW_SUBSCRIPTION",
       planCode: selectedPlanCode,
       billingPeriod,

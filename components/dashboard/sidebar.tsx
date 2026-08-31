@@ -23,6 +23,7 @@ import {
   Eye,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
+import { ContextSwitcher } from "./context-switcher";
 
 interface NavItem {
   href: string;
@@ -38,7 +39,9 @@ interface NavSection {
 
 export function DashboardSidebar() {
   const pathname = usePathname();
-  const { store, organization } = useCommerceStore();
+  const { store, organization, currentContext } = useCommerceStore();
+
+  const isPersonal = currentContext.context_type === "PERSONAL";
 
   const navSections: NavSection[] = [
     {
@@ -74,11 +77,11 @@ export function DashboardSidebar() {
     {
       title: "HỆ THỐNG",
       items: [
-        { href: "/store", label: "Cửa hàng & Kênh bán", icon: StoreIcon },
+        { href: "/store", label: isPersonal ? "Cửa hàng của tôi" : "Cửa hàng & Kênh bán", icon: StoreIcon },
         { href: "/store/public-settings", label: "Hiển thị công khai", icon: Eye },
         { href: "/settings/billing", label: "Gói Dịch Vụ & Hạn Mức", icon: CreditCard },
         { href: "/settings/security", label: "Tài khoản & Passkey", icon: KeyRound },
-        { href: "/settings", label: "Thiết lập Doanh nghiệp", icon: Settings },
+        { href: "/settings", label: isPersonal ? "Cài đặt & Chuyển đổi" : "Thiết lập Tổ chức", icon: Settings },
       ],
     },
   ];
@@ -100,15 +103,20 @@ export function DashboardSidebar() {
             <h1 className="font-bold text-sm text-neutral-900 dark:text-neutral-100 tracking-tight">
               COMMERCE PLATFORM
             </h1>
-            <p className="text-xs text-neutral-500 truncate max-w-[130px]">
-              {organization.name}
+            <p className="text-[11px] text-neutral-400 font-medium">
+              V2 Multi-Context
             </p>
           </div>
         </div>
       </div>
 
-      {/* Quick View Public Store */}
+      {/* Context Switcher on Sidebar */}
       <div className="px-3 pt-3">
+        <ContextSwitcher />
+      </div>
+
+      {/* Quick View Public Store */}
+      <div className="px-3 pt-2">
         <Link
           href={`/${store.slug}`}
           target="_blank"

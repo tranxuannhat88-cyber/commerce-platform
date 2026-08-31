@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import {
   Organization,
+  OrganizationMember,
+  PersonalActor,
+  WorkContext,
   Store,
   BusinessParty,
   Category,
@@ -41,7 +44,10 @@ import {
 } from "@/types";
 
 import {
+  INITIAL_PERSONAL_ACTOR,
   INITIAL_ORGANIZATION,
+  INITIAL_ORGANIZATIONS,
+  INITIAL_ORGANIZATION_MEMBERS,
   INITIAL_STORE,
   INITIAL_PAYMENT_ACCOUNTS,
   INITIAL_CATEGORIES,
@@ -70,6 +76,8 @@ import {
   INITIAL_PASSKEYS,
   INITIAL_AUTH_SESSION,
   INITIAL_SUBSCRIPTION,
+  INITIAL_SUBSCRIPTION_PERSONAL,
+  INITIAL_SUBSCRIPTIONS,
   INITIAL_BILLING_ORDERS,
   INITIAL_BILLING_INVOICES,
 } from "./mock-data";
@@ -102,8 +110,13 @@ import { MerkleTree } from "@/core/verification/merkle";
 import { defaultBlockchainProvider } from "@/core/verification/blockchain-adapter";
 
 const STORAGE_KEYS = {
+  PERSONAL_ACTOR: "commerce_personal_actor",
   ORGANIZATION: "commerce_org",
+  ORGANIZATIONS: "commerce_organizations",
+  ORGANIZATION_MEMBERS: "commerce_org_members",
+  ACTIVE_CONTEXT: "commerce_active_context",
   STORE: "commerce_store",
+  STORES: "commerce_stores_list",
   CATEGORIES: "commerce_categories",
   COLLECTIONS: "commerce_collections",
   OFFERS: "commerce_offers",
@@ -131,6 +144,7 @@ const STORAGE_KEYS = {
   PASSKEYS: "commerce_passkeys",
   SESSION: "commerce_session",
   SUBSCRIPTION: "commerce_subscription",
+  SUBSCRIPTIONS: "commerce_subscriptions_list",
   BILLING_ORDERS: "commerce_billing_orders",
   BILLING_INVOICES: "commerce_billing_invoices",
 };
@@ -218,7 +232,18 @@ function setStored<T>(key: string, value: T): void {
 
 export function useCommerceStore() {
   const [isLoaded, setIsLoaded] = useState(false);
+  const [personalActor, setPersonalActorState] = useState<PersonalActor>(INITIAL_PERSONAL_ACTOR);
   const [organization, setOrgState] = useState<Organization>(INITIAL_ORGANIZATION);
+  const [organizations, setOrganizationsState] = useState<Organization[]>(INITIAL_ORGANIZATIONS);
+  const [organizationMembers, setOrgMembersState] = useState<OrganizationMember[]>(INITIAL_ORGANIZATION_MEMBERS);
+  const [currentContext, setCurrentContextState] = useState<WorkContext>({
+    actor_id: INITIAL_PERSONAL_ACTOR.id,
+    context_type: "PERSONAL",
+    display_name: INITIAL_PERSONAL_ACTOR.display_name,
+    plan_code: "FREE",
+    is_active: true,
+  });
+
   const [store, setStoreState] = useState<Store>(INITIAL_STORE);
   const [categories, setCategoriesState] = useState<Category[]>(INITIAL_CATEGORIES);
   const [collections, setCollectionsState] = useState<Collection[]>(INITIAL_COLLECTIONS);
@@ -247,6 +272,7 @@ export function useCommerceStore() {
   const [currentSession, setCurrentSessionState] = useState<AuthSession | null>(INITIAL_AUTH_SESSION);
   const [passkeys, setPasskeysState] = useState<PasskeyCredential[]>(INITIAL_PASSKEYS);
   const [subscription, setSubscriptionState] = useState<Subscription>(INITIAL_SUBSCRIPTION);
+  const [subscriptions, setSubscriptionsState] = useState<Subscription[]>(INITIAL_SUBSCRIPTIONS);
   const [billingOrders, setBillingOrdersState] = useState<BillingOrder[]>(INITIAL_BILLING_ORDERS);
   const [billingInvoices, setBillingInvoicesState] = useState<BillingInvoice[]>(INITIAL_BILLING_INVOICES);
 
@@ -254,7 +280,33 @@ export function useCommerceStore() {
     // Proactively clean bloated storage on first load
     clearBloatedLocalStorage();
 
-    setOrgState(getStored(STORAGE_KEYS.ORGANIZATION, INITIAL_ORGANIZATION));
+    const storedPersonal = getStored(STORAGE_KEYS.PERSONAL_ACTOR, INITIAL_PERSONAL_ACTOR);
+    const storedOrgs = getStored(STORAGE_KEYS.ORGANIZATIONS, INITIAL_ORGANIZATIONS);
+    const storedMembers = getStored(STORAGE_KEYS.ORGANIZATION_MEMBERS, INITIAL_ORGANIZATION_MEMBERS);
+    const storedSubs = getStored(STORAGE_KEYS.SUBSCRIPTIONS, INITIAL_SUBSCRIPTIONS);
+    const storedActiveContext = getStored<WorkContext | null>(STORAGE_KEYS.ACTIVE_CONTEXT, null);
+
+    setPersonalActorState(storedPersonal);
+    setOrganizationsState(storedOrgs);
+    setOrgMembersState(storedMembers);
+    setSubscriptionsState(storedSubs);
+
+    if (storedActiveContext) {
+      setCurrentContextState(storedActiveContext);
+      if (storedActiveContext.context_type === "ORGANIZATION" && storedActiveContext.organization_id) {
+        const matchingOrg = storedOrgs.find((o) => o.id === storedActiveContext.organization_id) || storedOrgs[0];
+        setOrgState(matchingOrg);
+        const sub = storedSubs.find((s) => s.actor_id === matchingOrg.id);
+        if (sub) setSubscriptionState(sub);
+      } else {
+        const sub = storedSubs.find((s) => s.actor_id === storedPersonal.id) || INITIAL_SUBSCRIPTION_PERSONAL;
+        setSubscriptionState(sub);
+      }
+    } else {
+      setOrgState(getStored(STORAGE_KEYS.ORGANIZATION, INITIAL_ORGANIZATION));
+      setSubscriptionState(getStored(STORAGE_KEYS.SUBSCRIPTION, INITIAL_SUBSCRIPTION_PERSONAL));
+    }
+
     setStoreState(getStored(STORAGE_KEYS.STORE, INITIAL_STORE));
     setCategoriesState(getStored(STORAGE_KEYS.CATEGORIES, INITIAL_CATEGORIES));
     setCollectionsState(getStored(STORAGE_KEYS.COLLECTIONS, INITIAL_COLLECTIONS));
@@ -282,12 +334,23 @@ export function useCommerceStore() {
     setCurrentUserState(getStored(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY));
     setCurrentSessionState(getStored(STORAGE_KEYS.SESSION, INITIAL_AUTH_SESSION));
     setPasskeysState(getStored(STORAGE_KEYS.PASSKEYS, INITIAL_PASSKEYS));
-    setSubscriptionState(getStored(STORAGE_KEYS.SUBSCRIPTION, INITIAL_SUBSCRIPTION));
     setBillingOrdersState(getStored(STORAGE_KEYS.BILLING_ORDERS, INITIAL_BILLING_ORDERS));
     setBillingInvoicesState(getStored(STORAGE_KEYS.BILLING_INVOICES, INITIAL_BILLING_INVOICES));
     setIsLoaded(true);
 
     const handleStorageUpdate = () => {
+      const p = getStored(STORAGE_KEYS.PERSONAL_ACTOR, INITIAL_PERSONAL_ACTOR);
+      const oList = getStored(STORAGE_KEYS.ORGANIZATIONS, INITIAL_ORGANIZATIONS);
+      const mList = getStored(STORAGE_KEYS.ORGANIZATION_MEMBERS, INITIAL_ORGANIZATION_MEMBERS);
+      const sList = getStored(STORAGE_KEYS.SUBSCRIPTIONS, INITIAL_SUBSCRIPTIONS);
+      const ctx = getStored<WorkContext | null>(STORAGE_KEYS.ACTIVE_CONTEXT, null);
+
+      setPersonalActorState(p);
+      setOrganizationsState(oList);
+      setOrgMembersState(mList);
+      setSubscriptionsState(sList);
+      if (ctx) setCurrentContextState(ctx);
+
       setOrgState(getStored(STORAGE_KEYS.ORGANIZATION, INITIAL_ORGANIZATION));
       setStoreState(getStored(STORAGE_KEYS.STORE, INITIAL_STORE));
       setCategoriesState(getStored(STORAGE_KEYS.CATEGORIES, INITIAL_CATEGORIES));
@@ -325,10 +388,201 @@ export function useCommerceStore() {
     return () => window.removeEventListener("commerce_storage_update", handleStorageUpdate);
   }, []);
 
+  const switchContext = (actorId: string) => {
+    if (actorId === personalActor.id) {
+      const personalSub = subscriptions.find((s) => s.actor_id === personalActor.id) || INITIAL_SUBSCRIPTION_PERSONAL;
+      const ctx: WorkContext = {
+        actor_id: personalActor.id,
+        context_type: "PERSONAL",
+        display_name: personalActor.display_name,
+        plan_code: personalSub.plan_code,
+        is_active: true,
+      };
+      setCurrentContextState(ctx);
+      setSubscriptionState(personalSub);
+      setStored(STORAGE_KEYS.ACTIVE_CONTEXT, ctx);
+      return;
+    }
+
+    const org = organizations.find((o) => o.id === actorId);
+    if (!org) return;
+    const member = organizationMembers.find(
+      (m) => m.organization_id === org.id && m.user_id === (currentUser?.id || "usr_2k_admin")
+    );
+    const orgSub = subscriptions.find((s) => s.actor_id === org.id) || {
+      ...INITIAL_SUBSCRIPTION,
+      actor_id: org.id,
+      actor_name: org.name,
+    };
+
+    const ctx: WorkContext = {
+      actor_id: org.id,
+      context_type: "ORGANIZATION",
+      organization_id: org.id,
+      display_name: org.name,
+      org_type: org.org_type || "COMPANY",
+      role: member?.role || "OWNER",
+      plan_code: orgSub.plan_code,
+      is_active: true,
+    };
+    setCurrentContextState(ctx);
+    setOrgState(org);
+    setSubscriptionState(orgSub);
+    setStored(STORAGE_KEYS.ACTIVE_CONTEXT, ctx);
+  };
+
+  const createOrganization = (data: {
+    name: string;
+    org_type?: import("@/types").OrganizationType;
+    tax_code?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+    logo_url?: string;
+  }): Organization => {
+    const orgId = `org_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const newOrg: Organization = {
+      id: orgId,
+      name: data.name,
+      slug: data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""),
+      org_type: data.org_type || "COMPANY",
+      tax_code: data.tax_code,
+      phone: data.phone,
+      email: data.email,
+      address: data.address,
+      logo_url: data.logo_url || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const newMember: OrganizationMember = {
+      id: `mem_${Date.now()}`,
+      organization_id: orgId,
+      user_id: currentUser?.id || "usr_2k_admin",
+      role: "OWNER",
+      status: "ACTIVE",
+      joined_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+    };
+
+    const newOrgSub: Subscription = {
+      id: `sub_${orgId}`,
+      actor_id: orgId,
+      actor_type: "ORGANIZATION",
+      actor_name: newOrg.name,
+      plan_id: "plan-free",
+      plan_code: "FREE",
+      status: "ACTIVE",
+      billing_period: "MONTHLY",
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(Date.now() + 365 * 86400000).toISOString(),
+      cancel_at_period_end: false,
+      items: [
+        {
+          id: `item_${Date.now()}`,
+          subscription_id: `sub_${orgId}`,
+          item_type: "BASE_PLAN",
+          quantity: 1,
+          unit_price: 0,
+          total_amount: 0,
+          effective_from: new Date().toISOString(),
+        },
+      ],
+      activated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const updatedOrgs = [...organizations, newOrg];
+    const updatedMembers = [...organizationMembers, newMember];
+    const updatedSubs = [...subscriptions, newOrgSub];
+
+    setOrganizationsState(updatedOrgs);
+    setStored(STORAGE_KEYS.ORGANIZATIONS, updatedOrgs);
+
+    setOrgMembersState(updatedMembers);
+    setStored(STORAGE_KEYS.ORGANIZATION_MEMBERS, updatedMembers);
+
+    setSubscriptionsState(updatedSubs);
+    setStored(STORAGE_KEYS.SUBSCRIPTIONS, updatedSubs);
+
+    // Automatically switch context to new org
+    const ctx: WorkContext = {
+      actor_id: orgId,
+      context_type: "ORGANIZATION",
+      organization_id: orgId,
+      display_name: newOrg.name,
+      org_type: newOrg.org_type,
+      role: "OWNER",
+      plan_code: "FREE",
+      is_active: true,
+    };
+    setCurrentContextState(ctx);
+    setOrgState(newOrg);
+    setSubscriptionState(newOrgSub);
+    setStored(STORAGE_KEYS.ACTIVE_CONTEXT, ctx);
+
+    return newOrg;
+  };
+
+  const transferStoreToOrganization = (storeId: string, targetOrgId: string): boolean => {
+    const targetOrg = organizations.find((o) => o.id === targetOrgId);
+    if (!targetOrg) return false;
+
+    const updatedStore = {
+      ...store,
+      organization_id: targetOrgId,
+      owner_actor_id: targetOrgId,
+      owner_actor_type: "ORGANIZATION" as const,
+      updated_at: new Date().toISOString(),
+    };
+    setStoreState(updatedStore);
+    setStored(STORAGE_KEYS.STORE, updatedStore);
+    return true;
+  };
+
+  const getWorkContexts = (): WorkContext[] => {
+    const personalSub = subscriptions.find((s) => s.actor_id === personalActor.id) || INITIAL_SUBSCRIPTION_PERSONAL;
+    const personalContext: WorkContext = {
+      actor_id: personalActor.id,
+      context_type: "PERSONAL",
+      display_name: currentUser?.full_name || personalActor.display_name,
+      plan_code: personalSub.plan_code,
+      is_active: currentContext.actor_id === personalActor.id,
+    };
+
+    const orgContexts: WorkContext[] = organizations.map((org) => {
+      const member = organizationMembers.find(
+        (m) => m.organization_id === org.id && m.user_id === (currentUser?.id || "usr_2k_admin")
+      );
+      const orgSub = subscriptions.find((s) => s.actor_id === org.id) || {
+        ...INITIAL_SUBSCRIPTION,
+        actor_id: org.id,
+        actor_name: org.name,
+      };
+
+      return {
+        actor_id: org.id,
+        context_type: "ORGANIZATION",
+        organization_id: org.id,
+        display_name: org.name,
+        org_type: org.org_type || "COMPANY",
+        role: member?.role || "MEMBER",
+        plan_code: orgSub.plan_code,
+        is_active: currentContext.actor_id === org.id,
+      };
+    });
+
+    return [personalContext, ...orgContexts];
+  };
+
   const updateOrganization = (newOrg: Partial<Organization>) => {
     const updated = { ...organization, ...newOrg, updated_at: new Date().toISOString() };
     setOrgState(updated);
     setStored(STORAGE_KEYS.ORGANIZATION, updated);
+
+    const updatedOrgs = organizations.map((o) => (o.id === organization.id ? updated : o));
+    setOrganizationsState(updatedOrgs);
+    setStored(STORAGE_KEYS.ORGANIZATIONS, updatedOrgs);
   };
 
   const updateStore = (newStore: Partial<Store>) => {
@@ -1946,9 +2200,22 @@ export function useCommerceStore() {
     setBillingOrdersState(updatedOrders);
     setStored(STORAGE_KEYS.BILLING_ORDERS, updatedOrders);
 
-    // Update active subscription
+    // Update active subscription and list of subscriptions
     setSubscriptionState(updatedSubscription);
     setStored(STORAGE_KEYS.SUBSCRIPTION, updatedSubscription);
+
+    const updatedSubs = subscriptions.map((s) => (s.actor_id === updatedSubscription.actor_id ? updatedSubscription : s));
+    if (!subscriptions.some((s) => s.actor_id === updatedSubscription.actor_id)) {
+      updatedSubs.push(updatedSubscription);
+    }
+    setSubscriptionsState(updatedSubs);
+    setStored(STORAGE_KEYS.SUBSCRIPTIONS, updatedSubs);
+
+    if (currentContext.actor_id === updatedSubscription.actor_id) {
+      const updatedCtx = { ...currentContext, plan_code: updatedSubscription.plan_code };
+      setCurrentContextState(updatedCtx);
+      setStored(STORAGE_KEYS.ACTIVE_CONTEXT, updatedCtx);
+    }
 
     // Add invoice
     const updatedInvoices = [invoice, ...billingInvoices];
@@ -2007,7 +2274,11 @@ export function useCommerceStore() {
 
   return {
     isLoaded,
+    personalActor,
     organization,
+    organizations,
+    organizationMembers,
+    currentContext,
     store,
     categories,
     collections,
@@ -2036,8 +2307,14 @@ export function useCommerceStore() {
     currentSession,
     passkeys,
     subscription,
+    subscriptions,
     billingOrders,
     billingInvoices,
+    // Context & Org Actions
+    switchContext,
+    createOrganization,
+    transferStoreToOrganization,
+    getWorkContexts,
     // Actions
     updateOrganization,
     updateStore,

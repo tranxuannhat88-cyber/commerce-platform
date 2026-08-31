@@ -23,6 +23,7 @@ import {
   Calendar,
   X,
   Tag,
+  ShieldCheck,
 } from "lucide-react";
 import { formatVND, formatDate } from "@/lib/utils";
 import { useCommerceStore } from "@/lib/db/store";
@@ -35,6 +36,8 @@ export default function BillingDashboardPage() {
   const {
     organization,
     subscription,
+    subscriptions,
+    currentContext,
     billingOrders,
     billingInvoices,
     orders,
@@ -51,8 +54,11 @@ export default function BillingDashboardPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showDowngradeModal, setShowDowngradeModal] = useState(false);
 
-  // Current Plan
-  const currentPlan = BILLING_PLANS[subscription.plan_code] || BILLING_PLANS.PRO;
+  const isPersonal = currentContext.context_type === "PERSONAL";
+  const canManageBilling = isPersonal || currentContext.role === "OWNER" || currentContext.role === "ADMIN";
+
+  // Current Plan for active context
+  const currentPlan = BILLING_PLANS[subscription.plan_code] || BILLING_PLANS.FREE;
   const isFree = subscription.plan_code === "FREE";
 
   // Calculate Realtime Usages
@@ -61,8 +67,8 @@ export default function BillingDashboardPage() {
   ).length;
 
   const activeProductsCount = offers.filter((o) => o.status === "ACTIVE").length;
-  const simulatedStorageBytes = 12.4 * 1024 * 1024 * 1024; // 12.4 GB simulated
-  const teamMembersCount = 3;
+  const simulatedStorageBytes = isPersonal ? 0.8 * 1024 * 1024 * 1024 : 12.4 * 1024 * 1024 * 1024;
+  const teamMembersCount = isPersonal ? 1 : 3;
   const storesCount = 1;
 
   const usage = EntitlementService.getUsage(
@@ -113,9 +119,9 @@ export default function BillingDashboardPage() {
   const handleConfirmAddonPurchase = () => {
     if (!selectedAddon) return;
     createBillingOrder({
-      actorId: organization.id,
-      actorType: "ORGANIZATION",
-      actorName: organization.name,
+      actorId: currentContext.actor_id,
+      actorType: currentContext.context_type,
+      actorName: currentContext.display_name,
       orderType: "ADDON_PURCHASE",
       addonSelections: [{ addonCode: selectedAddon.code, quantity: addonQuantity }],
     });
@@ -136,21 +142,40 @@ export default function BillingDashboardPage() {
           </Link>
           <h1 className="text-2xl font-black text-neutral-900 dark:text-neutral-100 tracking-tight flex items-center gap-2.5">
             <CreditCard className="w-7 h-7 text-blue-600" />
-            <span>Gói Dịch Vụ & Hạn Mức Sử Dụng</span>
+            <span>
+              Gói Dịch Vụ & Hạn Mức ({isPersonal ? "Cá Nhân" : `Tổ chức: ${currentContext.display_name}`})
+            </span>
           </h1>
           <p className="text-xs text-neutral-500">
-            Quản lý gói thuê bao, theo dõi định mức tài nguyên và lịch sử thanh toán
+            {isPersonal
+              ? "Quản lý gói thuê bao và định mức tài nguyên dành riêng cho tài khoản Cá nhân"
+              : `Quản lý gói thuê bao chung cho toàn bộ thành viên thuộc tổ chức ${currentContext.display_name}`}
           </p>
         </div>
 
-        <Link
-          href="/pricing"
-          className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 flex items-center gap-1.5 cursor-pointer"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Xem Bảng Giá Tất Cả Các Gói</span>
-        </Link>
+        {canManageBilling && (
+          <Link
+            href="/pricing"
+            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 flex items-center gap-1.5 cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Xem Bảng Giá Tất Cả Các Gói</span>
+          </Link>
+        )}
       </div>
+
+      {/* Permission Warning if not Owner/Admin in Organization */}
+      {!canManageBilling && (
+        <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-3">
+          <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0" />
+          <div>
+            <p className="font-bold">Quyền quản trị Billing bị giới hạn</p>
+            <p className="text-amber-700 dark:text-amber-300 text-[11px]">
+              Bạn đang tham gia tổ chức với vai trò <strong>{currentContext.role}</strong>. Chỉ <strong>Owner</strong> hoặc <strong>Admin</strong> mới có quyền mua thêm Add-on, nâng cấp hoặc đổi gói.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 1. CURRENT SUBSCRIPTION CARD */}
       <div className="p-6 rounded-3xl bg-linear-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-xl space-y-6">

@@ -127,8 +127,8 @@ export class PaymentSettingsService {
     if (!activeAccount && store.payment_settings?.bank_account_no) {
       activeAccount = {
         id: `legacy-${store.id}`,
-        actor_id: store.organization_id,
-        actor_type: 'ORGANIZATION',
+        actor_id: store.organization_id || store.owner_actor_id || store.id,
+        actor_type: store.owner_actor_type || 'ORGANIZATION',
         bank_bin: store.payment_settings.bank_bin || '970422',
         bank_name: store.payment_settings.bank_name || 'MBBank',
         bank_short_name: store.payment_settings.bank_name || 'MBBank',

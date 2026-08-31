@@ -134,6 +134,35 @@ export class EntitlementService {
   }
 
   /**
+   * Check if context can invite team members
+   */
+  public static canInviteMember(
+    subscription: Subscription,
+    currentActiveMembers: number
+  ): { allowed: boolean; reason?: string; is_personal?: boolean } {
+    if (subscription.actor_type === "PERSONAL") {
+      return {
+        allowed: false,
+        is_personal: true,
+        reason: "Hình thức Cá nhân dành cho một người tự quản lý và vận hành. Nếu muốn nhiều người cùng tham gia và được phân quyền, hãy tạo Tổ chức.",
+      };
+    }
+
+    const limits = this.getEffectiveLimits(subscription);
+    if (limits.users === null) return { allowed: true };
+
+    if (currentActiveMembers >= limits.users) {
+      return {
+        allowed: false,
+        is_personal: false,
+        reason: `Tổ chức đã đạt hạn mức ${limits.users} thành viên của gói ${subscription.plan_code}. Vui lòng mua thêm Add-on thành viên hoặc nâng gói.`,
+      };
+    }
+
+    return { allowed: true };
+  }
+
+  /**
    * Check transaction quota status (Never blocks checkout!)
    */
   public static checkTransactionOverage(

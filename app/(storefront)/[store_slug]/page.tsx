@@ -207,7 +207,7 @@ function StorefrontContent() {
                       onClick={() => {
                         const productOffer: import("@/types").Offer = {
                           id: p.id,
-                          organization_id: store.organization_id,
+                          organization_id: store.organization_id || store.owner_actor_id,
                           store_id: store.id,
                           offer_type: "PRODUCT",
                           name: p.name,
