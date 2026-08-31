@@ -124,7 +124,7 @@ export function generateQuotationNumber(): string {
   return `QT${year}${month}${day}-${random}`;
 }
 
-export function compressImageFile(file: File, maxWidth = 1000, quality = 0.8): Promise<string> {
+export function compressImageFile(file: File, maxWidth = 600, quality = 0.7): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = reject;

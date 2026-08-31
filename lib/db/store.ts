@@ -149,49 +149,6 @@ const STORAGE_KEYS = {
   BILLING_INVOICES: "commerce_billing_invoices",
 };
 
-function sanitizeForStorage(obj: any): any {
-  if (!obj) return obj;
-  if (typeof obj === "string") {
-    // If it's a huge base64 string (> 80KB), replace with clean fallback URL
-    if (obj.startsWith("data:image/") && obj.length > 80000) {
-      return "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600";
-    }
-    return obj;
-  }
-  if (Array.isArray(obj)) {
-    return obj.map(sanitizeForStorage);
-  }
-  if (typeof obj === "object") {
-    const res: Record<string, any> = {};
-    for (const [k, v] of Object.entries(obj)) {
-      res[k] = sanitizeForStorage(v);
-    }
-    return res;
-  }
-  return obj;
-}
-
-export function clearBloatedLocalStorage() {
-  if (typeof window === "undefined") return;
-  try {
-    const keys = Object.values(STORAGE_KEYS);
-    for (const k of keys) {
-      const item = localStorage.getItem(k);
-      if (item && item.length > 150000) {
-        try {
-          const parsed = JSON.parse(item);
-          const cleaned = sanitizeForStorage(parsed);
-          localStorage.setItem(k, JSON.stringify(cleaned));
-        } catch (e) {
-          localStorage.removeItem(k);
-        }
-      }
-    }
-  } catch (e) {
-    console.warn("Storage auto-clean warning:", e);
-  }
-}
-
 function getStored<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
@@ -205,27 +162,21 @@ function getStored<T>(key: string, fallback: T): T {
 
 function setStored<T>(key: string, value: T): void {
   if (typeof window === "undefined") return;
-  const sanitized = sanitizeForStorage(value);
   try {
-    localStorage.setItem(key, JSON.stringify(sanitized));
+    localStorage.setItem(key, JSON.stringify(value));
     window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key } }));
   } catch (e: any) {
-    console.warn(`Storage quota exceeded on ${key}, running aggressive cleanup...`, e);
+    console.warn(`Storage quota notice on ${key}:`, e);
     try {
-      // Clear non-critical mock cache to free quota immediately
+      // Clear non-critical verification log cache to free storage quota
       localStorage.removeItem(STORAGE_KEYS.MERKLE_BATCHES);
       localStorage.removeItem(STORAGE_KEYS.BLOCKCHAIN_ANCHORS);
       localStorage.removeItem(STORAGE_KEYS.DOCUMENT_HASHES);
       localStorage.removeItem(STORAGE_KEYS.VERIFICATION_RECORDS);
-      localStorage.removeItem(STORAGE_KEYS.MOVEMENTS);
-      clearBloatedLocalStorage();
-
-      // Retry save with sanitized payload
-      localStorage.setItem(key, JSON.stringify(sanitized));
+      localStorage.setItem(key, JSON.stringify(value));
       window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key } }));
     } catch (retryErr) {
-      console.error(`Critical storage error for ${key}:`, retryErr);
-      window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key } }));
+      console.error(`Critical storage save error for ${key}:`, retryErr);
     }
   }
 }
@@ -289,9 +240,6 @@ export function useCommerceStore() {
         localStorage.setItem(PURGE_VERSION_KEY, CURRENT_PURGE_VERSION);
       }
     }
-
-    // Proactively clean bloated storage on first load
-    clearBloatedLocalStorage();
 
     const storedUser = getStored<UserIdentity | null>(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY);
     const storedPersonal = getStored<PersonalActor>(STORAGE_KEYS.PERSONAL_ACTOR, INITIAL_PERSONAL_ACTOR);

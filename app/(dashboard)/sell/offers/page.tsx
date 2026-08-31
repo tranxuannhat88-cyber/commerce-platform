@@ -295,7 +295,7 @@ function OffersContent() {
     if (!file) return;
     e.target.value = "";
     try {
-      const compressed = await compressImageFile(file, 800, 0.75);
+      const compressed = await compressImageFile(file, 600, 0.7);
       setLibProdItem((prev) => ({ ...prev, image_url: compressed }));
     } catch (err) {
       console.error("Error reading image:", err);
@@ -309,12 +309,17 @@ function OffersContent() {
     e.target.value = "";
     try {
       const base64List = await Promise.all(
-        filesArray.map((file) => compressImageFile(file, 800, 0.75))
+        filesArray.map((file) => compressImageFile(file, 600, 0.7))
       );
       setLibProdItem((prev) => {
         const existing = prev.gallery || [];
         const uniqueNew = base64List.filter((img) => !existing.includes(img));
-        return { ...prev, gallery: [...existing, ...uniqueNew].slice(0, 5) };
+        const combined = [...existing, ...uniqueNew].slice(0, 5);
+        return {
+          ...prev,
+          enable_gallery: true,
+          gallery: combined,
+        };
       });
     } catch (err) {
       console.error("Error reading gallery:", err);
@@ -322,10 +327,14 @@ function OffersContent() {
   };
 
   const handleRemoveLibProdGallery = (photoIndex: number) => {
-    setLibProdItem((prev) => ({
-      ...prev,
-      gallery: prev.gallery.filter((_, idx) => idx !== photoIndex),
-    }));
+    setLibProdItem((prev) => {
+      const filtered = prev.gallery.filter((_, idx) => idx !== photoIndex);
+      return {
+        ...prev,
+        gallery: filtered,
+        enable_gallery: filtered.length > 0,
+      };
+    });
   };
 
   const handleLibProdAttachmentFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -344,20 +353,28 @@ function OffersContent() {
       };
       setLibProdItem((prev) => {
         const existing = prev.attachments || [];
-        if (!existing.some((a) => a.name === file.name)) {
-          return { ...prev, attachments: [...existing, newAttachment] };
-        }
-        return prev;
+        const nextAtts = existing.some((a) => a.name === file.name)
+          ? existing
+          : [...existing, newAttachment];
+        return {
+          ...prev,
+          enable_attachments: true,
+          attachments: nextAtts,
+        };
       });
     };
     reader.readAsDataURL(file);
   };
 
   const handleRemoveLibProdAttachment = (attId: string) => {
-    setLibProdItem((prev) => ({
-      ...prev,
-      attachments: prev.attachments.filter((a) => a.id !== attId),
-    }));
+    setLibProdItem((prev) => {
+      const filtered = prev.attachments.filter((a) => a.id !== attId);
+      return {
+        ...prev,
+        attachments: filtered,
+        enable_attachments: filtered.length > 0,
+      };
+    });
   };
 
   const handleAddLibProdVariantRow = () => {
@@ -365,6 +382,7 @@ function OffersContent() {
       const nextNum = prev.variants.length + 1;
       return {
         ...prev,
+        enable_variants: true,
         variants: [
           ...prev.variants,
           { id: `var-lib-${Date.now()}-${nextNum}`, name: `Phiên bản ${nextNum}`, price: prev.price || "", compare_price: "" },
@@ -398,7 +416,8 @@ function OffersContent() {
 
     const parsedPrice = parseThousands(libProdItem.price) || 0;
     const parsedCompare = libProdItem.compare_price ? parseThousands(libProdItem.compare_price) : undefined;
-    const itemVariants: OfferVariant[] = libProdItem.enable_variants
+    const hasVariants = libProdItem.enable_variants && libProdItem.variants.length > 0;
+    const itemVariants: OfferVariant[] = hasVariants
       ? libProdItem.variants.map((v) => ({
           id: v.id,
           name: v.name.trim() || "Phiên bản",
@@ -418,9 +437,9 @@ function OffersContent() {
       unit: libProdItem.unit.trim() || "cái",
       category: libProdItem.category.trim() || "Chung",
       description: libProdItem.description.trim(),
-      image_url: libProdItem.image_url.trim() || undefined,
-      gallery: libProdItem.enable_gallery ? libProdItem.gallery : [],
-      attachments: libProdItem.enable_attachments ? libProdItem.attachments : [],
+      image_url: libProdItem.image_url?.trim() || undefined,
+      gallery: (libProdItem.enable_gallery || libProdItem.gallery.length > 0) ? libProdItem.gallery : [],
+      attachments: (libProdItem.enable_attachments || libProdItem.attachments.length > 0) ? libProdItem.attachments : [],
       variants: itemVariants,
       is_available: true,
     };
@@ -497,7 +516,7 @@ function OffersContent() {
     if (!file) return;
     e.target.value = "";
     try {
-      const compressed = await compressImageFile(file, 800, 0.75);
+      const compressed = await compressImageFile(file, 600, 0.7);
       handleUpdateCatalogItemField(index, "image_url", compressed);
     } catch (err) {
       console.error("Error reading image:", err);
@@ -514,7 +533,7 @@ function OffersContent() {
 
     try {
       const base64List = await Promise.all(
-        filesArray.map((file) => compressImageFile(file, 800, 0.75))
+        filesArray.map((file) => compressImageFile(file, 600, 0.7))
       );
 
       setCatalogItemsList((prev) => {
@@ -526,6 +545,7 @@ function OffersContent() {
         const uniqueNew = base64List.filter((img) => !existing.includes(img));
         const combined = [...existing, ...uniqueNew].slice(0, 5);
         
+        item.enable_gallery = true;
         item.gallery = combined;
         return copy;
       });
@@ -537,7 +557,9 @@ function OffersContent() {
   const handleRemoveItemGallery = (itemIndex: number, photoIndex: number) => {
     setCatalogItemsList((prev) => {
       const copy = [...prev];
-      copy[itemIndex].gallery = copy[itemIndex].gallery.filter((_, idx) => idx !== photoIndex);
+      const filtered = copy[itemIndex].gallery.filter((_, idx) => idx !== photoIndex);
+      copy[itemIndex].gallery = filtered;
+      copy[itemIndex].enable_gallery = filtered.length > 0;
       return copy;
     });
   };
@@ -562,9 +584,11 @@ function OffersContent() {
         const copy = [...prev];
         const existingAtts = copy[itemIndex].attachments || [];
         // Avoid duplicate filename attachments
-        if (!existingAtts.some((a) => a.name === file.name)) {
-          copy[itemIndex].attachments = [...existingAtts, newAttachment];
-        }
+        const nextAtts = existingAtts.some((a) => a.name === file.name)
+          ? existingAtts
+          : [...existingAtts, newAttachment];
+        copy[itemIndex].enable_attachments = true;
+        copy[itemIndex].attachments = nextAtts;
         return copy;
       });
     };
@@ -574,7 +598,9 @@ function OffersContent() {
   const handleRemoveItemAttachment = (itemIndex: number, attId: string) => {
     setCatalogItemsList((prev) => {
       const copy = [...prev];
-      copy[itemIndex].attachments = copy[itemIndex].attachments.filter((a) => a.id !== attId);
+      const filtered = copy[itemIndex].attachments.filter((a) => a.id !== attId);
+      copy[itemIndex].attachments = filtered;
+      copy[itemIndex].enable_attachments = filtered.length > 0;
       return copy;
     });
   };
@@ -822,9 +848,9 @@ function OffersContent() {
           unit: it.unit.trim() || "cái",
           category: it.category.trim() || "Chung",
           description: it.description.trim(),
-          image_url: it.image_url.trim() || undefined,
-          gallery: it.enable_gallery ? it.gallery : [],
-          attachments: it.enable_attachments ? it.attachments : [],
+          image_url: it.image_url?.trim() || undefined,
+          gallery: (it.enable_gallery || it.gallery.length > 0) ? it.gallery : [],
+          attachments: (it.enable_attachments || it.attachments.length > 0) ? it.attachments : [],
           variants: itemVariants.length > 0 ? itemVariants : undefined,
           is_available: true,
         };
@@ -1094,6 +1120,18 @@ function OffersContent() {
                         {prod.variants && prod.variants.length > 0 && (
                           <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-600 text-white">
                             {prod.variants.length} phiên bản
+                          </span>
+                        )}
+                        {prod.gallery && prod.gallery.length > 0 && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-600 text-white flex items-center gap-1">
+                            <ImageIcon className="w-2.5 h-2.5" />
+                            <span>+{prod.gallery.length} ảnh</span>
+                          </span>
+                        )}
+                        {prod.attachments && prod.attachments.length > 0 && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-600 text-white flex items-center gap-1">
+                            <Paperclip className="w-2.5 h-2.5" />
+                            <span>{prod.attachments.length} file</span>
                           </span>
                         )}
                       </div>
@@ -1409,24 +1447,46 @@ function OffersContent() {
                           {/* Thumbnail with Click to Upload / Camera */}
                           <div className="relative group w-14 h-14 rounded-xl bg-neutral-100 dark:bg-neutral-800 border overflow-hidden shrink-0 flex items-center justify-center">
                             {item.image_url ? (
-                              <img
-                                src={item.image_url}
-                                alt={item.name || "Preview"}
-                                className="w-full h-full object-cover"
-                              />
+                              <>
+                                <img
+                                  src={item.image_url}
+                                  alt={item.name || "Preview"}
+                                  className="w-full h-full object-cover"
+                                />
+                                <label className="absolute inset-0 bg-black/50 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[9px] font-bold">
+                                  <Camera className="w-3.5 h-3.5" />
+                                  <span>Đổi</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => handleItemImageFileChange(idx, e)}
+                                    className="hidden"
+                                  />
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleUpdateCatalogItemField(idx, "image_url", "");
+                                  }}
+                                  className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-600 text-white rounded-full flex items-center justify-center text-[10px] shadow-xs cursor-pointer z-10 hover:bg-red-700"
+                                  title="Xóa ảnh"
+                                >
+                                  ×
+                                </button>
+                              </>
                             ) : (
-                              <ImageIcon className="w-6 h-6 text-neutral-400" />
+                              <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors text-neutral-400 hover:text-emerald-600">
+                                <Camera className="w-4 h-4" />
+                                <span className="text-[9px] font-semibold mt-0.5">+ Ảnh</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => handleItemImageFileChange(idx, e)}
+                                  className="hidden"
+                                />
+                              </label>
                             )}
-
-                            <label className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold">
-                              <Camera className="w-4 h-4" />
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => handleItemImageFileChange(idx, e)}
-                                className="hidden"
-                              />
-                            </label>
                           </div>
 
                           {/* Name */}
@@ -2357,24 +2417,46 @@ function OffersContent() {
                     {/* Thumbnail with Click to Upload / Camera */}
                     <div className="relative group w-14 h-14 rounded-xl bg-neutral-100 dark:bg-neutral-800 border overflow-hidden shrink-0 flex items-center justify-center">
                       {libProdItem.image_url ? (
-                        <img
-                          src={libProdItem.image_url}
-                          alt={libProdItem.name || "Preview"}
-                          className="w-full h-full object-cover"
-                        />
+                        <>
+                          <img
+                            src={libProdItem.image_url}
+                            alt={libProdItem.name || "Preview"}
+                            className="w-full h-full object-cover"
+                          />
+                          <label className="absolute inset-0 bg-black/50 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[9px] font-bold">
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>Đổi</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleLibProdImageFileChange}
+                              className="hidden"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUpdateLibProdField("image_url", "");
+                            }}
+                            className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-600 text-white rounded-full flex items-center justify-center text-[10px] shadow-xs cursor-pointer z-10 hover:bg-red-700"
+                            title="Xóa ảnh"
+                          >
+                            ×
+                          </button>
+                        </>
                       ) : (
-                        <ImageIcon className="w-6 h-6 text-neutral-400" />
+                        <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors text-neutral-400 hover:text-purple-600">
+                          <Camera className="w-4 h-4" />
+                          <span className="text-[9px] font-semibold mt-0.5">+ Ảnh</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLibProdImageFileChange}
+                            className="hidden"
+                          />
+                        </label>
                       )}
-
-                      <label className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold">
-                        <Camera className="w-4 h-4" />
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleLibProdImageFileChange}
-                          className="hidden"
-                        />
-                      </label>
                     </div>
 
                     {/* Name */}
