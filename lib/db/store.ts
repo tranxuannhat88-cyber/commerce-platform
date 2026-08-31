@@ -2323,27 +2323,26 @@ export function useCommerceStore() {
     setStored(STORAGE_KEYS.USER, updated);
 
     // Update Personal Actor
-    if (profile.full_name) {
-      const updatedPersonalActor: PersonalActor = {
-        ...personalActor,
-        display_name: `${profile.full_name} (Cá nhân)`,
-        user_id: updated.id,
-        phone: updated.primary_phone,
-        email: updated.primary_email,
-        updated_at: new Date().toISOString(),
-      };
-      setPersonalActorState(updatedPersonalActor);
-      setStored(STORAGE_KEYS.PERSONAL_ACTOR, updatedPersonalActor);
+    const updatedPersonalActor: PersonalActor = {
+      ...personalActor,
+      display_name: profile.full_name ? `${profile.full_name} (Cá nhân)` : personalActor.display_name,
+      avatar_url: profile.avatar_url !== undefined ? profile.avatar_url : personalActor.avatar_url,
+      user_id: updated.id,
+      phone: updated.primary_phone,
+      email: updated.primary_email,
+      updated_at: new Date().toISOString(),
+    };
+    setPersonalActorState(updatedPersonalActor);
+    setStored(STORAGE_KEYS.PERSONAL_ACTOR, updatedPersonalActor);
 
-      // If active context is PERSONAL, update active context display_name
-      if (currentContext.context_type === "PERSONAL") {
-        const updatedCtx: WorkContext = {
-          ...currentContext,
-          display_name: profile.full_name,
-        };
-        setCurrentContextState(updatedCtx);
-        setStored(STORAGE_KEYS.ACTIVE_CONTEXT, updatedCtx);
-      }
+    // If active context is PERSONAL, update active context display_name
+    if (currentContext.context_type === "PERSONAL" && profile.full_name) {
+      const updatedCtx: WorkContext = {
+        ...currentContext,
+        display_name: profile.full_name,
+      };
+      setCurrentContextState(updatedCtx);
+      setStored(STORAGE_KEYS.ACTIVE_CONTEXT, updatedCtx);
     }
   };
 

@@ -22,6 +22,9 @@ import {
   Mail,
   MapPin,
   FileText,
+  Camera,
+  Trash2,
+  Upload,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { UserRole, OrganizationType } from "@/types";
@@ -47,8 +50,10 @@ export default function SettingsPage() {
 
   // Form states
   const [personalName, setPersonalName] = useState(currentUser?.full_name || personalActor.display_name);
+  const [personalAvatar, setPersonalAvatar] = useState(currentUser?.avatar_url || personalActor.avatar_url || "");
   const [orgName, setOrgName] = useState(organization.name);
   const [shortName, setShortName] = useState(organization.short_name || "");
+  const [orgLogo, setOrgLogo] = useState(organization.logo_url || "");
   const [orgType, setOrgType] = useState<OrganizationType>(organization.org_type || "COMPANY");
   const [taxCode, setTaxCode] = useState(organization.tax_code || "");
   const [phone, setPhone] = useState(organization.phone || "");
@@ -59,14 +64,94 @@ export default function SettingsPage() {
   // Synchronize form states when organization or user changes
   useEffect(() => {
     setPersonalName(currentUser?.full_name || personalActor.display_name);
+    setPersonalAvatar(currentUser?.avatar_url || personalActor.avatar_url || "");
     setOrgName(organization.name);
     setShortName(organization.short_name || "");
+    setOrgLogo(organization.logo_url || "");
     setOrgType(organization.org_type || "COMPANY");
     setTaxCode(organization.tax_code || "");
     setPhone(organization.phone || "");
     setEmail(organization.email || "");
     setAddress(organization.address || "");
   }, [organization, currentUser, personalActor]);
+
+  // Image compression helper
+  const compressImageFile = (file: File, maxDim = 400, quality = 0.75): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let { width, height } = img;
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL("image/jpeg", quality));
+          } else {
+            resolve(e.target?.result as string);
+          }
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageFile(file, 400, 0.75);
+      setPersonalAvatar(compressed);
+      updateUserProfile({ avatar_url: compressed });
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setPersonalAvatar("");
+    updateUserProfile({ avatar_url: "" });
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 2500);
+  };
+
+  const handleOrgLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageFile(file, 400, 0.75);
+      setOrgLogo(compressed);
+      updateOrganization({ logo_url: compressed });
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRemoveOrgLogo = () => {
+    setOrgLogo("");
+    updateOrganization({ logo_url: "" });
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 2500);
+  };
 
   // Store Transfer state
   const [selectedTargetOrgId, setSelectedTargetOrgId] = useState(organizations[0]?.id || "");
@@ -78,7 +163,7 @@ export default function SettingsPage() {
 
   const handleSavePersonal = (e: React.FormEvent) => {
     e.preventDefault();
-    updateUserProfile({ full_name: personalName });
+    updateUserProfile({ full_name: personalName, avatar_url: personalAvatar });
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2500);
   };
@@ -88,6 +173,7 @@ export default function SettingsPage() {
     updateOrganization({
       name: orgName,
       short_name: shortName.trim() || undefined,
+      logo_url: orgLogo || undefined,
       org_type: orgType,
       tax_code: taxCode.trim() || undefined,
       phone: phone.trim() || undefined,
@@ -207,12 +293,62 @@ export default function SettingsPage() {
           {/* Profile Form */}
           <form
             onSubmit={handleSavePersonal}
-            className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4"
+            className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-5"
           >
             <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
               <User className="w-4 h-4 text-blue-600" />
-              <span>Hồ Sơ Cá Nhân</span>
+              <span>Hồ Sơ Cá Nhân & Ảnh Đại Diện</span>
             </h3>
+
+            {/* Avatar Picker Card */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200/80 dark:border-neutral-700">
+              <div className="relative w-20 h-20 rounded-2xl bg-linear-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-2xl shadow-md overflow-hidden shrink-0 border-2 border-white dark:border-neutral-800">
+                {personalAvatar ? (
+                  <img
+                    src={personalAvatar}
+                    alt="Ảnh đại diện"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  (personalName?.trim() ? personalName.trim().charAt(0).toUpperCase() : "U")
+                )}
+              </div>
+
+              <div className="flex-1 space-y-2 text-center sm:text-left">
+                <div>
+                  <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
+                    Ảnh Đại Diện Cá Nhân (Avatar)
+                  </h4>
+                  <p className="text-[11px] text-neutral-500">
+                    Chọn ảnh từ máy tính hoặc điện thoại. Nếu không chọn ảnh, hệ thống hiển thị mặc định chữ cái đầu tiên của tên bạn.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-0.5">
+                  <label className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs cursor-pointer shadow-xs transition-all">
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>{personalAvatar ? "Đổi ảnh đại diện" : "Chọn ảnh từ thiết bị"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {personalAvatar && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveAvatar}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 text-neutral-700 dark:text-neutral-300 font-bold text-xs cursor-pointer transition-all"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      <span>Xóa ảnh (dùng chữ cái)</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -224,7 +360,7 @@ export default function SettingsPage() {
                   required
                   value={personalName}
                   onChange={(e) => setPersonalName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-semibold focus:ring-2 focus:ring-blue-500 outline-hidden"
                 />
               </div>
 
@@ -236,7 +372,7 @@ export default function SettingsPage() {
                   type="text"
                   disabled
                   value={currentUser?.primary_phone || "+84988123456"}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-100 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 text-neutral-500 font-mono cursor-not-allowed"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-100 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 text-neutral-500 font-mono cursor-not-allowed"
                 />
               </div>
             </div>
@@ -339,11 +475,61 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
               <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-blue-600" />
-                <span>Thông Tin Pháp Nhân / Doanh Nghiệp</span>
+                <span>Thông Tin Pháp Nhân & Logo Doanh Nghiệp</span>
               </h3>
               <span className="text-[11px] text-neutral-400 font-mono">
                 ID: {organization.id}
               </span>
+            </div>
+
+            {/* Org Logo Picker Card */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200/80 dark:border-neutral-700">
+              <div className="relative w-20 h-20 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-2xl shadow-md overflow-hidden shrink-0 border-2 border-white dark:border-neutral-800">
+                {orgLogo ? (
+                  <img
+                    src={orgLogo}
+                    alt="Logo tổ chức"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  (orgName?.trim() ? orgName.trim().charAt(0).toUpperCase() : "O")
+                )}
+              </div>
+
+              <div className="flex-1 space-y-2 text-center sm:text-left">
+                <div>
+                  <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
+                    Logo / Ảnh Đại Diện Tổ Chức
+                  </h4>
+                  <p className="text-[11px] text-neutral-500">
+                    Chọn logo từ máy tính hoặc điện thoại. Nếu không chọn logo, hệ thống hiển thị mặc định chữ cái đầu tiên của tên tổ chức.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-0.5">
+                  <label className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs cursor-pointer shadow-xs transition-all">
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>{orgLogo ? "Đổi logo tổ chức" : "Chọn logo từ thiết bị"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleOrgLogoUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {orgLogo && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveOrgLogo}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 text-neutral-700 dark:text-neutral-300 font-bold text-xs cursor-pointer transition-all"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      <span>Xóa logo (dùng chữ cái)</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* 1. Tên đầy đủ & Tên viết tắt */}

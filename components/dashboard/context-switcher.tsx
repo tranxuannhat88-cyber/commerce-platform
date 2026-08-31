@@ -20,7 +20,7 @@ interface ContextSwitcherProps {
 }
 
 export function ContextSwitcher({ className = "", isCompact = false }: ContextSwitcherProps) {
-  const { currentContext, getWorkContexts, switchContext, currentUser, personalActor } = useCommerceStore();
+  const { currentContext, getWorkContexts, switchContext, currentUser, personalActor, organization, organizations } = useCommerceStore();
   const [isOpen, setIsOpen] = useState(false);
   const [showCreateOrg, setShowCreateOrg] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -74,11 +74,27 @@ export function ContextSwitcher({ className = "", isCompact = false }: ContextSw
         >
           {/* Top Row: Icon + Full Organization / Personal Name + Dropdown Chevron */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs overflow-hidden border border-blue-500/20">
               {currentContext.context_type === "PERSONAL" ? (
-                <User className="w-4 h-4" />
+                currentUser?.avatar_url || personalActor?.avatar_url ? (
+                  <img
+                    src={currentUser?.avatar_url || personalActor?.avatar_url}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  (currentDisplayName?.trim() ? currentDisplayName.trim().charAt(0).toUpperCase() : <User className="w-4 h-4" />)
+                )
               ) : (
-                <Building2 className="w-4 h-4" />
+                organization?.logo_url ? (
+                  <img
+                    src={organization.logo_url}
+                    alt="Org Logo"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  (currentDisplayName?.trim() ? currentDisplayName.trim().charAt(0).toUpperCase() : <Building2 className="w-4 h-4" />)
+                )
               )}
             </div>
 
@@ -134,8 +150,16 @@ export function ContextSwitcher({ className = "", isCompact = false }: ContextSw
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 flex items-center justify-center shrink-0">
-                      <User className="w-3.5 h-3.5" />
+                    <div className="w-7 h-7 rounded-lg bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
+                      {currentUser?.avatar_url || personalActor?.avatar_url ? (
+                        <img
+                          src={currentUser?.avatar_url || personalActor?.avatar_url}
+                          alt="Avatar"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        (currentUser?.full_name?.trim() ? currentUser.full_name.trim().charAt(0).toUpperCase() : <User className="w-3.5 h-3.5" />)
+                      )}
                     </div>
                     <div className="text-left min-w-0">
                       <p className="truncate font-bold text-neutral-900 dark:text-neutral-100">
@@ -163,37 +187,48 @@ export function ContextSwitcher({ className = "", isCompact = false }: ContextSw
                   Chưa tham gia tổ chức nào
                 </div>
               ) : (
-                orgContexts.map((org) => (
-                  <button
-                    key={org.actor_id}
-                    type="button"
-                    onClick={() => handleSelect(org.actor_id)}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-all cursor-pointer ${
-                      org.is_active
-                        ? "bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-100 font-bold border border-blue-200/80 dark:border-blue-900/60"
-                        : "hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center shrink-0 font-bold text-[10px]">
-                        <Building2 className="w-3.5 h-3.5" />
+                orgContexts.map((org) => {
+                  const targetOrg = organizations.find((o) => o.id === org.actor_id);
+                  return (
+                    <button
+                      key={org.actor_id}
+                      type="button"
+                      onClick={() => handleSelect(org.actor_id)}
+                      className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-all cursor-pointer ${
+                        org.is_active
+                          ? "bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-100 font-bold border border-blue-200/80 dark:border-blue-900/60"
+                          : "hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center shrink-0 font-bold text-xs overflow-hidden">
+                          {targetOrg?.logo_url ? (
+                            <img
+                              src={targetOrg.logo_url}
+                              alt="Org Logo"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            (org.display_name?.trim() ? org.display_name.trim().charAt(0).toUpperCase() : <Building2 className="w-3.5 h-3.5" />)
+                          )}
+                        </div>
+                        <div className="text-left min-w-0">
+                          <p className="truncate">{org.display_name}</p>
+                          <p className="text-[10px] text-neutral-400 font-normal">
+                            Vai trò: <span className="font-semibold text-neutral-600 dark:text-neutral-300">{org.role || "MEMBER"}</span>
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-left min-w-0">
-                        <p className="truncate">{org.display_name}</p>
-                        <p className="text-[10px] text-neutral-400 font-normal">
-                          Vai trò: <span className="font-semibold text-neutral-600 dark:text-neutral-300">{org.role || "MEMBER"}</span>
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${getPlanBadgeClass(org.plan_code)}`}>
-                        {org.plan_code || "FREE"}
-                      </span>
-                      {org.is_active && <Check className="w-4 h-4 text-blue-600" />}
-                    </div>
-                  </button>
-                ))
+                      <div className="flex items-center gap-2">
+                        <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${getPlanBadgeClass(org.plan_code)}`}>
+                          {org.plan_code || "FREE"}
+                        </span>
+                        {org.is_active && <Check className="w-4 h-4 text-blue-600" />}
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
 

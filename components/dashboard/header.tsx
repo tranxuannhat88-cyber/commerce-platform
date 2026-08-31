@@ -145,12 +145,20 @@ export function DashboardHeader() {
 
         {/* User Account & Security Link */}
         <Link
-          href="/settings/security"
+          href="/settings"
           className="flex items-center gap-2 pl-2 border-l border-neutral-200 dark:border-neutral-800 hover:opacity-80 transition-opacity"
-          title="Tài khoản & Cài đặt bảo mật"
+          title="Tài khoản & Cài đặt"
         >
-          <div className="w-8 h-8 rounded-xl bg-linear-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-            {currentUser?.full_name?.charAt(0) || "U"}
+          <div className="w-8 h-8 rounded-xl bg-linear-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs overflow-hidden shrink-0 border border-blue-500/20">
+            {currentUser?.avatar_url ? (
+              <img
+                src={currentUser.avatar_url}
+                alt={currentUser.full_name || "Avatar"}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              (currentUser?.full_name?.trim() ? currentUser.full_name.trim().charAt(0).toUpperCase() : "U")
+            )}
           </div>
           <div className="hidden xl:block text-left">
             <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate max-w-[110px]">

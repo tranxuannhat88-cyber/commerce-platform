@@ -19,6 +19,8 @@ import {
   Loader2,
   KeyRound,
   Info,
+  Camera,
+  User,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { PhoneNormalizationService } from "@/lib/auth/phone";
@@ -172,6 +174,57 @@ export default function SecuritySettingsPage() {
     }
   };
 
+  // Avatar upload handler
+  const compressImageFile = (file: File, maxDim = 400, quality = 0.75): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let { width, height } = img;
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL("image/jpeg", quality));
+          } else {
+            resolve(e.target?.result as string);
+          }
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageFile(file, 400, 0.75);
+      updateUserProfile({ avatar_url: compressed });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    updateUserProfile({ avatar_url: "" });
+  };
+
   if (!currentUser) {
     return (
       <div className="p-8 text-center space-y-4">
@@ -184,7 +237,7 @@ export default function SecuritySettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-20">
+    <div className="max-w-4xl mx-auto space-y-6 pb-20">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-1">
@@ -207,6 +260,61 @@ export default function SecuritySettingsPage() {
         <div className="px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-xs font-mono font-bold flex items-center gap-1.5">
           <span>User ID:</span>
           <span className="text-neutral-900 dark:text-neutral-100">{currentUser.user_code}</span>
+        </div>
+      </div>
+
+      {/* SECTION 0: ẢNH ĐẠI DIỆN & ĐỊNH DANH CÁ NHÂN */}
+      <div className="p-5 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-xs flex flex-col sm:flex-row items-center sm:items-start gap-4">
+        <div className="relative w-16 h-16 rounded-2xl bg-linear-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-xl shadow-md overflow-hidden shrink-0 border-2 border-white dark:border-neutral-800">
+          {currentUser.avatar_url ? (
+            <img
+              src={currentUser.avatar_url}
+              alt="Ảnh đại diện"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            (currentUser.full_name?.trim() ? currentUser.full_name.trim().charAt(0).toUpperCase() : "U")
+          )}
+        </div>
+
+        <div className="flex-1 space-y-2 text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <div>
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                {currentUser.full_name || "Tài khoản cá nhân"}
+              </h3>
+              <p className="text-[11px] text-neutral-400">
+                Ảnh đại diện hiển thị trên thanh điều hướng, menu chuyển không gian làm việc và giao diện cá nhân.
+              </p>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950 text-blue-600 font-bold self-center sm:self-start">
+              {currentUser.avatar_url ? "Đã đặt ảnh tùy chỉnh" : "Mặc định (Chữ cái)"}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-0.5">
+            <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs cursor-pointer shadow-xs transition-all">
+              <Camera className="w-3.5 h-3.5" />
+              <span>{currentUser.avatar_url ? "Đổi ảnh đại diện" : "Chọn ảnh từ thiết bị"}</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                className="hidden"
+              />
+            </label>
+
+            {currentUser.avatar_url && (
+              <button
+                type="button"
+                onClick={handleRemoveAvatar}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 text-neutral-700 dark:text-neutral-300 font-bold text-xs cursor-pointer transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                <span>Xóa ảnh (dùng chữ cái)</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
