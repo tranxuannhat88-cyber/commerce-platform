@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -16,12 +16,11 @@ import {
   Wrench,
   Package,
   Sparkles,
-  Utensils,
   CheckCircle2,
   Send,
   X,
   CreditCard,
-  Building,
+  Building2,
   ListOrdered,
   MapPin,
   Navigation,
@@ -34,27 +33,54 @@ import {
   RotateCcw,
   Star,
   ArrowRight,
+  User,
+  Clock,
+  ExternalLink,
+  ChevronRight,
+  AlertCircle,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND, getPhoneValidationError } from "@/lib/utils";
 import { CartProvider, CartDrawer, useCart } from "@/components/storefront/cart-drawer";
 import { QRModal } from "@/components/shared/qr-modal";
 import { CopyButton } from "@/components/shared/copy-button";
-import { Offer, OfferVariant, OfferItem, PaymentMethodType, FulfillmentMethodType, Store, ActorPaymentAccount } from "@/types";
+import {
+  Offer,
+  OfferVariant,
+  OfferItem,
+  PaymentMethodType,
+  FulfillmentMethodType,
+  Store,
+  ActorPaymentAccount,
+  Product,
+} from "@/types";
 import { ShippingCalculationService } from "@/lib/shipping/engine";
 import { PaymentSettingsService } from "@/lib/services/payment-settings-service";
 import { FulfillmentService } from "@/lib/services/fulfillment-service";
 import { ProductAvailabilityService } from "@/lib/inventory/availability";
 import { OfferHeader } from "@/components/storefront/offer-header";
 import { OfferPolicySummary } from "@/components/storefront/offer-policy-summary";
-import { SellerMiniCard } from "@/components/storefront/seller-mini-card";
 import { SellerTrustSummary } from "@/components/storefront/seller-trust-summary";
 import { StorePoliciesModal } from "@/components/storefront/store-policies-modal";
-import { RelatedProducts } from "@/components/storefront/related-products";
 import { OtherActiveOffers } from "@/components/storefront/other-active-offers";
 import { OfferPublicService } from "@/lib/storefront/offer-public-service";
-import { SyncBridgeService } from "@/lib/db/sync-bridge";
 import confetti from "canvas-confetti";
+
+interface ResolvedItem {
+  id: string;
+  name: string;
+  price: number;
+  compare_at_price?: number;
+  unit?: string;
+  description?: string;
+  image_url?: string;
+  category?: string;
+  availability_status?: string;
+  available_quantity?: number;
+  inventory_tracking?: boolean;
+  variants?: OfferVariant[];
+  attachments?: import("@/types").OfferAttachment[];
+}
 
 function DirectOfferContent() {
   const params = useParams();
@@ -62,7 +88,17 @@ function DirectOfferContent() {
   const storeSlug = (params?.store_slug as string) || "auto";
   const offerSlug = params?.offer_slug as string;
 
-  const { offers, store, organization, products, orders, createOrder, shippingMethods, shippingZones, paymentAccounts } = useCommerceStore();
+  const {
+    offers,
+    store,
+    organization,
+    products,
+    orders,
+    createOrder,
+    shippingMethods,
+    shippingZones,
+    paymentAccounts,
+  } = useCommerceStore();
   const { addToCart } = useCart();
 
   // Server-side fallback state for public visitors on mobile / Zalo
@@ -85,14 +121,16 @@ function DirectOfferContent() {
   // Fetch offer and store data from server if client localStorage does not have it
   useEffect(() => {
     let isMounted = true;
-    const localOffer = offers.find((o) => o.slug === offerSlug);
+    const localOffer = offers.find((o) => o.slug === offerSlug || o.id === offerSlug);
     if (localOffer) {
       setIsLoadingServer(false);
       return;
     }
 
     setIsLoadingServer(true);
-    fetch(`/api/storefront/offer?store_slug=${encodeURIComponent(storeSlug)}&offer_slug=${encodeURIComponent(offerSlug)}`)
+    fetch(
+      `/api/storefront/offer?store_slug=${encodeURIComponent(storeSlug)}&offer_slug=${encodeURIComponent(offerSlug)}`
+    )
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!isMounted) return;
@@ -112,9 +150,10 @@ function DirectOfferContent() {
     };
   }, [offerSlug, storeSlug, offers]);
 
-  const effectiveOffer = offers.find((o) => o.slug === offerSlug) || serverData?.offer;
-  const effectiveStore = (store && store.slug === storeSlug) ? store : (serverData?.store || store);
-  const effectivePaymentAccounts = (paymentAccounts && paymentAccounts.length > 0) ? paymentAccounts : (serverData?.paymentAccounts || []);
+  const effectiveOffer = offers.find((o) => o.slug === offerSlug || o.id === offerSlug) || serverData?.offer;
+  const effectiveStore = store && store.slug === storeSlug ? store : serverData?.store || store;
+  const effectivePaymentAccounts =
+    paymentAccounts && paymentAccounts.length > 0 ? paymentAccounts : serverData?.paymentAccounts || [];
 
   const offer = effectiveOffer;
   const currentStore = effectiveStore;
@@ -130,30 +169,22 @@ function DirectOfferContent() {
       })
     : null;
 
-  const [activeDisplayImage, setActiveDisplayImage] = useState<string | null>(null);
-  const [selectedVariant, setSelectedVariant] = useState<OfferVariant | undefined>(
-    offer?.variants && offer.variants.length > 0 ? offer.variants[0] : undefined
-  );
-  const [quantity, setQuantity] = useState(1);
+  // Selected quantities for all items in the Offer: map of item_id -> quantity
+  const [selectedQuantities, setSelectedQuantities] = useState<Record<string, number>>({});
+  const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
+  const [activeCategory, setActiveCategory] = useState<string>("ALL");
   const [showQR, setShowQR] = useState(false);
   const [showPoliciesModal, setShowPoliciesModal] = useState(false);
   const [policyInitialTab, setPolicyInitialTab] = useState<"shipping" | "returns" | "warranty" | "payment">("shipping");
 
-  const allDisplayImages = offer
-    ? [offer.image_url, ...(offer.gallery || [])].filter((img): img is string => Boolean(img))
-    : [];
-
-  // Multi-Item Catalog Mode State
-  const [menuQuantities, setMenuQuantities] = useState<Record<string, number>>({});
-  const [activeCategory, setActiveCategory] = useState<string>("ALL");
-  const [showMenuCheckoutModal, setShowMenuCheckoutModal] = useState(false);
-
-  // Checkout Form State for Catalog Offer
+  // Checkout Modal State
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [deliveryLocation, setDeliveryLocation] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
+  const [selectedFulfillment, setSelectedFulfillment] = useState<FulfillmentMethodType>("DELIVERY");
   const [selectedShippingMethodId, setSelectedShippingMethodId] = useState<string | undefined>(undefined);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>("VIETQR");
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
@@ -161,6 +192,277 @@ function DirectOfferContent() {
   // GPS Geolocation State
   const [isLocatingGPS, setIsLocatingGPS] = useState(false);
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number; map_url: string } | null>(null);
+
+  // Resolve all items in this Offer (whether single product or multi-item catalog)
+  const resolvedItems: ResolvedItem[] = useMemo(() => {
+    if (!offer) return [];
+
+    if (offer.items && offer.items.length > 0) {
+      return offer.items.map((item) => {
+        // Image resolution priority: item.image_url -> matching product media -> first gallery -> null
+        const matchingProduct = products.find(
+          (p) => p.id === item.id || p.name.toLowerCase() === item.name.toLowerCase()
+        );
+        const resolvedImg = item.image_url || matchingProduct?.image_url || item.gallery?.[0] || matchingProduct?.gallery?.[0];
+
+        return {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          compare_at_price: item.compare_at_price,
+          unit: item.unit || matchingProduct?.unit,
+          description: item.description || matchingProduct?.description,
+          image_url: resolvedImg,
+          category: item.category || matchingProduct?.category,
+          availability_status: item.availability_status || matchingProduct?.availability_status || "IN_STOCK",
+          available_quantity: item.available_quantity ?? matchingProduct?.available_quantity,
+          inventory_tracking: item.inventory_tracking ?? matchingProduct?.inventory_tracking,
+          variants: item.variants || matchingProduct?.variants,
+          attachments: item.attachments || matchingProduct?.attachments,
+        };
+      });
+    }
+
+    // Single item offer
+    const matchingProduct = products.find(
+      (p) => p.id === offer.id || p.name.toLowerCase() === offer.name.toLowerCase()
+    );
+    const resolvedImg = offer.image_url || matchingProduct?.image_url || offer.gallery?.[0] || matchingProduct?.gallery?.[0];
+
+    return [
+      {
+        id: offer.id,
+        name: offer.name,
+        price: offer.price,
+        compare_at_price: offer.compare_at_price,
+        unit: offer.service_unit || matchingProduct?.unit,
+        description: offer.short_description || offer.description || matchingProduct?.description,
+        image_url: resolvedImg,
+        category: matchingProduct?.category,
+        availability_status: offer.availability_status || matchingProduct?.availability_status || "IN_STOCK",
+        available_quantity: offer.available_quantity ?? matchingProduct?.available_quantity,
+        inventory_tracking: offer.inventory_tracking,
+        variants: offer.variants || matchingProduct?.variants,
+        attachments: offer.attachments || matchingProduct?.attachments,
+      },
+    ];
+  }, [offer, products]);
+
+  // Categories list if multi-item
+  const itemCategories = useMemo(() => {
+    const cats = Array.from(new Set(resolvedItems.map((i) => i.category).filter(Boolean))) as string[];
+    return ["ALL", ...cats];
+  }, [resolvedItems]);
+
+  const filteredItems = useMemo(() => {
+    if (activeCategory === "ALL") return resolvedItems;
+    return resolvedItems.filter((i) => i.category === activeCategory);
+  }, [resolvedItems, activeCategory]);
+
+  // Total calculation for selected items
+  const selectedItemsList = useMemo(() => {
+    return resolvedItems
+      .filter((it) => (selectedQuantities[it.id] || 0) > 0)
+      .map((it) => ({
+        ...it,
+        quantity: selectedQuantities[it.id],
+        line_total: it.price * selectedQuantities[it.id],
+      }));
+  }, [resolvedItems, selectedQuantities]);
+
+  const totalSelectedCount = selectedItemsList.reduce((acc, it) => acc + it.quantity, 0);
+  const subtotalAmount = selectedItemsList.reduce((acc, it) => acc + it.line_total, 0);
+
+  // Auto-select initial quantity = 1 if single item offer
+  useEffect(() => {
+    if (resolvedItems.length === 1 && totalSelectedCount === 0) {
+      const singleItem = resolvedItems[0];
+      const isOut = singleItem.availability_status === "OUT_OF_STOCK";
+      if (!isOut) {
+        setSelectedQuantities({ [singleItem.id]: 1 });
+      }
+    }
+  }, [resolvedItems, totalSelectedCount]);
+
+  const handleUpdateQty = (itemId: string, delta: number) => {
+    setSelectedQuantities((prev) => {
+      const current = prev[itemId] || 0;
+      const next = Math.max(0, current + delta);
+      if (next === 0) {
+        const copy = { ...prev };
+        delete copy[itemId];
+        return copy;
+      }
+      return { ...prev, [itemId]: next };
+    });
+  };
+
+  const handleSetQtyDirect = (itemId: string, val: number) => {
+    setSelectedQuantities((prev) => {
+      const next = Math.max(0, val);
+      if (next === 0) {
+        const copy = { ...prev };
+        delete copy[itemId];
+        return copy;
+      }
+      return { ...prev, [itemId]: next };
+    });
+  };
+
+  // GPS Handler
+  const handleGetGPSLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Thiết bị hoặc trình duyệt của bạn không hỗ trợ định vị GPS.");
+      return;
+    }
+
+    setIsLocatingGPS(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const mapUrl = `https://maps.google.com/?q=${lat},${lng}`;
+        setGpsCoords({ lat, lng, map_url: mapUrl });
+        setIsLocatingGPS(false);
+
+        if (!deliveryLocation.trim()) {
+          setDeliveryLocation(`📍 Vị trí GPS (${lat.toFixed(5)}, ${lng.toFixed(5)})`);
+        }
+      },
+      (err) => {
+        setIsLocatingGPS(false);
+        let msg = "Không thể lấy vị trí. Vui lòng cấp quyền truy cập vị trí trên trình duyệt.";
+        if (err.code === err.PERMISSION_DENIED) {
+          msg = "Bạn đã từ chối quyền định vị. Vui lòng cho phép truy cập vị trí trong cài đặt trình duyệt.";
+        }
+        alert(msg);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // Shipping calculation
+  const shippingCalculation = useMemo(() => {
+    if (!currentStore || selectedFulfillment === "STORE_PICKUP") {
+      return {
+        final_shipping_fee: 0,
+        is_free_shipping: true,
+        selected_option: { name: "Nhận tại cửa hàng", is_quote_later: false },
+      };
+    }
+
+    const itemsForShipping = selectedItemsList.map((it) => ({
+      id: it.id,
+      name: it.name,
+      price: it.price,
+      quantity: it.quantity,
+      offer_type: "PRODUCT" as const,
+    }));
+
+    return ShippingCalculationService.calculate({
+      store: currentStore,
+      items: itemsForShipping,
+      subtotal: subtotalAmount,
+      delivery_address: { address_line: deliveryLocation },
+      selected_method_id: selectedShippingMethodId,
+      shipping_methods: shippingMethods,
+      shipping_zones: shippingZones,
+    });
+  }, [currentStore, selectedFulfillment, selectedItemsList, subtotalAmount, deliveryLocation, selectedShippingMethodId, shippingMethods, shippingZones]);
+
+  const isQuoteLater = shippingCalculation.selected_option?.is_quote_later === true;
+  const shippingFee = isQuoteLater || selectedFulfillment === "STORE_PICKUP" ? 0 : shippingCalculation.final_shipping_fee;
+  const grandTotal = subtotalAmount + shippingFee;
+
+  // Real Enabled Payment Methods
+  const enabledPaymentMethods = useMemo(() => {
+    if (offer?.payment_override?.mode === "OFFER_OVERRIDE" && offer.payment_override.enabled_methods) {
+      return offer.payment_override.enabled_methods;
+    }
+    if (currentStore.advanced_payment_settings?.enabled_methods) {
+      return currentStore.advanced_payment_settings.enabled_methods;
+    }
+    const legacy: PaymentMethodType[] = [];
+    if (currentStore.payment_settings?.enable_bank_transfer !== false) legacy.push("VIETQR");
+    if (currentStore.payment_settings?.enable_cod) legacy.push("COD");
+    return legacy.length > 0 ? legacy : ["VIETQR", "COD"];
+  }, [offer, currentStore]);
+
+  // Real Enabled Fulfillment Methods
+  const enabledFulfillmentMethods = useMemo(() => {
+    if (offer?.fulfillment_override?.mode === "OFFER_OVERRIDE" && offer.fulfillment_override.enabled_methods) {
+      return offer.fulfillment_override.enabled_methods;
+    }
+    return currentStore.fulfillment_settings?.enabled_methods || ["DELIVERY", "STORE_PICKUP"];
+  }, [offer, currentStore]);
+
+  // Submit Final Order
+  const handlePlaceOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (totalSelectedCount === 0 || !offer || !currentStore) return;
+
+    const phoneErr = getPhoneValidationError(customerPhone);
+    if (phoneErr) {
+      setPhoneError(phoneErr);
+      return;
+    }
+    setPhoneError(null);
+
+    setIsSubmittingOrder(true);
+
+    const orderItems = selectedItemsList.map((it) => ({
+      offer: {
+        ...offer,
+        name: resolvedItems.length > 1 ? `${it.name} (${offer.name})` : it.name,
+        price: it.price,
+        cost_price: it.price * 0.5,
+      },
+      variant: selectedVariantId ? it.variants?.find((v) => v.id === selectedVariantId) : undefined,
+      quantity: it.quantity,
+    }));
+
+    const orderPayload = {
+      customer_name: customerName.trim() || "Khách Hàng",
+      customer_phone: customerPhone.trim(),
+      shipping_address: {
+        full_address: selectedFulfillment === "STORE_PICKUP" ? `Nhận tại cửa hàng: ${currentStore.address || currentStore.store_name}` : deliveryLocation.trim() || "Địa chỉ giao hàng",
+        latitude: gpsCoords?.lat,
+        longitude: gpsCoords?.lng,
+        map_url: gpsCoords?.map_url,
+      },
+      shipping_method_id: selectedShippingMethodId,
+      fulfillment_method_type: selectedFulfillment,
+      payment_method: paymentMethod,
+      customer_notes: orderNotes.trim() ? `${orderNotes.trim()}${gpsCoords ? `\n[Tọa độ GPS: ${gpsCoords.map_url}]` : ""}` : gpsCoords ? `[Tọa độ GPS: ${gpsCoords.map_url}]` : undefined,
+      items: orderItems,
+    };
+
+    try {
+      const createdOrder = await createOrder(orderPayload);
+
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+
+      setShowCheckoutModal(false);
+
+      if (createdOrder && createdOrder.order_number) {
+        router.push(`/${storeSlug}/order/${createdOrder.order_number}`);
+      } else {
+        router.push(`/${storeSlug}`);
+      }
+    } catch (err) {
+      console.error("Order submission failed:", err);
+      alert("Đặt hàng thất bại. Vui lòng thử lại!");
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
+
+  const offerUrl = typeof window !== "undefined" ? window.location.href : `/${storeSlug}/o/${offerSlug}`;
+  const brandColor = currentStore.customization?.brand_color || "#2563eb";
 
   // 1. Loading State
   if (isLoadingServer && !offer) {
@@ -171,7 +473,7 @@ function DirectOfferContent() {
         </div>
         <div className="space-y-1">
           <p className="font-bold text-sm text-neutral-800 dark:text-neutral-200">Đang tải thông tin ưu đãi...</p>
-          <p className="text-xs text-neutral-400">Kết nối máy chủ và nạp dữ liệu bảo mật</p>
+          <p className="text-xs text-neutral-400">Kết nối máy chủ và nạp danh mục sản phẩm</p>
         </div>
       </div>
     );
@@ -203,201 +505,17 @@ function DirectOfferContent() {
     );
   }
 
-  // Handle DISCONTINUED product state with graceful UX (not generic 404)
-  if (offer.product_status === "DISCONTINUED") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950 p-6 text-center">
-        <div className="space-y-4 max-w-md">
-          <div className="w-16 h-16 rounded-3xl bg-rose-100 dark:bg-rose-950/40 flex items-center justify-center mx-auto text-rose-600">
-            <Package className="w-8 h-8" />
-          </div>
-          <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
-            Sản phẩm này hiện không còn kinh doanh
-          </h2>
-          <p className="text-xs text-neutral-500">
-            Nhà bán hàng đã ngừng phân phối hoặc chuyển sang model thế hệ mới. Bạn có thể tham khảo các mặt hàng khác tại cửa hàng.
-          </p>
-          <Link
-            href={`/${storeSlug}`}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Xem các sản phẩm khác tại cửa hàng</span>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const isMenuMode = offer.offer_structure === "MENU_CATALOG" || (offer.items && offer.items.length > 0);
-  const currentPrice = selectedVariant ? selectedVariant.price : offer.price;
-  const offerUrl = typeof window !== "undefined" ? window.location.href : `/${storeSlug}/o/${offerSlug}`;
-
-  // Menu / Catalog items & calculation (Filtered by Offer out_of_stock_visibility setting)
-  const allMenuItems: OfferItem[] = offer.items || [];
-  const menuItems: OfferItem[] = allMenuItems.filter((item) =>
-    ProductAvailabilityService.isOfferItemVisible(item, {
-      out_of_stock_visibility: offer.out_of_stock_visibility || "HIDE",
-    })
-  );
-  const menuCategories = ["ALL", ...Array.from(new Set(menuItems.map((i) => i.category || "Khác")))];
-
-  const filteredMenuItems = menuItems.filter((i) => {
-    if (activeCategory === "ALL") return true;
-    return i.category === activeCategory;
-  });
-
-  const totalMenuItemsCount = Object.values(menuQuantities).reduce((a, b) => a + b, 0);
-  const totalMenuAmount = menuItems.reduce((acc, it) => {
-    const qty = menuQuantities[it.id] || 0;
-    return acc + it.price * qty;
-  }, 0);
-
-  const handleUpdateItemQty = (itemId: string, delta: number) => {
-    setMenuQuantities((prev) => {
-      const current = prev[itemId] || 0;
-      const next = Math.max(0, current + delta);
-      if (next === 0) {
-        const copy = { ...prev };
-        delete copy[itemId];
-        return copy;
-      }
-      return { ...prev, [itemId]: next };
-    });
-  };
-
-  const handleBuyNow = () => {
-    addToCart(offer, selectedVariant, quantity);
-    router.push(`/${storeSlug}/checkout`);
-  };
-
-  // GPS Geolocation Handler
-  const handleGetGPSLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Thiết bị hoặc trình duyệt của bạn không hỗ trợ định vị GPS.");
-      return;
-    }
-
-    setIsLocatingGPS(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const mapUrl = `https://maps.google.com/?q=${lat},${lng}`;
-        setGpsCoords({ lat, lng, map_url: mapUrl });
-        setIsLocatingGPS(false);
-
-        // Auto-fill delivery address if empty or append
-        if (!deliveryLocation.trim()) {
-          setDeliveryLocation(`📍 Vị trí GPS (${lat.toFixed(5)}, ${lng.toFixed(5)})`);
-        }
-      },
-      (err) => {
-        setIsLocatingGPS(false);
-        let msg = "Không thể lấy vị trí. Vui lòng cấp quyền truy cập vị trí trên trình duyệt.";
-        if (err.code === err.PERMISSION_DENIED) {
-          msg = "Bạn đã từ chối quyền định vị. Vui lòng cho phép truy cập vị trí trong cài đặt trình duyệt.";
-        }
-        alert(msg);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-      }
-    );
-  };
-
-  // Dynamic Shipping Calculation for Catalog Order Modal
-  const selectedItemsForShipping = menuItems
-    .filter((it) => (menuQuantities[it.id] || 0) > 0)
-    .map((it) => ({
-      id: it.id,
-      name: it.name,
-      price: it.price,
-      quantity: menuQuantities[it.id],
-      offer_type: "PRODUCT" as const,
-    }));
-
-  const catalogShippingCalc = ShippingCalculationService.calculate({
-    store,
-    items: selectedItemsForShipping,
-    subtotal: totalMenuAmount,
-    delivery_address: { address_line: deliveryLocation },
-    selected_method_id: selectedShippingMethodId,
-    shipping_methods: shippingMethods,
-    shipping_zones: shippingZones,
-  });
-
-  const selectedCatalogShippingOption = catalogShippingCalc.selected_option;
-  const isCatalogQuoteLater = selectedCatalogShippingOption?.is_quote_later === true;
-  const catalogShippingFee = isCatalogQuoteLater ? 0 : catalogShippingCalc.final_shipping_fee;
-  const finalMenuGrandTotal = totalMenuAmount + catalogShippingFee;
-
-  const handleCompleteMenuOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (totalMenuItemsCount === 0) return;
-    setIsSubmittingOrder(true);
-
-    // Build order items array
-    const selectedItemsForOrder = menuItems
-      .filter((it) => (menuQuantities[it.id] || 0) > 0)
-      .map((it) => ({
-        offer: {
-          ...offer,
-          name: `${it.name} (${offer.name})`,
-          price: it.price,
-          cost_price: it.cost_price || it.price * 0.5,
-        },
-        quantity: menuQuantities[it.id],
-      }));
-
-    const order = createOrder({
-      customer_name: customerName,
-      customer_phone: customerPhone,
-      shipping_address: {
-        full_address: deliveryLocation || "Tại cơ sở / Theo định vị GPS",
-        latitude: gpsCoords?.lat,
-        longitude: gpsCoords?.lng,
-        map_url: gpsCoords?.map_url,
-      },
-      items: selectedItemsForOrder,
-      payment_method: paymentMethod,
-      shipping_method_id: selectedCatalogShippingOption?.method_id,
-      customer_notes: `${deliveryLocation ? `[Địa chỉ/Khu vực: ${deliveryLocation}] ` : ""}${gpsCoords ? `[GPS: ${gpsCoords.lat.toFixed(5)},${gpsCoords.lng.toFixed(5)}] ` : ""}${orderNotes}`,
-    });
-
-    SyncBridgeService.submitOrderToServer(order);
-
-    confetti({
-      particleCount: 150,
-      spread: 80,
-      origin: { y: 0.6 },
-    });
-
-    setTimeout(() => {
-      router.push(`/${storeSlug}/order/${order.order_number}`);
-    }, 600);
-  };
-
-  const avail = ProductAvailabilityService.computeAvailability({
-    inventory_tracking: offer.inventory_tracking,
-    availability_status: offer.availability_status,
-    available_quantity: offer.available_quantity,
-  });
-  const isOutOfStock = avail === "OUT_OF_STOCK";
-  const isLowStock = avail === "LOW_STOCK";
-
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 font-sans pb-32 text-neutral-900 dark:text-neutral-100">
-      {/* Top Bar */}
-      <header className="sticky top-0 z-40 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md border-b border-neutral-200/80 dark:border-neutral-800 px-4 py-3">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+      {/* Top Breadcrumb Navigation */}
+      <header className="sticky top-0 z-30 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
+        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <Link
             href={`/${storeSlug}`}
-            className="flex items-center gap-1.5 text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:text-neutral-900"
+            className="flex items-center gap-2 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>{store.store_name}</span>
+            <span>{currentStore.store_name}</span>
           </Link>
 
           <div className="flex items-center gap-2">
@@ -408,118 +526,142 @@ function DirectOfferContent() {
             >
               <QrCode className="w-4 h-4" />
             </button>
-            <CopyButton text={offerUrl} label="Share Offer" className="text-xs" />
+            <CopyButton text={offerUrl} label="Chia sẻ" className="text-xs" />
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 pt-4 sm:pt-6 space-y-6">
-        {/* ========================================================================= */}
-        {/* MODE A: MULTI-ITEM CATALOG / PRICE-LIST OFFER                            */}
-        {/* ========================================================================= */}
-        {isMenuMode ? (
-          <div className="space-y-6">
-            {/* Redesigned Compact Offer Header (OFFER FIRST, SELLER SECOND) */}
-            <OfferHeader
-              offer={offer}
-              store={currentStore}
-              organization={organization}
-              sellerType={publicOffer?.seller_mini_card.actor_type}
-              sellerDisplayName={publicOffer?.seller_mini_card.seller_display_name}
-              sellerAvatarUrl={publicOffer?.seller_mini_card.logo_url}
-              isVerified={publicOffer?.seller_mini_card.is_verified}
-              publicLocation={publicOffer?.seller_mini_card.location_summary}
-              itemCount={menuItems.length}
-              customization={currentStore.customization}
-            />
+      {/* Main Content Area */}
+      <main className="max-w-6xl mx-auto px-4 pt-4 sm:pt-6 space-y-6">
+        {/* 1. COMPACT OFFER HEADER (Seller Mini Profile + Title + Description) */}
+        <OfferHeader
+          offer={offer}
+          store={currentStore}
+          organization={organization}
+          sellerType={publicOffer?.seller_mini_card.actor_type}
+          sellerDisplayName={publicOffer?.seller_mini_card.seller_display_name}
+          sellerAvatarUrl={publicOffer?.seller_mini_card.logo_url}
+          isVerified={publicOffer?.seller_mini_card.is_verified}
+          publicLocation={publicOffer?.seller_mini_card.location_summary}
+          itemCount={resolvedItems.length}
+          customization={currentStore.customization}
+        />
 
-            {/* Category Filter Pills (if multiple categories) */}
-            {menuCategories.length > 2 && (
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-                {menuCategories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
-                    className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                      activeCategory === cat
-                        ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-md"
-                        : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100"
-                    }`}
-                  >
-                    {cat === "ALL" ? "Tất cả sản phẩm/dịch vụ" : cat}
-                  </button>
-                ))}
-              </div>
-            )}
+        {/* 2. CORE TRANSACTION SECTION: OFFER ITEMS (LEFT) + STICKY ORDER PANEL (RIGHT) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* LEFT: PRODUCTS / SERVICES IN OFFER */}
+          <div className="lg:col-span-8 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base sm:text-lg font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                <Package className="w-5 h-5 text-blue-600" />
+                <span>Sản Phẩm & Dịch Vụ Trong Offer</span>
+                <span className="text-xs font-semibold text-neutral-400">({resolvedItems.length})</span>
+              </h2>
 
-            {/* Catalog Items Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {filteredMenuItems.map((item) => {
-                const qty = menuQuantities[item.id] || 0;
+              {/* Category Filter Pills (if multiple) */}
+              {itemCategories.length > 2 && (
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                  {itemCategories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setActiveCategory(cat)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                        activeCategory === cat
+                          ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-xs"
+                          : "bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700"
+                      }`}
+                    >
+                      {cat === "ALL" ? "Tất cả" : cat}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Items Grid */}
+            <div className="space-y-4">
+              {filteredItems.map((item) => {
+                const qty = selectedQuantities[item.id] || 0;
+                const isOutOfStock = item.availability_status === "OUT_OF_STOCK";
+                const isLowStock = item.availability_status === "LOW_STOCK";
+
                 return (
                   <div
                     key={item.id}
-                    className={`p-4 rounded-3xl bg-white dark:bg-neutral-900 border transition-all flex gap-4 ${
+                    className={`p-4 sm:p-5 rounded-3xl bg-white dark:bg-neutral-900 border transition-all flex flex-col sm:flex-row gap-4 ${
                       qty > 0
-                        ? "border-emerald-500 shadow-md ring-2 ring-emerald-500/20"
-                        : "border-neutral-200/80 dark:border-neutral-800 hover:border-neutral-300"
+                        ? "border-blue-600 ring-2 ring-blue-500/20 shadow-md"
+                        : "border-neutral-200/90 dark:border-neutral-800 hover:border-neutral-300"
                     }`}
                   >
-                    {/* Item Image */}
-                    {item.image_url && (
-                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 shrink-0 border border-neutral-100 dark:border-neutral-800">
+                    {/* Item Image with Neutral Fallback (Aspect 1:1, NEVER disappearing) */}
+                    <div className="w-full sm:w-32 sm:h-32 aspect-square rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 shrink-0 border border-neutral-200 dark:border-neutral-700 relative">
+                      {item.image_url ? (
                         <img
                           src={item.image_url}
                           alt={item.name}
                           className="w-full h-full object-cover"
                         />
-                      </div>
-                    )}
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-neutral-400 p-2 text-center">
+                          <Package className="w-10 h-10 mb-1 opacity-40" />
+                          <span className="text-[10px] font-medium opacity-60">Chưa có hình ảnh</span>
+                        </div>
+                      )}
 
-                    {/* Item Info & Actions */}
-                    <div className="flex-1 flex flex-col justify-between space-y-2">
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                      {/* Out of stock badge on image */}
+                      {isOutOfStock && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 text-center">
+                          <span className="px-2.5 py-1 rounded-md text-[10px] font-black bg-rose-600 text-white shadow-xs">
+                            TẠM HẾT HÀNG
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Item Info & Purchasing Stepper */}
+                    <div className="flex-1 flex flex-col justify-between space-y-3">
+                      <div className="space-y-1.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-neutral-100">
                             {item.name}
                           </h3>
                           {item.category && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-500">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-500 shrink-0">
                               {item.category}
                             </span>
                           )}
                         </div>
+
                         {item.description && (
-                          <p className="text-[11px] text-neutral-500 line-clamp-2 leading-relaxed">
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed">
                             {item.description}
                           </p>
                         )}
 
-                        {/* Item Variants tags if any */}
-                        {item.variants && item.variants.length > 0 && (
-                          <div className="flex flex-wrap gap-1 pt-0.5">
-                            {item.variants.map((v) => (
-                              <span key={v.id} className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-[10px] font-semibold text-blue-700 dark:text-blue-300">
-                                {v.name}: {formatVND(v.price)}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                        {/* Availability Tag */}
+                        <div className="flex items-center gap-2 pt-0.5">
+                          {isOutOfStock ? (
+                            <span className="text-xs font-bold text-rose-600">● Tạm hết hàng</span>
+                          ) : isLowStock ? (
+                            <span className="text-xs font-bold text-amber-600">● Sắp hết hàng ({item.available_quantity} còn lại)</span>
+                          ) : (
+                            <span className="text-xs font-semibold text-emerald-600">● Còn hàng sẵn giao ngay</span>
+                          )}
+                        </div>
 
-                        {/* Item Attachments if any */}
+                        {/* Attachments if any */}
                         {item.attachments && item.attachments.length > 0 && (
-                          <div className="flex flex-wrap gap-1 pt-0.5">
+                          <div className="flex flex-wrap gap-1 pt-1">
                             {item.attachments.map((a) => (
                               <a
                                 key={a.id}
                                 href={a.file_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                download={a.file_type !== "LINK"}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950 text-[10px] font-bold text-amber-800 dark:text-amber-300 hover:underline border border-amber-200"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950 text-[10px] font-bold text-amber-800 dark:text-amber-300 border border-amber-200"
                               >
-                                <Paperclip className="w-2.5 h-2.5" />
+                                <Paperclip className="w-3 h-3" />
                                 <span>{a.name} ↗</span>
                               </a>
                             ))}
@@ -527,37 +669,59 @@ function DirectOfferContent() {
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between pt-1">
+                      {/* Price & Quantity Controls */}
+                      <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
                         <div className="flex items-baseline gap-2">
-                          <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                          <span className="text-base sm:text-lg font-black text-rose-600 dark:text-rose-400">
                             {formatVND(item.price)}
-                            {item.unit && <span className="text-[10px] text-neutral-400 font-normal">/{item.unit}</span>}
+                            {item.unit && <span className="text-xs font-normal text-neutral-400"> /{item.unit}</span>}
                           </span>
                           {item.compare_at_price && item.compare_at_price > item.price && (
-                            <span className="text-[11px] text-neutral-400 line-through">
+                            <span className="text-xs text-neutral-400 line-through">
                               {formatVND(item.compare_at_price)}
                             </span>
                           )}
                         </div>
 
-                        {/* Quantity Counter */}
-                        <div className="flex items-center border border-neutral-300 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-800">
-                          <button
-                            onClick={() => handleUpdateItemQty(item.id, -1)}
-                            disabled={qty === 0}
-                            className="px-2.5 py-1 text-neutral-500 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
-                          >
-                            <Minus className="w-3.5 h-3.5" />
-                          </button>
-                          <span className={`px-2 text-xs font-bold ${qty > 0 ? "text-emerald-600 font-black" : "text-neutral-400"}`}>
-                            {qty}
-                          </span>
-                          <button
-                            onClick={() => handleUpdateItemQty(item.id, 1)}
-                            className="px-2.5 py-1 text-neutral-700 dark:text-neutral-200 hover:text-emerald-600 cursor-pointer"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
+                        {/* Quantity Stepper */}
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center border border-neutral-300 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-800 shadow-2xs">
+                            <button
+                              type="button"
+                              disabled={qty === 0 || isOutOfStock}
+                              onClick={() => handleUpdateQty(item.id, -1)}
+                              className="p-2 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
+                            <input
+                              type="number"
+                              min="0"
+                              disabled={isOutOfStock}
+                              value={qty}
+                              onChange={(e) => handleSetQtyDirect(item.id, parseInt(e.target.value) || 0)}
+                              className="w-10 text-center text-xs font-black bg-transparent border-0 focus:ring-0 p-0 text-neutral-900 dark:text-neutral-100"
+                            />
+                            <button
+                              type="button"
+                              disabled={isOutOfStock}
+                              onClick={() => handleUpdateQty(item.id, 1)}
+                              className="p-2 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 disabled:opacity-30 cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          {qty === 0 && !isOutOfStock && (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateQty(item.id, 1)}
+                              className="px-3 py-2 rounded-xl text-xs font-bold text-white shadow-xs cursor-pointer hover:opacity-90 active:scale-95 transition-all"
+                              style={{ backgroundColor: brandColor }}
+                            >
+                              Chọn Mua
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -565,700 +729,377 @@ function DirectOfferContent() {
                 );
               })}
             </div>
-
-            {/* Sticky Bottom Order Bar for Catalog Mode */}
-            {totalMenuItemsCount > 0 && (
-              <div className="fixed bottom-4 left-4 right-4 z-40 max-w-4xl mx-auto animate-in slide-in-from-bottom-5">
-                <div className="p-4 rounded-3xl bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-2xl flex items-center justify-between gap-4 border border-white/20">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center font-black text-xs shadow-md">
-                      {totalMenuItemsCount}
-                    </div>
-                    <div>
-                      <p className="text-xs text-neutral-300 dark:text-neutral-600 font-medium">Tổng giá trị đã chọn:</p>
-                      <p className="text-base font-black text-emerald-400 dark:text-emerald-600">
-                        {formatVND(totalMenuAmount)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setShowMenuCheckoutModal(true)}
-                    className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap"
-                  >
-                    <span>GỬI ĐƠN ĐẶT HÀNG</span>
-                    <Send className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
-        ) : (
-          /* ========================================================================= */
-          /* MODE B: SINGLE PRODUCT / SERVICE / COMBO OFFER                            */
-          /* ========================================================================= */
-          <div className="space-y-6">
-            {/* Redesigned Compact Offer Header (OFFER FIRST, SELLER SECOND) */}
-            <OfferHeader
-              offer={offer}
-              store={currentStore}
-              organization={organization}
-              sellerType={publicOffer?.seller_mini_card.actor_type}
-              sellerDisplayName={publicOffer?.seller_mini_card.seller_display_name}
-              sellerAvatarUrl={publicOffer?.seller_mini_card.logo_url}
-              isVerified={publicOffer?.seller_mini_card.is_verified}
-              publicLocation={publicOffer?.seller_mini_card.location_summary}
-              itemCount={offer.items?.length || (offer.offer_type === "PRODUCT" ? 1 : 0)}
-              customization={currentStore.customization}
-            />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white dark:bg-neutral-900 rounded-3xl p-6 md:p-8 border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
-            {/* Image & Gallery */}
-            <div className="space-y-3">
-              <div className="aspect-square rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border flex items-center justify-center">
-                {activeDisplayImage || offer.image_url ? (
-                  <img
-                    src={activeDisplayImage || offer.image_url}
-                    alt={offer.name}
-                    className="w-full h-full object-cover transition-all"
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-neutral-400 bg-neutral-100/90 dark:bg-neutral-800/90">
-                    <Package className="w-16 h-16 mb-2 opacity-40" />
-                    <span className="text-xs font-medium opacity-60">Chưa có hình ảnh</span>
-                  </div>
-                )}
+          {/* RIGHT: DESKTOP STICKY ORDER SUMMARY PANEL */}
+          <div className="lg:col-span-4 sticky top-20 space-y-4">
+            <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200/90 dark:border-neutral-800 shadow-sm space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4 text-blue-600" />
+                  <span>Tóm Tắt Đơn Hàng</span>
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-300">
+                  {totalSelectedCount} món đã chọn
+                </span>
               </div>
 
-              {/* Gallery Thumbnails (Primary + Additional Photos) */}
-              {allDisplayImages.length > 1 && (
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                  {allDisplayImages.map((img: string, idx: number) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setActiveDisplayImage(img)}
-                      className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
-                        (activeDisplayImage || offer.image_url) === img
-                          ? "border-blue-600 ring-2 ring-blue-500/20 shadow-xs"
-                          : "border-neutral-200 dark:border-neutral-700 opacity-70 hover:opacity-100"
-                      }`}
-                    >
-                      <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
-                    </button>
+              {/* Selected Items List */}
+              {selectedItemsList.length > 0 ? (
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  {selectedItemsList.map((it) => (
+                    <div key={it.id} className="flex items-center justify-between text-xs gap-2">
+                      <div className="min-w-0">
+                        <p className="font-bold text-neutral-900 dark:text-neutral-100 truncate">{it.name}</p>
+                        <p className="text-[11px] text-neutral-400">
+                          {formatVND(it.price)} × {it.quantity}
+                        </p>
+                      </div>
+                      <span className="font-bold text-neutral-900 dark:text-neutral-100 shrink-0">
+                        {formatVND(it.line_total)}
+                      </span>
+                    </div>
                   ))}
                 </div>
-              )}
-            </div>
-
-            {/* Offer Details & Purchasing Controls */}
-            {(() => {
-              const avail = ProductAvailabilityService.computeAvailability({
-                inventory_tracking: offer.inventory_tracking,
-                availability_status: offer.availability_status,
-                available_quantity: offer.available_quantity,
-              });
-              const isOutOfStock = avail === "OUT_OF_STOCK";
-              const isLowStock = avail === "LOW_STOCK";
-
-              return (
-                <div className="space-y-5 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900">
-                        {offer.offer_type === "PRODUCT" ? "📦 SẢN PHẨM" : "🛠️ DỊCH VỤ"}
-                      </span>
-                      {isOutOfStock && (
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-600 text-white shadow-xs">
-                          TẠM HẾT HÀNG
-                        </span>
-                      )}
-                      {isLowStock && (
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500 text-white shadow-xs">
-                          SẮP HẾT HÀNG (Còn {offer.available_quantity})
-                        </span>
-                      )}
-                      {!isOutOfStock && !isLowStock && offer.inventory_tracking && (
-                        <span className="text-[11px] text-emerald-600 font-semibold">● Còn hàng sẵn ({offer.available_quantity || "Nhiều"})</span>
-                      )}
-                    </div>
-
-                    <h1 className="text-xl md:text-2xl font-extrabold text-neutral-900 dark:text-neutral-100">
-                      {offer.name}
-                    </h1>
-
-                    <div className="flex items-baseline gap-3 pt-1">
-                      <span className="text-2xl font-black text-blue-600 dark:text-blue-400">
-                        {formatVND(currentPrice)}
-                      </span>
-                      {offer.compare_at_price && offer.compare_at_price > currentPrice && (
-                        <span className="text-sm text-neutral-400 line-through">
-                          {formatVND(offer.compare_at_price)}
-                        </span>
-                      )}
-                      {offer.service_unit && (
-                        <span className="text-xs text-neutral-500">/{offer.service_unit}</span>
-                      )}
-                    </div>
-
-                    {/* Variants Selection (if any) */}
-                    {offer.variants && offer.variants.length > 0 && (
-                      <div className="pt-2 space-y-2">
-                        <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                          Chọn phân loại:
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                          {offer.variants.map((v: OfferVariant) => (
-                            <button
-                              key={v.id}
-                              disabled={isOutOfStock}
-                              onClick={() => setSelectedVariant(v)}
-                              className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                                selectedVariant?.id === v.id
-                                  ? "border-blue-600 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 ring-2 ring-blue-500/20"
-                                  : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400"
-                              }`}
-                            >
-                              {v.name} ({formatVND(v.price)})
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Quantity */}
-                    <div className="pt-2 flex items-center gap-3">
-                      <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                        Số lượng:
-                      </span>
-                      <div className="flex items-center border border-neutral-300 dark:border-neutral-700 rounded-xl bg-white dark:bg-neutral-900">
-                        <button
-                          disabled={isOutOfStock}
-                          onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                          className="px-2.5 py-1 text-neutral-500 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
-                        >
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="px-3 text-xs font-bold">{quantity}</span>
-                        <button
-                          disabled={isOutOfStock}
-                          onClick={() => setQuantity(quantity + 1)}
-                          className="px-2.5 py-1 text-neutral-500 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <div className="pt-3 border-t border-neutral-100 dark:border-neutral-800 text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed whitespace-pre-line">
-                      {offer.description}
-                    </div>
-
-                    {/* Attached Files & Documents */}
-                    {offer.attachments && offer.attachments.length > 0 && (
-                      <div className="pt-3 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100">
-                          <Paperclip className="w-3.5 h-3.5 text-amber-600" />
-                          <span>Tài Liệu & File Đính Kèm ({offer.attachments.length}):</span>
-                        </div>
-                        <div className="space-y-1.5">
-                          {offer.attachments.map((att) => (
-                            <a
-                              key={att.id}
-                              href={att.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              download={att.file_type !== "LINK"}
-                              className="p-2.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 hover:bg-amber-100/70 dark:hover:bg-amber-900/40 border border-amber-200/80 dark:border-amber-900/60 flex items-center justify-between text-xs transition-all group"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                {att.file_type === "LINK" ? (
-                                  <Globe className="w-4 h-4 text-blue-600 shrink-0" />
-                                ) : (
-                                  <FileDown className="w-4 h-4 text-amber-600 shrink-0" />
-                                )}
-                                <span className="font-bold text-neutral-800 dark:text-neutral-200 group-hover:text-blue-600 truncate">
-                                  {att.name}
-                                </span>
-                              </div>
-                              <span className="text-[10px] text-neutral-500 group-hover:underline shrink-0 flex items-center gap-1">
-                                {att.file_size || "Tải về"} ↗
-                              </span>
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* CTA Buttons */}
-                  <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800 grid grid-cols-2 gap-3">
-                    <button
-                      disabled={isOutOfStock}
-                      onClick={() => !isOutOfStock && addToCart(offer, selectedVariant, quantity)}
-                      className={`py-3 rounded-2xl border-2 text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                        isOutOfStock
-                          ? "border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed"
-                          : "border-neutral-900 dark:border-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-100 cursor-pointer"
-                      }`}
-                    >
-                      <ShoppingCart className="w-4 h-4" />
-                      <span>{isOutOfStock ? "TẠM HẾT HÀNG" : "Thêm Vào Giỏ"}</span>
-                    </button>
-
-                    <button
-                      disabled={isOutOfStock}
-                      onClick={() => !isOutOfStock && handleBuyNow()}
-                      className={`py-3 rounded-2xl text-xs font-bold shadow-lg transition-all flex items-center justify-center gap-1.5 ${
-                        isOutOfStock
-                          ? "bg-neutral-300 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed shadow-none"
-                          : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/30 cursor-pointer"
-                      }`}
-                    >
-                      <span>{isOutOfStock ? "HẾT HÀNG" : "Mua Ngay"}</span>
-                    </button>
-                  </div>
+              ) : (
+                <div className="py-6 text-center text-neutral-400 space-y-1">
+                  <Package className="w-8 h-8 mx-auto opacity-30" />
+                  <p className="text-xs font-semibold">Chưa chọn sản phẩm</p>
+                  <p className="text-[11px] opacity-70">Chọn số lượng sản phẩm ở bên trái để tiếp tục đặt hàng.</p>
                 </div>
-              );
-            })()}
+              )}
+
+              {/* Financial Calculation */}
+              <div className="pt-3 border-t border-neutral-100 dark:border-neutral-800 space-y-2 text-xs">
+                <div className="flex justify-between text-neutral-600 dark:text-neutral-400">
+                  <span>Tiền hàng:</span>
+                  <span className="font-bold text-neutral-900 dark:text-neutral-100">{formatVND(subtotalAmount)}</span>
+                </div>
+                <div className="flex justify-between text-neutral-600 dark:text-neutral-400">
+                  <span>Phí giao hàng:</span>
+                  <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+                    {isQuoteLater ? "Báo sau" : selectedFulfillment === "STORE_PICKUP" ? "Miễn phí (Tại quầy)" : formatVND(shippingFee)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm pt-2 border-t border-neutral-100 dark:border-neutral-800 font-black">
+                  <span>Tổng thanh toán:</span>
+                  <span className="text-rose-600 dark:text-rose-400 text-base">{formatVND(grandTotal)}</span>
+                </div>
+              </div>
+
+              {/* CTA ĐẶT HÀNG */}
+              <button
+                type="button"
+                disabled={totalSelectedCount === 0}
+                onClick={() => setShowCheckoutModal(true)}
+                className="w-full py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-black text-white shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 active:scale-98"
+                style={{ backgroundColor: brandColor }}
+              >
+                <span>TIẾP TỤC ĐẶT HÀNG</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
-      )}
 
-        {/* Real Store & Offer Policy Summary (No Fake Claims!) */}
+        {/* 3. SUPPORTING INFORMATION (DELIVERY & PAYMENT RULES) */}
         <OfferPolicySummary
-          paymentSettings={currentStore.advanced_payment_settings || PaymentSettingsService.getStorePaymentSettings(currentStore)}
-          fulfillmentSettings={currentStore.fulfillment_settings || FulfillmentService.getStoreFulfillmentSettings(currentStore)}
-          policies={publicOffer?.policies}
-          onOpenPolicyModal={(tab) => {
+          paymentSettings={currentStore.advanced_payment_settings}
+          fulfillmentSettings={currentStore.fulfillment_settings}
+          policies={currentStore.policy_settings}
+          onOpenPolicyModal={(tab: "shipping" | "returns" | "warranty" | "payment") => {
             setPolicyInitialTab(tab);
             setShowPoliciesModal(true);
           }}
         />
 
-        {/* Real Seller Trust Summary Block (Only Real Database Data) */}
-        {publicOffer && (
-          <SellerTrustSummary
-            sellerDisplayName={publicOffer.seller_mini_card.seller_display_name}
-            sellerSlug={publicOffer.seller_mini_card.seller_slug}
-            trustScore={publicOffer.trust_summary.trust_score}
-            completionRate={publicOffer.trust_summary.completion_rate}
-            onTimeRate={publicOffer.trust_summary.on_time_delivery_rate}
-            completedTransactions={publicOffer.trust_summary.completed_transactions}
-            ratingAverage={publicOffer.seller_mini_card.rating_average}
-            ratingCount={publicOffer.seller_mini_card.rating_count}
-            isVerified={publicOffer.seller_mini_card.is_verified}
-            memberSince={publicOffer.trust_summary.member_since}
-          />
-        )}
+        {/* 4. SELLER TRUST SUMMARY (BELOW TRANSACTION) */}
+        <SellerTrustSummary
+          sellerDisplayName={publicOffer?.seller_mini_card.seller_display_name || currentStore.store_name}
+          sellerSlug={publicOffer?.seller_mini_card.seller_slug || storeSlug}
+          trustScore={publicOffer?.trust_summary.trust_score}
+          completionRate={publicOffer?.trust_summary.completion_rate}
+          onTimeRate={publicOffer?.trust_summary.on_time_delivery_rate}
+          completedTransactions={publicOffer?.trust_summary.completed_transactions}
+          isVerified={publicOffer?.trust_summary.is_verified_business}
+          memberSince={publicOffer?.trust_summary.member_since}
+        />
 
-        {/* Related Products (Cross-Sell) */}
-        {publicOffer?.related_products && publicOffer.related_products.length > 0 && (
-          <RelatedProducts
-            products={publicOffer.related_products}
-            storeSlug={store.slug}
-            storeName={store.store_name}
-          />
-        )}
-
-        {/* Other Active Offers from Same Store */}
+        {/* 5. OTHER ACTIVE OFFERS FROM STORE */}
         {publicOffer?.other_active_offers && publicOffer.other_active_offers.length > 0 && (
-          <OtherActiveOffers
-            offers={publicOffer.other_active_offers}
-            storeName={store.store_name}
-          />
+          <OtherActiveOffers offers={publicOffer.other_active_offers} storeName={currentStore.store_name} />
         )}
       </main>
 
-      {/* Sticky Mobile Bottom Buy Bar (Single Product Offer) */}
-      {!isMenuMode && (
-        <div className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-800 p-3 z-40 flex items-center justify-between gap-3 shadow-2xl pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
-          <div className="min-w-0">
-            <p className="text-[10px] text-neutral-400 uppercase font-bold">Tổng tiền</p>
-            <p className="text-sm font-black text-blue-600 dark:text-blue-400 truncate">
-              {formatVND(currentPrice * quantity)}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              disabled={isOutOfStock}
-              onClick={() => !isOutOfStock && addToCart(offer, selectedVariant, quantity)}
-              className="px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all min-h-[40px]"
-            >
-              <ShoppingCart className="w-4 h-4" />
-              <span>+ Giỏ</span>
-            </button>
+      {/* 6. MOBILE STICKY ORDER BAR */}
+      {totalSelectedCount > 0 && (
+        <div className="lg:hidden fixed bottom-4 inset-x-3 z-40 animate-in slide-in-from-bottom-4">
+          <div className="p-3.5 bg-neutral-950 text-white dark:bg-white dark:text-neutral-900 rounded-3xl shadow-2xl flex items-center justify-between gap-3 border border-neutral-800 dark:border-neutral-200">
+            <div className="flex items-center gap-2.5 min-w-0 pl-1">
+              <div
+                className="w-8 h-8 rounded-xl text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs"
+                style={{ backgroundColor: brandColor }}
+              >
+                {totalSelectedCount}
+              </div>
+              <div className="truncate">
+                <p className="text-[10px] opacity-70">Tổng thanh toán:</p>
+                <p className="text-sm font-black text-rose-400 dark:text-rose-600 truncate">{formatVND(grandTotal)}</p>
+              </div>
+            </div>
 
             <button
-              disabled={isOutOfStock}
-              onClick={() => !isOutOfStock && handleBuyNow()}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs shadow-md shadow-blue-600/30 flex items-center gap-1.5 transition-all min-h-[40px]"
+              type="button"
+              onClick={() => setShowCheckoutModal(true)}
+              className="px-5 py-2.5 rounded-2xl text-xs font-black text-white shadow-md flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-all"
+              style={{ backgroundColor: brandColor }}
             >
-              <span>{isOutOfStock ? "HẾT HÀNG" : "Mua Ngay"}</span>
+              <span>ĐẶT HÀNG</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* Policies Details Modal */}
-      <StorePoliciesModal
-        isOpen={showPoliciesModal}
-        onClose={() => setShowPoliciesModal(false)}
-        policies={publicOffer?.policies || {}}
-        storeName={store.store_name}
-        initialTab={policyInitialTab}
-      />
-
-      {/* ========================================================================= */}
-      {/* INSTANT CHECKOUT MODAL WITH GEOLOCATION GPS                               */}
-      {/* ========================================================================= */}
-      {showMenuCheckoutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl border border-neutral-200 dark:border-neutral-800 max-h-[90vh] overflow-y-auto p-6 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
-              <div className="flex items-center gap-2">
-                <ListOrdered className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
-                  Xác Nhận Đặt Hàng ({totalMenuItemsCount} sản phẩm/dịch vụ)
-                </h3>
+      {/* 7. CHECKOUT & DELIVERY MODAL */}
+      {showCheckoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="relative w-full max-w-xl max-h-[92vh] bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl border border-neutral-200 dark:border-neutral-800 flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="p-5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between shrink-0 bg-white dark:bg-neutral-900">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600">
+                  <ShoppingCart className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-neutral-900 dark:text-neutral-100">Xác Nhận Đặt Hàng</h3>
+                  <p className="text-xs text-neutral-500">
+                    {totalSelectedCount} sản phẩm • Tổng {formatVND(grandTotal)}
+                  </p>
+                </div>
               </div>
               <button
-                onClick={() => setShowMenuCheckoutModal(false)}
-                className="p-1.5 text-neutral-400 hover:text-neutral-600 rounded-full cursor-pointer"
+                type="button"
+                onClick={() => setShowCheckoutModal(false)}
+                className="p-2 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Selected Items Summary List */}
-            <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border space-y-2 text-xs">
-              <span className="text-[10px] font-bold uppercase text-neutral-400 block">Sản phẩm / Dịch vụ đã chọn:</span>
-              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                {menuItems
-                  .filter((it) => (menuQuantities[it.id] || 0) > 0)
-                  .map((it) => (
-                    <div key={it.id} className="flex justify-between items-center text-xs">
-                      <span>
-                        <strong>{menuQuantities[it.id]}x</strong> {it.name}
-                      </span>
-                      <span className="font-bold text-neutral-900 dark:text-neutral-100">
-                        {formatVND(it.price * menuQuantities[it.id])}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-              <div className="pt-2 border-t flex justify-between items-center text-xs font-black">
-                <span>Tổng cộng:</span>
-                <span className="text-sm text-emerald-600">{formatVND(totalMenuAmount)}</span>
-              </div>
-            </div>
-
-            {/* Customer Information Form */}
-            <form onSubmit={handleCompleteMenuOrder} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                  Họ tên người đặt hàng *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Nguyễn Văn Nam"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block font-bold text-neutral-700 dark:text-neutral-300">
-                      Số điện thoại *
-                    </label>
-                    {customerPhone && !phoneError && (
-                      <span className="text-[10px] font-bold text-emerald-600">✓ Hợp lệ</span>
-                    )}
+            {/* Scrollable Form */}
+            <form onSubmit={handlePlaceOrder} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-5">
+              {/* 1. Buyer Info */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black uppercase tracking-wider text-neutral-500">1. Thông Tin Người Nhận</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Họ và tên *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Nguyễn Văn A"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="w-full mt-1 px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-medium focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
-                  <input
-                    type="tel"
-                    required
-                    maxLength={11}
-                    placeholder="0912 345 678"
-                    value={customerPhone}
-                    onChange={(e) => {
-                      const cleaned = e.target.value.replace(/[^\d+]/g, "");
-                      setCustomerPhone(cleaned);
-                      setPhoneError(getPhoneValidationError(cleaned));
-                    }}
-                    className={`w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border text-neutral-900 dark:text-neutral-100 font-mono font-bold transition-all ${
-                      phoneError
-                        ? "border-red-500 ring-2 ring-red-500/20"
-                        : "border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-emerald-500"
-                    }`}
-                  />
-                  {phoneError && (
-                    <p className="text-[10px] font-medium text-red-500 mt-1">{phoneError}</p>
+                  <div>
+                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Số điện thoại *</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="0912345678"
+                      value={customerPhone}
+                      onChange={(e) => {
+                        setCustomerPhone(e.target.value);
+                        setPhoneError(null);
+                      }}
+                      className="w-full mt-1 px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-medium focus:ring-2 focus:ring-blue-500"
+                    />
+                    {phoneError && <p className="text-[11px] text-rose-500 mt-1">{phoneError}</p>}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Fulfillment Method */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black uppercase tracking-wider text-neutral-500">2. Phương Thức Nhận Hàng</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {enabledFulfillmentMethods.includes("DELIVERY") && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFulfillment("DELIVERY")}
+                      className={`p-3 rounded-2xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+                        selectedFulfillment === "DELIVERY"
+                          ? "border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/50 dark:bg-blue-950/30"
+                          : "border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50"
+                      }`}
+                    >
+                      <Truck className="w-4 h-4 text-blue-600 shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Giao Hàng Tận Nơi</p>
+                        <p className="text-[10px] text-neutral-500">Chuyển phát tiêu chuẩn</p>
+                      </div>
+                    </button>
+                  )}
+
+                  {enabledFulfillmentMethods.includes("STORE_PICKUP") && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFulfillment("STORE_PICKUP")}
+                      className={`p-3 rounded-2xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+                        selectedFulfillment === "STORE_PICKUP"
+                          ? "border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/50 dark:bg-blue-950/30"
+                          : "border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50"
+                      }`}
+                    >
+                      <StoreIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Nhận Tại Cửa Hàng</p>
+                        <p className="text-[10px] text-emerald-600 font-bold">Miễn phí ship</p>
+                      </div>
+                    </button>
                   )}
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block font-bold text-neutral-700 dark:text-neutral-300">
-                      Địa chỉ / Bàn / Khu vực *
-                    </label>
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    placeholder="123 Lê Lợi hoặc Bàn 04..."
-                    value={deliveryLocation}
-                    onChange={(e) => setDeliveryLocation(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
-
-              {/* GPS Location Button & Badge */}
-              <div className="p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 text-emerald-900 dark:text-emerald-300 font-bold text-[11px]">
-                    <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>Định Vị Điểm Giao Nhận Hàng (GPS):</span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleGetGPSLocation}
-                    disabled={isLocatingGPS}
-                    className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-[11px] shadow-xs flex items-center gap-1 transition-all cursor-pointer"
-                  >
-                    {isLocatingGPS ? (
-                      <>
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        <span>Đang lấy GPS...</span>
-                      </>
-                    ) : (
-                      <>
+                {/* Delivery Address or Store Pickup Notice */}
+                {selectedFulfillment === "DELIVERY" ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                        Địa chỉ nhận hàng *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleGetGPSLocation}
+                        disabled={isLocatingGPS}
+                        className="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      >
                         <Navigation className="w-3 h-3" />
-                        <span>📍 Lấy vị trí hiện tại</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {gpsCoords ? (
-                  <div className="flex items-center justify-between text-[11px] text-emerald-800 dark:text-emerald-300 font-medium pt-1 border-t border-emerald-200/60 dark:border-emerald-800">
-                    <span className="flex items-center gap-1">
-                      <Check className="w-3 h-3 text-emerald-600" />
-                      <span>Đã gắn tọa độ: {gpsCoords.lat.toFixed(5)}, {gpsCoords.lng.toFixed(5)}</span>
-                    </span>
-                    <a
-                      href={gpsCoords.map_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-0.5"
-                    >
-                      <span>Xem Google Maps ↗</span>
-                    </a>
+                        <span>{isLocatingGPS ? "Đang định vị..." : "Lấy vị trí GPS"}</span>
+                      </button>
+                    </div>
+                    <textarea
+                      required
+                      rows={2}
+                      placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
+                      value={deliveryLocation}
+                      onChange={(e) => setDeliveryLocation(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-medium focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
                 ) : (
-                  <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
-                    Bấm để tự động lấy tọa độ định vị GPS thiết bị của bạn giúp shipper/người bán giao hàng chính xác.
-                  </p>
+                  <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs space-y-1">
+                    <p className="font-bold text-emerald-800 dark:text-emerald-200">Địa chỉ nhận hàng tại cửa hàng:</p>
+                    <p className="text-emerald-700 dark:text-emerald-300">{currentStore.address || "Liên hệ cửa hàng để nhận địa chỉ chính xác"}</p>
+                  </div>
                 )}
               </div>
 
-              <div>
-                <label className="block font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  Ghi chú cho người bán (Tùy chọn)
-                </label>
+              {/* 3. Payment Method */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black uppercase tracking-wider text-neutral-500">3. Phương Thức Thanh Toán</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {enabledPaymentMethods.includes("VIETQR") && (
+                    <label className="flex items-center gap-2.5 p-3 rounded-2xl border border-neutral-200 dark:border-neutral-700 cursor-pointer hover:bg-neutral-50">
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        checked={paymentMethod === "VIETQR"}
+                        onChange={() => setPaymentMethod("VIETQR")}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <div>
+                        <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Chuyển khoản VietQR</p>
+                        <p className="text-[10px] text-neutral-500">Quét mã QR Napas247 tự động</p>
+                      </div>
+                    </label>
+                  )}
+
+                  {enabledPaymentMethods.includes("COD") && (
+                    <label className="flex items-center gap-2.5 p-3 rounded-2xl border border-neutral-200 dark:border-neutral-700 cursor-pointer hover:bg-neutral-50">
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        checked={paymentMethod === "COD"}
+                        onChange={() => setPaymentMethod("COD")}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <div>
+                        <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Thanh toán khi nhận (COD)</p>
+                        <p className="text-[10px] text-neutral-500">Tiền mặt khi giao hàng</p>
+                      </div>
+                    </label>
+                  )}
+
+                  {enabledPaymentMethods.includes("PAY_AT_STORE") && selectedFulfillment === "STORE_PICKUP" && (
+                    <label className="flex items-center gap-2.5 p-3 rounded-2xl border border-neutral-200 dark:border-neutral-700 cursor-pointer hover:bg-neutral-50">
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        checked={paymentMethod === "PAY_AT_STORE"}
+                        onChange={() => setPaymentMethod("PAY_AT_STORE")}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <div>
+                        <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Thanh toán tại quầy</p>
+                        <p className="text-[10px] text-neutral-500">Tiền mặt hoặc quẹt thẻ</p>
+                      </div>
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* 4. Notes */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Ghi chú đơn hàng (nếu có)</label>
                 <input
                   type="text"
-                  placeholder="Yêu cầu quy cách đóng gói, xuất hóa đơn, thời gian nhận..."
+                  placeholder="Ghi chú thời gian giao hàng, lời dặn người bán..."
                   value={orderNotes}
                   onChange={(e) => setOrderNotes(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-medium"
                 />
               </div>
 
-              {/* Shipping Method Options */}
-              {catalogShippingCalc.requires_shipping && (
-                <div className="space-y-2">
-                  <label className="block font-bold text-neutral-700 dark:text-neutral-300">
-                    Phương thức vận chuyển & Giao hàng
-                  </label>
-                  <div className="space-y-2">
-                    {catalogShippingCalc.available_options.map((option) => {
-                      const isSelected = (selectedCatalogShippingOption?.method_id === option.method_id) || (!selectedShippingMethodId && option === catalogShippingCalc.selected_option);
-                      return (
-                        <label
-                          key={option.method_id}
-                          onClick={() => setSelectedShippingMethodId(option.method_id)}
-                          className={`p-3 rounded-xl border flex items-center justify-between gap-2 cursor-pointer transition-all ${
-                            isSelected
-                              ? "border-emerald-600 bg-emerald-50/70 dark:bg-emerald-950/40 ring-2 ring-emerald-500/20 font-bold"
-                              : "border-neutral-200 dark:border-neutral-700"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-4 h-4 rounded-full border-2 border-emerald-600 flex items-center justify-center shrink-0">
-                              {isSelected && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
-                            </div>
-                            <div className="text-left">
-                              <p className="text-xs text-neutral-900 dark:text-neutral-100">
-                                <span>{option.name}</span>
-                                {option.estimated_delivery && (
-                                  <span className="text-[10px] text-neutral-400 font-normal ml-1">
-                                    ({option.estimated_delivery})
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                          </div>
-
-                          <span className="text-xs shrink-0 font-bold">
-                            {option.is_quote_later ? (
-                              <span className="text-amber-600 dark:text-amber-400 text-[11px]">Báo sau</span>
-                            ) : option.fee === 0 ? (
-                              <span className="text-emerald-600 dark:text-emerald-400">0đ (Miễn phí)</span>
-                            ) : (
-                              <span className="text-neutral-800 dark:text-neutral-200">{formatVND(option.fee)}</span>
-                            )}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
+              {/* Order Total Review */}
+              <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Tiền hàng:</span>
+                  <span className="font-bold text-neutral-900 dark:text-neutral-100">{formatVND(subtotalAmount)}</span>
                 </div>
-              )}
-
-              {/* Dynamic Payment Method Resolution */}
-              {(() => {
-                const effectivePayment = PaymentSettingsService.getEffectivePaymentMethods(store, offer, paymentAccounts);
-                const activeMethods = effectivePayment.methods;
-                const depositMethod = activeMethods.find((m) => m.type === "DEPOSIT");
-                const payLaterMethod = activeMethods.find((m) => m.type === "PAY_LATER");
-
-                const depositCalc = paymentMethod === "DEPOSIT" && depositMethod?.deposit
-                  ? PaymentSettingsService.calculateDepositAmount(
-                      finalMenuGrandTotal,
-                      depositMethod.deposit.type,
-                      depositMethod.deposit.percentage,
-                      depositMethod.deposit.fixed_amount
-                    )
-                  : null;
-
-                const dueDate = paymentMethod === "PAY_LATER" && payLaterMethod?.pay_later
-                  ? PaymentSettingsService.calculatePaymentDueDate(
-                      new Date().toISOString(),
-                      (payLaterMethod.pay_later.terms as any) || "NET_30",
-                      payLaterMethod.pay_later.days || 30
-                    )
-                  : null;
-
-                return (
-                  <div className="space-y-2">
-                    <label className="block font-bold text-neutral-700 dark:text-neutral-300">
-                      Phương thức thanh toán ({activeMethods.length} lựa chọn)
-                    </label>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {activeMethods.map((m) => {
-                        const isSelected = paymentMethod === m.type;
-                        return (
-                          <button
-                            key={m.type}
-                            type="button"
-                            onClick={() => setPaymentMethod(m.type)}
-                            className={`p-3 rounded-xl border flex items-center gap-2 cursor-pointer transition-all text-left ${
-                              isSelected
-                                ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20 font-bold"
-                                : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400"
-                            }`}
-                          >
-                            <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
-                            <div className="min-w-0">
-                              <span className="text-xs block font-bold">
-                                {m.name}
-                              </span>
-                              <span className="text-[10px] text-neutral-400 block truncate">
-                                {m.description || "Thanh toán đơn hàng"}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Deposit info banner */}
-                    {depositCalc && (
-                      <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-xs space-y-1">
-                        <div className="flex justify-between font-bold text-blue-900 dark:text-blue-200">
-                          <span>Số tiền đặt cọc cần thanh toán ngay:</span>
-                          <span className="text-blue-600 dark:text-blue-400">{formatVND(depositCalc.depositPayable)}</span>
-                        </div>
-                        <div className="flex justify-between text-[11px] text-neutral-500">
-                          <span>Số tiền còn lại thanh toán khi nhận hàng:</span>
-                          <span>{formatVND(depositCalc.remainingBalance)}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Pay later info banner */}
-                    {dueDate && (
-                      <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between">
-                        <span>Hạn thanh toán công nợ:</span>
-                        <span className="font-bold">{new Date(dueDate).toLocaleDateString("vi-VN")}</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Order Total Breakdown */}
-              <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 space-y-1.5 text-xs">
-                <div className="flex justify-between text-neutral-500">
-                  <span>Tiền hàng (Tạm tính):</span>
-                  <span className="font-semibold text-neutral-800 dark:text-neutral-200">{formatVND(totalMenuAmount)}</span>
-                </div>
-                {catalogShippingCalc.requires_shipping && (
-                  <div className="flex justify-between text-neutral-500">
-                    <span>Phí vận chuyển:</span>
-                    <span className="font-bold">
-                      {isCatalogQuoteLater ? (
-                        <span className="text-amber-600">Báo phí sau</span>
-                      ) : catalogShippingFee === 0 ? (
-                        <span className="text-emerald-600">0đ (Miễn phí)</span>
-                      ) : (
-                        <span className="text-neutral-800 dark:text-neutral-200">{formatVND(catalogShippingFee)}</span>
-                      )}
-                    </span>
-                  </div>
-                )}
-                <div className="pt-2 border-t flex justify-between items-center font-black text-sm">
-                  <span>Tổng thanh toán:</span>
-                  <span className="text-emerald-600 dark:text-emerald-400">
-                    {isCatalogQuoteLater ? `${formatVND(totalMenuAmount)} + Phí ship` : formatVND(finalMenuGrandTotal)}
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Phí giao hàng:</span>
+                  <span className="font-bold text-neutral-900 dark:text-neutral-100">
+                    {selectedFulfillment === "STORE_PICKUP" ? "Miễn phí" : formatVND(shippingFee)}
                   </span>
+                </div>
+                <div className="flex justify-between text-sm font-black pt-2 border-t border-neutral-200 dark:border-neutral-700">
+                  <span>Tổng thanh toán:</span>
+                  <span className="text-rose-600 dark:text-rose-400 text-base">{formatVND(grandTotal)}</span>
                 </div>
               </div>
 
+              {/* Submit CTA */}
               <div className="pt-2">
                 <button
                   type="submit"
                   disabled={isSubmittingOrder}
-                  className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-xs shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3.5 rounded-2xl text-xs sm:text-sm font-black text-white shadow-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-98 transition-all"
+                  style={{ backgroundColor: brandColor }}
                 >
-                  <Send className="w-4 h-4" />
-                  <span>
-                    {isSubmittingOrder
-                      ? "Đang gửi đơn..."
-                      : isCatalogQuoteLater
-                      ? "GỬI YÊU CẦU ĐẶT HÀNG (BÁO PHÍ SAU)"
-                      : `HOÀN TẤT ĐẶT HÀNG (${formatVND(finalMenuGrandTotal)})`}
-                  </span>
+                  {isSubmittingOrder ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Đang Xử Lý Đơn Hàng...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 stroke-[3]" />
+                      <span>XÁC NHẬN ĐẶT HÀNG</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -1266,27 +1107,35 @@ function DirectOfferContent() {
         </div>
       )}
 
-      {/* Cart Drawer */}
-      <CartDrawer storeSlug={storeSlug} />
+      {/* QR Modal */}
+      <QRModal
+        isOpen={showQR}
+        onClose={() => setShowQR(false)}
+        url={offerUrl}
+        title={offer.name}
+        subtitle="Quét mã QR để mở trang ưu đãi trên điện thoại"
+      />
 
-      {/* QR MODAL */}
-      {showQR && (
-        <QRModal
-          isOpen={true}
-          onClose={() => setShowQR(false)}
-          url={offerUrl}
-          title={offer.name}
-          subtitle={isMenuMode ? `${menuItems.length} sản phẩm trong danh mục` : formatVND(currentPrice)}
-        />
-      )}
+      {/* Policies Modal */}
+      <StorePoliciesModal
+        isOpen={showPoliciesModal}
+        onClose={() => setShowPoliciesModal(false)}
+        storeName={currentStore.store_name}
+        policies={currentStore.policy_settings || {}}
+        initialTab={policyInitialTab}
+      />
     </div>
   );
 }
 
 export default function DirectOfferPage() {
+  const params = useParams();
+  const storeSlug = (params?.store_slug as string) || "auto";
+
   return (
     <CartProvider>
       <DirectOfferContent />
+      <CartDrawer storeSlug={storeSlug} />
     </CartProvider>
   );
 }
