@@ -6,6 +6,7 @@ import { StoreTemplate, Store, TemplateLicense } from "@/types";
 import { TemplateEngine } from "@/components/storefront/templates/template-engine";
 import { DEMO_STORE_DATASET } from "@/lib/templates/definitions";
 import { formatVND } from "@/lib/utils";
+import { CartProvider } from "@/components/storefront/cart-drawer";
 
 interface TemplatePreviewModalProps {
   isOpen: boolean;
@@ -132,16 +133,18 @@ export function TemplatePreviewModal({
             }`}
           >
             {/* Template Engine Demo Rendering */}
-            <TemplateEngine
-              template={template}
-              store={DEMO_STORE_DATASET.store as Store}
-              organization={DEMO_STORE_DATASET.organization}
-              categories={DEMO_STORE_DATASET.categories}
-              products={DEMO_STORE_DATASET.products}
-              offers={DEMO_STORE_DATASET.offers}
-              storeSlug="demo-nova"
-              isDemoPreview={true}
-            />
+            <CartProvider>
+              <TemplateEngine
+                template={template}
+                store={DEMO_STORE_DATASET.store as Store}
+                organization={DEMO_STORE_DATASET.organization}
+                categories={DEMO_STORE_DATASET.categories}
+                products={DEMO_STORE_DATASET.products}
+                offers={DEMO_STORE_DATASET.offers}
+                storeSlug="demo-nova"
+                isDemoPreview={true}
+              />
+            </CartProvider>
           </div>
         </div>
       </div>
