@@ -35,7 +35,7 @@ import confetti from "canvas-confetti";
 export default function OrderStatusPage() {
   const params = useParams();
   const router = useRouter();
-  const storeSlug = (params?.store_slug as string) || "2k-store";
+  const storeSlug = (params?.store_slug as string) || "auto";
   const orderNumber = params?.order_number as string;
 
   const { orders, store, confirmPayment } = useCommerceStore();

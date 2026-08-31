@@ -40,7 +40,7 @@ export class OfferPublicService {
       location_summary: "Hải Phòng",
       trust_score: reputation.trust_score,
       has_store: true,
-      store_slug: store.slug,
+      store_slug: store.slug || "auto",
       seller_slug: organization.slug,
     };
 
@@ -73,7 +73,7 @@ export class OfferPublicService {
         price: o.price,
         compare_at_price: o.compare_at_price,
         image_url: o.image_url,
-        store_slug: store.slug,
+        store_slug: o.store_slug || store.slug || "auto",
       }));
 
     const policies: StorePolicySettings = store.policy_settings || DEFAULT_STORE_POLICIES;

@@ -39,7 +39,7 @@ import { Store, Offer } from "@/types";
 
 function StorefrontContent() {
   const params = useParams();
-  const storeSlug = (params?.store_slug as string) || "2k-store";
+  const storeSlug = (params?.store_slug as string) || "auto";
   const { store, organization, offers, categories, products } = useCommerceStore();
   const { addToCart, setIsCartOpen, totalItems, subtotal } = useCart();
 

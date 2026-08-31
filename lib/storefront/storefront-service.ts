@@ -52,7 +52,7 @@ export class StorefrontService {
         price: o.price,
         compare_at_price: o.compare_at_price,
         image_url: o.image_url,
-        store_slug: store.slug,
+        store_slug: o.store_slug || store.slug || "auto",
       }));
 
     // Filter Visible Products (Hide DISCONTINUED & HIDDEN)

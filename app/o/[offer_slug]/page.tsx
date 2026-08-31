@@ -22,7 +22,7 @@ export default function ShortOfferRedirectPage() {
     // 1. Check local offers
     const local = offers.find((o) => o.slug === offerSlug || o.id === offerSlug);
     if (local) {
-      const targetStoreSlug = local.store_slug || store.slug || "2k-store";
+      const targetStoreSlug = local.store_slug || store.slug || "auto";
       router.replace(`/${targetStoreSlug}/o/${local.slug}`);
       return;
     }
@@ -33,7 +33,7 @@ export default function ShortOfferRedirectPage() {
       .then((data) => {
         if (!isMounted) return;
         if (data && data.success && data.offer) {
-          const targetStoreSlug = data.offer.store_slug || data.store?.slug || store.slug || "2k-store";
+          const targetStoreSlug = data.offer.store_slug || data.store?.slug || store.slug || "auto";
           router.replace(`/${targetStoreSlug}/o/${data.offer.slug}`);
         } else {
           setErrorMsg("Không tìm thấy sản phẩm/ưu đãi này.");

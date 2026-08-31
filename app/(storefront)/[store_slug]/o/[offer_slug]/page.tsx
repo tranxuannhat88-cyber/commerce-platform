@@ -57,7 +57,7 @@ import confetti from "canvas-confetti";
 function DirectOfferContent() {
   const params = useParams();
   const router = useRouter();
-  const storeSlug = (params?.store_slug as string) || "2k-store";
+  const storeSlug = (params?.store_slug as string) || "auto";
   const offerSlug = params?.offer_slug as string;
 
   const { offers, store, organization, products, createOrder, shippingMethods, shippingZones, paymentAccounts } = useCommerceStore();

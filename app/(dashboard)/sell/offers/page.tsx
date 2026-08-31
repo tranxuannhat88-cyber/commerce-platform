@@ -1151,7 +1151,7 @@ function OffersContent() {
         updateOffer(editingOffer.id, {
           name: resolvedName,
           slug: slugify(resolvedName),
-          store_slug: store.slug || "2k-store",
+          store_slug: store.slug || "auto",
           category_id: formCategory.trim() || "Chung",
           short_description: formShortDesc.trim() || (isMultiple ? `Bảng giá gồm ${validItems.length} sản phẩm/dịch vụ.` : validItems[0]?.description || ""),
           description: formShortDesc.trim() || (isMultiple ? `Bảng giá gồm ${validItems.length} sản phẩm/dịch vụ.` : validItems[0]?.description || ""),
@@ -1172,7 +1172,7 @@ function OffersContent() {
         createOffer({
           organization_id: orgId,
           store_id: storeId,
-          store_slug: store.slug || "2k-store",
+          store_slug: store.slug || "auto",
           offer_type: "PRODUCT",
           offer_structure: isMultiple ? "MENU_CATALOG" : "SINGLE",
           name: resolvedName,

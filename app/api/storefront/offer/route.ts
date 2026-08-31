@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       store: store || {
         id: offer.store_id || "store_default",
         store_name: "Cửa Hàng Trực Tuyến",
-        slug: offer.store_slug || storeSlug || "store",
+        slug: offer.store_slug || storeSlug || "auto",
         status: "ACTIVE",
       },
       paymentAccounts,

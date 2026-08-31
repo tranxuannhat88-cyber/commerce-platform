@@ -20,21 +20,21 @@ export class AppUrlService {
 
   /**
    * Tạo Storefront URL
-   * Ví dụ: https://go.invamax.com/2k-store
+   * Ví dụ: https://go.invamax.com/auto
    */
   public static getStoreUrl(storeSlug?: string): string {
     const base = this.getBaseUrl();
-    const cleanSlug = (storeSlug && storeSlug.trim()) ? storeSlug.trim().replace(/^\/+|\/+$/g, "") : "2k-store";
+    const cleanSlug = (storeSlug && storeSlug.trim()) ? storeSlug.trim().replace(/^\/+|\/+$/g, "") : "auto";
     return `${base}/${cleanSlug}`;
   }
 
   /**
    * Tạo Offer / Bảng Giá Public URL chuẩn
-   * Ví dụ: https://go.invamax.com/2k-store/o/tu-trang-tri
+   * Ví dụ: https://go.invamax.com/auto/o/tu-trang-tri
    */
   public static getOfferUrl(storeSlug?: string, offerSlug?: string): string {
     const base = this.getBaseUrl();
-    const cleanStore = (storeSlug && storeSlug.trim()) ? storeSlug.trim().replace(/^\/+|\/+$/g, "") : "2k-store";
+    const cleanStore = (storeSlug && storeSlug.trim()) ? storeSlug.trim().replace(/^\/+|\/+$/g, "") : "auto";
     const cleanOffer = (offerSlug && offerSlug.trim()) ? offerSlug.trim().replace(/^\/+|\/+$/g, "") : "offer";
     return `${base}/${cleanStore}/o/${cleanOffer}`;
   }

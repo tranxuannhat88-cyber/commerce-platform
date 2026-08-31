@@ -30,7 +30,7 @@ import { SyncBridgeService } from "@/lib/db/sync-bridge";
 function CheckoutContent() {
   const params = useParams();
   const router = useRouter();
-  const storeSlug = (params?.store_slug as string) || "2k-store";
+  const storeSlug = (params?.store_slug as string) || "auto";
   const { store, createOrder, shippingMethods, shippingZones, paymentAccounts } = useCommerceStore();
   const { cart, subtotal, clearCart, removeFromCart } = useCart();
 
