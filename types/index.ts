@@ -34,6 +34,7 @@ export interface WorkContext {
 export interface Organization {
   id: string;
   name: string;
+  short_name?: string;
   slug: string;
   org_type?: OrganizationType;
   tax_code?: string;

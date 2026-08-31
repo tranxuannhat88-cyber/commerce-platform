@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Settings,
@@ -19,9 +19,12 @@ import {
   ArrowRightLeft,
   CheckCircle2,
   Plus,
+  Mail,
+  MapPin,
+  FileText,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
-import { UserRole } from "@/types";
+import { UserRole, OrganizationType } from "@/types";
 import { MediaUploadDropzone } from "@/components/shared/media-upload-dropzone";
 import { CreateOrgModal } from "@/components/dashboard/create-org-modal";
 import { PersonalTeamNoticeModal } from "@/components/dashboard/personal-team-notice-modal";
@@ -45,10 +48,25 @@ export default function SettingsPage() {
   // Form states
   const [personalName, setPersonalName] = useState(currentUser?.full_name || personalActor.display_name);
   const [orgName, setOrgName] = useState(organization.name);
+  const [shortName, setShortName] = useState(organization.short_name || "");
+  const [orgType, setOrgType] = useState<OrganizationType>(organization.org_type || "COMPANY");
   const [taxCode, setTaxCode] = useState(organization.tax_code || "");
   const [phone, setPhone] = useState(organization.phone || "");
   const [email, setEmail] = useState(organization.email || "");
+  const [address, setAddress] = useState(organization.address || "");
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Synchronize form states when organization or user changes
+  useEffect(() => {
+    setPersonalName(currentUser?.full_name || personalActor.display_name);
+    setOrgName(organization.name);
+    setShortName(organization.short_name || "");
+    setOrgType(organization.org_type || "COMPANY");
+    setTaxCode(organization.tax_code || "");
+    setPhone(organization.phone || "");
+    setEmail(organization.email || "");
+    setAddress(organization.address || "");
+  }, [organization, currentUser, personalActor]);
 
   // Store Transfer state
   const [selectedTargetOrgId, setSelectedTargetOrgId] = useState(organizations[0]?.id || "");
@@ -69,9 +87,12 @@ export default function SettingsPage() {
     e.preventDefault();
     updateOrganization({
       name: orgName,
-      tax_code: taxCode,
-      phone,
-      email,
+      short_name: shortName.trim() || undefined,
+      org_type: orgType,
+      tax_code: taxCode.trim() || undefined,
+      phone: phone.trim() || undefined,
+      email: email.trim() || undefined,
+      address: address.trim() || undefined,
     });
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2500);
@@ -100,7 +121,7 @@ export default function SettingsPage() {
           <h2 className="text-xl md:text-2xl font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-2.5">
             {isPersonal ? <User className="w-6 h-6 text-blue-600" /> : <Building2 className="w-6 h-6 text-blue-600" />}
             <span>
-              {isPersonal ? "Cài Đặt Tài Khoản Cá Nhân" : `Thiết Lập Tổ Chức (${organization.name})`}
+              {isPersonal ? "Cài Đặt Tài Khoản Cá Nhân" : `Thiết Lập Doanh Nghiệp (${organization.short_name || organization.name})`}
             </span>
           </h2>
           <p className="text-xs text-neutral-500 mt-0.5">
@@ -292,7 +313,7 @@ export default function SettingsPage() {
                 >
                   {organizations.map((org) => (
                     <option key={org.id} value={org.id}>
-                      Chuyển sang: {org.name}
+                      Chuyển sang: {org.short_name ? `${org.short_name} - ${org.name}` : org.name}
                     </option>
                   ))}
                 </select>
@@ -313,68 +334,135 @@ export default function SettingsPage() {
         <div className="space-y-6">
           <form
             onSubmit={handleSaveOrg}
-            className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4"
+            className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-5"
           >
-            <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-blue-600" />
-              <span>Thông Tin Pháp Nhân / Tổ Chức</span>
-            </h3>
+            <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-blue-600" />
+                <span>Thông Tin Pháp Nhân / Doanh Nghiệp</span>
+              </h3>
+              <span className="text-[11px] text-neutral-400 font-mono">
+                ID: {organization.id}
+              </span>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  Tên Tổ chức / Doanh nghiệp
+            {/* 1. Tên đầy đủ & Tên viết tắt */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                  Tên đầy đủ (Theo ĐKKD / Giấy phép) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
+                  placeholder="VD: CÔNG TY CỔ PHẦN INVAMAX VIỆT NAM"
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-semibold"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  Mã số thuế (Tax Code)
+                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                  Tên viết tắt / Thương hiệu
                 </label>
                 <input
                   type="text"
-                  value={taxCode}
-                  onChange={(e) => setTaxCode(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  Số điện thoại đại diện
-                </label>
-                <input
-                  type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  Email liên hệ
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
+                  placeholder="VD: INVAMAX"
+                  value={shortName}
+                  onChange={(e) => setShortName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-bold focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end pt-2">
+            {/* 2. Loại hình hoạt động */}
+            <div>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-2">
+                Loại hình hoạt động
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { type: "COMPANY" as OrganizationType, label: "🏢 Công ty" },
+                  { type: "HOUSEHOLD" as OrganizationType, label: "🏪 Hộ kinh doanh" },
+                  { type: "OTHER" as OrganizationType, label: "👥 Nhóm / Khác" },
+                ].map((item) => (
+                  <button
+                    key={item.type}
+                    type="button"
+                    onClick={() => setOrgType(item.type)}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all text-center cursor-pointer ${
+                      orgType === item.type
+                        ? "bg-blue-50 dark:bg-blue-950/60 border-blue-600 text-blue-700 dark:text-blue-300 shadow-xs"
+                        : "bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Mã số thuế, Phone, Email */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                  Mã số thuế (Tax Code)
+                </label>
+                <input
+                  type="text"
+                  placeholder="VD: 0109988776"
+                  value={taxCode}
+                  onChange={(e) => setTaxCode(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-mono focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                  Hotline / Số điện thoại
+                </label>
+                <input
+                  type="text"
+                  placeholder="VD: 0988 123 456"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                  Email liên hệ
+                </label>
+                <input
+                  type="email"
+                  placeholder="VD: contact@invamax.vn"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+            </div>
+
+            {/* 4. Địa chỉ */}
+            <div>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                Địa chỉ trụ sở / Văn phòng
+              </label>
+              <input
+                type="text"
+                placeholder="VD: Xã Vĩnh Thịnh, thành phố Hải Phòng"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-neutral-100 dark:border-neutral-800">
               <button
                 type="submit"
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-white text-white dark:text-neutral-900 font-bold text-xs shadow-md transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>Lưu Thông Tin Tổ Chức</span>

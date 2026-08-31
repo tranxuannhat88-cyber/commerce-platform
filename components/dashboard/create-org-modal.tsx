@@ -26,6 +26,7 @@ export function CreateOrgModal({ isOpen, onClose, onSuccess }: CreateOrgModalPro
   const { createOrganization } = useCommerceStore();
 
   const [name, setName] = useState("");
+  const [shortName, setShortName] = useState("");
   const [orgType, setOrgType] = useState<OrganizationType>("COMPANY");
   const [taxCode, setTaxCode] = useState("");
   const [phone, setPhone] = useState("");
@@ -39,7 +40,7 @@ export function CreateOrgModal({ isOpen, onClose, onSuccess }: CreateOrgModalPro
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setErrorMsg("Vui lòng nhập tên Tổ chức hoặc Doanh nghiệp.");
+      setErrorMsg("Vui lòng nhập Tên đầy đủ của Tổ chức hoặc Doanh nghiệp.");
       return;
     }
     setErrorMsg(null);
@@ -48,6 +49,7 @@ export function CreateOrgModal({ isOpen, onClose, onSuccess }: CreateOrgModalPro
     try {
       const newOrg = createOrganization({
         name: name.trim(),
+        short_name: shortName.trim() || undefined,
         org_type: orgType,
         tax_code: taxCode.trim() || undefined,
         phone: phone.trim() || undefined,
@@ -104,19 +106,34 @@ export function CreateOrgModal({ isOpen, onClose, onSuccess }: CreateOrgModalPro
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          {/* Tên tổ chức */}
-          <div>
-            <label className="block font-bold text-neutral-800 dark:text-neutral-200 mb-1">
-              Tên tổ chức / Doanh nghiệp <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="VD: Công Ty Cổ Phần Giải Pháp Kỹ Thuật 2K"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-medium focus:ring-2 focus:ring-blue-500 outline-none"
-            />
+          {/* 1. Tên đầy đủ & Tên viết tắt */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-2">
+              <label className="block font-bold text-neutral-800 dark:text-neutral-200 mb-1">
+                Tên đầy đủ <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="VD: CÔNG TY CỔ PHẦN INVAMAX VIỆT NAM"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-medium focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-neutral-800 dark:text-neutral-200 mb-1">
+                Tên viết tắt / Brand
+              </label>
+              <input
+                type="text"
+                placeholder="VD: INVAMAX"
+                value={shortName}
+                onChange={(e) => setShortName(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
           </div>
 
           {/* Loại hình */}

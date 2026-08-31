@@ -92,6 +92,7 @@ export const INITIAL_PERSONAL_ACTOR: PersonalActor = {
 export const INITIAL_ORGANIZATION: Organization = {
   id: "org-2k-tech",
   name: "CÔNG TY TNHH KỸ THUẬT & THƯƠNG MẠI 2K",
+  short_name: "2K TECH",
   slug: "cong-ty-2k",
   org_type: "COMPANY",
   tax_code: "0109988776",

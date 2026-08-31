@@ -419,7 +419,7 @@ export function useCommerceStore() {
       actor_id: org.id,
       context_type: "ORGANIZATION",
       organization_id: org.id,
-      display_name: org.name,
+      display_name: org.short_name || org.name,
       org_type: org.org_type || "COMPANY",
       role: member?.role || "OWNER",
       plan_code: orgSub.plan_code,
@@ -433,6 +433,7 @@ export function useCommerceStore() {
 
   const createOrganization = (data: {
     name: string;
+    short_name?: string;
     org_type?: import("@/types").OrganizationType;
     tax_code?: string;
     phone?: string;
@@ -444,7 +445,8 @@ export function useCommerceStore() {
     const newOrg: Organization = {
       id: orgId,
       name: data.name,
-      slug: data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""),
+      short_name: data.short_name?.trim() || undefined,
+      slug: (data.short_name || data.name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""),
       org_type: data.org_type || "COMPANY",
       tax_code: data.tax_code,
       phone: data.phone,
@@ -510,7 +512,7 @@ export function useCommerceStore() {
       actor_id: orgId,
       context_type: "ORGANIZATION",
       organization_id: orgId,
-      display_name: newOrg.name,
+      display_name: newOrg.short_name || newOrg.name,
       org_type: newOrg.org_type,
       role: "OWNER",
       plan_code: "FREE",
@@ -564,7 +566,7 @@ export function useCommerceStore() {
         actor_id: org.id,
         context_type: "ORGANIZATION",
         organization_id: org.id,
-        display_name: org.name,
+        display_name: org.short_name ? `${org.short_name} - ${org.name}` : org.name,
         org_type: org.org_type || "COMPANY",
         role: member?.role || "MEMBER",
         plan_code: orgSub.plan_code,
@@ -583,6 +585,16 @@ export function useCommerceStore() {
     const updatedOrgs = organizations.map((o) => (o.id === organization.id ? updated : o));
     setOrganizationsState(updatedOrgs);
     setStored(STORAGE_KEYS.ORGANIZATIONS, updatedOrgs);
+
+    if (currentContext.actor_id === organization.id) {
+      const updatedCtx: WorkContext = {
+        ...currentContext,
+        display_name: updated.short_name || updated.name,
+        org_type: updated.org_type || currentContext.org_type,
+      };
+      setCurrentContextState(updatedCtx);
+      setStored(STORAGE_KEYS.ACTIVE_CONTEXT, updatedCtx);
+    }
   };
 
   const updateStore = (newStore: Partial<Store>) => {
