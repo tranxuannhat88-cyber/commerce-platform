@@ -418,7 +418,7 @@ function OffersContent() {
       unit: libProdItem.unit.trim() || "cái",
       category: libProdItem.category.trim() || "Chung",
       description: libProdItem.description.trim(),
-      image_url: libProdItem.image_url.trim() || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500",
+      image_url: libProdItem.image_url.trim() || undefined,
       gallery: libProdItem.enable_gallery ? libProdItem.gallery : [],
       attachments: libProdItem.enable_attachments ? libProdItem.attachments : [],
       variants: itemVariants,
@@ -822,7 +822,7 @@ function OffersContent() {
           unit: it.unit.trim() || "cái",
           category: it.category.trim() || "Chung",
           description: it.description.trim(),
-          image_url: it.image_url.trim() || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=300",
+          image_url: it.image_url.trim() || undefined,
           gallery: it.enable_gallery ? it.gallery : [],
           attachments: it.enable_attachments ? it.attachments : [],
           variants: itemVariants.length > 0 ? itemVariants : undefined,
@@ -837,7 +837,7 @@ function OffersContent() {
       const primaryImg =
         (enableCustomCover && customCoverImage.trim())
           ? customCoverImage.trim()
-          : (validItems.length > 0 ? validItems[0].image_url : "") || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600";
+          : (validItems.length > 0 && validItems[0].image_url ? validItems[0].image_url : undefined);
           
       const topGallery = validItems[0]?.gallery || [];
       const topAttachments = validItems[0]?.attachments || [];
@@ -1069,12 +1069,19 @@ function OffersContent() {
                 >
                   <div>
                     {/* Thumbnail Image */}
-                    <div className="relative aspect-16/9 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-                      <img
-                        src={prod.image_url || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500"}
-                        alt={prod.name}
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="relative aspect-16/9 bg-neutral-100 dark:bg-neutral-800 overflow-hidden flex items-center justify-center">
+                      {prod.image_url ? (
+                        <img
+                          src={prod.image_url}
+                          alt={prod.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-neutral-400 bg-neutral-100/80 dark:bg-neutral-800/80">
+                          <Package className="w-10 h-10 mb-1 opacity-40" />
+                          <span className="text-[10px] font-medium opacity-60">Chưa có hình ảnh</span>
+                        </div>
+                      )}
                       <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5">
                         <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-900/80 text-white backdrop-blur-md">
                           {prod.category || "Chung"}
@@ -1174,12 +1181,19 @@ function OffersContent() {
               >
                 <div>
                   {/* Offer Image & Badges */}
-                  <div className="relative aspect-16/9 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-                    <img
-                      src={offer.image_url || "https://images.unsplash.com/photo-1585670270608-b4be4fbcf05d?w=600"}
-                      alt={offer.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                  <div className="relative aspect-16/9 bg-neutral-100 dark:bg-neutral-800 overflow-hidden flex items-center justify-center">
+                    {offer.image_url ? (
+                      <img
+                        src={offer.image_url}
+                        alt={offer.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-neutral-400 bg-neutral-100/80 dark:bg-neutral-800/80">
+                        <Package className="w-10 h-10 mb-1 opacity-40" />
+                        <span className="text-[10px] font-medium opacity-60">Chưa có hình ảnh</span>
+                      </div>
+                    )}
                     <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5">
                       {isCatalog ? (
                         <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-700 text-white backdrop-blur-md flex items-center gap-1">

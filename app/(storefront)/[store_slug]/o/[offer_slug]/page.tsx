@@ -696,12 +696,19 @@ function DirectOfferContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white dark:bg-neutral-900 rounded-3xl p-6 md:p-8 border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
             {/* Image & Gallery */}
             <div className="space-y-3">
-              <div className="aspect-square rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border">
-                <img
-                  src={activeDisplayImage || offer.image_url || "https://images.unsplash.com/photo-1585670270608-b4be4fbcf05d?w=600"}
-                  alt={offer.name}
-                  className="w-full h-full object-cover transition-all"
-                />
+              <div className="aspect-square rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border flex items-center justify-center">
+                {activeDisplayImage || offer.image_url ? (
+                  <img
+                    src={activeDisplayImage || offer.image_url}
+                    alt={offer.name}
+                    className="w-full h-full object-cover transition-all"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-neutral-400 bg-neutral-100/90 dark:bg-neutral-800/90">
+                    <Package className="w-16 h-16 mb-2 opacity-40" />
+                    <span className="text-xs font-medium opacity-60">Chưa có hình ảnh</span>
+                  </div>
+                )}
               </div>
 
               {/* Gallery Thumbnails (Primary + Additional Photos) */}

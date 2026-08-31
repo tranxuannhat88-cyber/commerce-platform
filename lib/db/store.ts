@@ -353,8 +353,25 @@ export function useCommerceStore() {
     setStoreState(getStored(STORAGE_KEYS.STORE, INITIAL_STORE));
     setCategoriesState(getStored(STORAGE_KEYS.CATEGORIES, INITIAL_CATEGORIES));
     setCollectionsState(getStored(STORAGE_KEYS.COLLECTIONS, INITIAL_COLLECTIONS));
-    setOffersState(getStored(STORAGE_KEYS.OFFERS, INITIAL_OFFERS));
-    setProductsState(getStored(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS));
+    const rawOffers = getStored<Offer[]>(STORAGE_KEYS.OFFERS, INITIAL_OFFERS);
+    const sanitizedOffers = rawOffers.map((o) => ({
+      ...o,
+      image_url: o.image_url && o.image_url.includes("images.unsplash.com") ? undefined : o.image_url,
+      items: o.items?.map((it) => ({
+        ...it,
+        image_url: it.image_url && it.image_url.includes("images.unsplash.com") ? undefined : it.image_url,
+      })),
+    }));
+    setOffersState(sanitizedOffers);
+    setStored(STORAGE_KEYS.OFFERS, sanitizedOffers);
+
+    const rawProducts = getStored<Product[]>(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+    const sanitizedProducts = rawProducts.map((p) => ({
+      ...p,
+      image_url: p.image_url && p.image_url.includes("images.unsplash.com") ? undefined : p.image_url,
+    }));
+    setProductsState(sanitizedProducts);
+    setStored(STORAGE_KEYS.PRODUCTS, sanitizedProducts);
     setWarehousesState(getStored(STORAGE_KEYS.WAREHOUSES, INITIAL_WAREHOUSES));
     setInventoryState(getStored(STORAGE_KEYS.INVENTORY, INITIAL_INVENTORY));
     setMovementsState(getStored(STORAGE_KEYS.MOVEMENTS, INITIAL_MOVEMENTS));
@@ -509,7 +526,7 @@ export function useCommerceStore() {
       phone: data.phone,
       email: data.email,
       address: data.address,
-      logo_url: data.logo_url || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80",
+      logo_url: data.logo_url?.trim() || undefined,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -911,7 +928,7 @@ export function useCommerceStore() {
           unit: item.unit || "cái",
           category: item.category || "Chung",
           description: item.description || "",
-          image_url: item.image_url || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500",
+          image_url: item.image_url?.trim() || undefined,
           gallery: item.gallery || [],
           attachments: item.attachments || [],
           variants: item.variants || [],
