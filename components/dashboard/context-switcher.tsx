@@ -65,8 +65,9 @@ export function ContextSwitcher({ className = "", isCompact = false }: ContextSw
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between gap-2.5 p-2.5 rounded-2xl bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-800/80 dark:hover:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700/60 transition-all text-left group cursor-pointer"
+          className="w-full p-2.5 rounded-2xl bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-800/80 dark:hover:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700/60 transition-all text-left group cursor-pointer space-y-1.5"
         >
+          {/* Top Row: Icon + Full Organization / Personal Name + Dropdown Chevron */}
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
               {currentContext.context_type === "PERSONAL" ? (
@@ -77,27 +78,33 @@ export function ContextSwitcher({ className = "", isCompact = false }: ContextSw
             </div>
 
             <div className="min-w-0 flex-1">
-              <div className="text-[10px] uppercase font-black tracking-wider text-blue-600 dark:text-blue-400 truncate">
-                {currentContext.context_type === "PERSONAL"
-                  ? "CÁ NHÂN"
-                  : (currentContext.org_type === "HOUSEHOLD" ? "HỘ KINH DOANH" : "TỔ CHỨC")}
-              </div>
-              <div className="font-bold text-xs text-neutral-900 dark:text-neutral-100 truncate group-hover:text-blue-600 transition-colors">
+              <div
+                className="font-bold text-xs text-neutral-900 dark:text-neutral-100 truncate group-hover:text-blue-600 transition-colors leading-snug"
+                title={currentContext.display_name}
+              >
                 {currentContext.display_name}
               </div>
             </div>
+
+            <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            {currentContext.role && currentContext.context_type === "ORGANIZATION" && (
-              <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300">
-                {currentContext.role}
-              </span>
-            )}
-            <span className={`px-2 py-0.5 rounded-md text-[10px] font-black tracking-wide ${getPlanBadgeClass(currentContext.plan_code)}`}>
-              {currentContext.plan_code || "FREE"}
+          {/* Bottom Row: Context Type indicator on left, 50% smaller Role & Plan badges on the bottom-right */}
+          <div className="flex items-center justify-between text-[9px] text-neutral-400 dark:text-neutral-500 pl-1 pt-0.5">
+            <span className="font-semibold truncate">
+              {currentContext.context_type === "PERSONAL" ? "👤 Cá nhân" : "🏢 Doanh nghiệp"}
             </span>
-            <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+
+            <div className="flex items-center gap-1 shrink-0 ml-auto">
+              {currentContext.role && currentContext.context_type === "ORGANIZATION" && (
+                <span className="px-1.5 py-0.5 rounded text-[8.5px] font-bold bg-neutral-200/90 dark:bg-neutral-700/90 text-neutral-600 dark:text-neutral-300">
+                  {currentContext.role}
+                </span>
+              )}
+              <span className={`px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase tracking-tight ${getPlanBadgeClass(currentContext.plan_code)}`}>
+                Gói {currentContext.plan_code || "FREE"}
+              </span>
+            </div>
           </div>
         </button>
 
