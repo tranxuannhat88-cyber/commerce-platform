@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { Offer, Store, Product, ActorPaymentAccount, Order, Organization } from "@/types";
+import { Offer, Store, Product, ActorPaymentAccount, Order, Organization, TemplateLicense } from "@/types";
 
 export interface ServerDatabase {
   stores: Store[];
@@ -9,6 +9,7 @@ export interface ServerDatabase {
   paymentAccounts: ActorPaymentAccount[];
   orders: Order[];
   organizations: Organization[];
+  template_licenses: TemplateLicense[];
   last_updated_at: string;
 }
 
@@ -36,6 +37,7 @@ function getInitialDb(): ServerDatabase {
     paymentAccounts: [],
     orders: [],
     organizations: [],
+    template_licenses: [],
     last_updated_at: new Date().toISOString(),
   };
 }
@@ -62,6 +64,7 @@ export class ServerDbManager {
           paymentAccounts: parsed.paymentAccounts || [],
           orders: parsed.orders || [],
           organizations: parsed.organizations || [],
+          template_licenses: parsed.template_licenses || [],
           last_updated_at: parsed.last_updated_at || new Date().toISOString(),
         };
         return memoryDb;
@@ -254,4 +257,49 @@ export class ServerDbManager {
     this.saveDb(db);
     return order;
   }
+
+  // =========================================================================
+  // TEMPLATE LICENSES ACTIONS
+  // =========================================================================
+  public static getTemplateLicenses(actorId?: string): TemplateLicense[] {
+    const db = this.getDb();
+    if (!db.template_licenses) db.template_licenses = [];
+    if (!actorId) return db.template_licenses;
+    return db.template_licenses.filter((l) => l.actor_id === actorId);
+  }
+
+  public static upsertTemplateLicense(license: TemplateLicense): TemplateLicense {
+    const db = this.getDb();
+    if (!db.template_licenses) db.template_licenses = [];
+
+    const existingIdx = db.template_licenses.findIndex(
+      (l) =>
+        l.id === license.id ||
+        (l.actor_id === license.actor_id &&
+          (l.template_id === license.template_id || l.template_code === license.template_code))
+    );
+
+    if (existingIdx >= 0) {
+      db.template_licenses[existingIdx] = {
+        ...db.template_licenses[existingIdx],
+        ...license,
+      };
+    } else {
+      db.template_licenses.push(license);
+    }
+
+    this.saveDb(db);
+    return license;
+  }
+
+  public static hasActiveLicense(actorId: string, templateIdOrCode: string): boolean {
+    const licenses = this.getTemplateLicenses(actorId);
+    const clean = templateIdOrCode.trim().toLowerCase();
+    return licenses.some(
+      (l) =>
+        (l.template_id.toLowerCase() === clean || l.template_code.toLowerCase() === clean) &&
+        l.status === "ACTIVE"
+    );
+  }
 }
+

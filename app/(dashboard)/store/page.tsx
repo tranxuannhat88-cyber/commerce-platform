@@ -18,6 +18,7 @@ import {
   FileText,
   Landmark,
   ArrowRight,
+  Layout,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { CopyButton } from "@/components/shared/copy-button";
@@ -31,13 +32,15 @@ import {
 } from "@/types";
 import { PaymentSettingsService } from "@/lib/services/payment-settings-service";
 import { FulfillmentService } from "@/lib/services/fulfillment-service";
+import { StoreCustomizer } from "@/components/templates/store-customizer";
 
-type ActiveTab = "INFO" | "PAYMENT_METHODS" | "PAYMENT_ACCOUNTS" | "FULFILLMENT" | "POLICIES";
+type ActiveTab = "INFO" | "TEMPLATES" | "PAYMENT_METHODS" | "PAYMENT_ACCOUNTS" | "FULFILLMENT" | "POLICIES";
 
 export default function StoreSettingsPage() {
   const {
     store,
     organization,
+    currentContext,
     updateStore,
     paymentAccounts,
     addPaymentAccount,
@@ -45,6 +48,10 @@ export default function StoreSettingsPage() {
     setDefaultPaymentAccount,
     updateStorePaymentSettings,
     updateStoreFulfillmentSettings,
+    templateLicenses,
+    applyStoreTemplate,
+    purchaseTemplateLicense,
+    updateStoreCustomization,
   } = useCommerceStore();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("INFO");
@@ -236,7 +243,20 @@ export default function StoreSettingsPage() {
           }`}
         >
           <Building className="w-4 h-4" />
-          <span>1. Thông Tin Cửa Hàng Công Khai</span>
+          <span>1. Thông Tin Cửa Hàng</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("TEMPLATES")}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === "TEMPLATES"
+              ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
+              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
+          }`}
+        >
+          <Layout className="w-4 h-4" />
+          <span>2. Mẫu Giao Diện & Tùy Biến</span>
         </button>
 
         <button
@@ -249,7 +269,7 @@ export default function StoreSettingsPage() {
           }`}
         >
           <CreditCard className="w-4 h-4" />
-          <span>2. Phương Thức Thanh Toán</span>
+          <span>3. Phương Thức Thanh Toán</span>
         </button>
 
         <button
@@ -262,7 +282,7 @@ export default function StoreSettingsPage() {
           }`}
         >
           <Landmark className="w-4 h-4" />
-          <span>3. Tài Khoản Nhận Tiền</span>
+          <span>4. Tài Khoản Nhận Tiền</span>
         </button>
 
         <button
@@ -275,7 +295,7 @@ export default function StoreSettingsPage() {
           }`}
         >
           <Truck className="w-4 h-4" />
-          <span>4. Vận Chuyển & Giao Hàng</span>
+          <span>5. Vận Chuyển & Giao Hàng</span>
         </button>
 
         <button
@@ -288,9 +308,20 @@ export default function StoreSettingsPage() {
           }`}
         >
           <FileText className="w-4 h-4" />
-          <span>5. Chính Sách & Hiển Thị</span>
+          <span>6. Chính Sách & Hiển Thị</span>
         </button>
       </div>
+
+      {activeTab === "TEMPLATES" && (
+        <StoreCustomizer
+          store={store}
+          currentContext={currentContext}
+          licenses={templateLicenses}
+          onUpdateCustomization={updateStoreCustomization}
+          onApplyTemplate={applyStoreTemplate}
+          onPurchaseTemplate={(tplId, price) => purchaseTemplateLicense({ templateId: tplId, price })}
+        />
+      )}
 
       <form onSubmit={handleSaveAll} className="space-y-6">
         {/* TAB 1: STORE BASIC INFO */}

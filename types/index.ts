@@ -100,6 +100,10 @@ export interface Store {
   };
   public_settings?: StorePublicSettings;
   policy_settings?: StorePolicySettings;
+  // Store Template & Presentation Settings
+  active_template_id?: string;
+  template_version?: string;
+  customization?: StoreCustomizationSettings;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -1127,5 +1131,79 @@ export interface MediaAccessAuditLog {
   ip_address?: string;
   user_agent?: string;
   created_at: string;
+}
+
+// =========================================================================
+// STORE TEMPLATES & TEMPLATE MARKETPLACE (MẪU GIAO DIỆN CỬA HÀNG)
+// =========================================================================
+
+export type TemplatePricingType = 'FREE' | 'PAID';
+export type TemplateStatus = 'ACTIVE' | 'DRAFT' | 'HIDDEN' | 'DEPRECATED';
+export type TemplateCategory = 'RETAIL' | 'SERVICE' | 'CORPORATE' | 'SHOWCASE' | 'LOCAL' | 'FLAGSHIP';
+
+export interface StoreTemplate {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  pricing_type: TemplatePricingType;
+  price: number; // 0 for FREE, 200000 for PAID
+  currency: 'VND';
+  status: TemplateStatus;
+  version: string;
+  category: TemplateCategory;
+  badge_text?: string;
+  preview_thumbnail_desktop: string;
+  preview_thumbnail_mobile: string;
+  features: string[];
+  design_tokens: {
+    font_family: string;
+    border_radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+    container_width: 'compact' | 'standard' | 'wide' | 'fluid';
+    hero_layout: 'centered' | 'split' | 'banner' | 'minimal' | 'storytelling';
+    product_card_style: 'minimal' | 'bordered' | 'elevated' | 'compact' | 'editorial';
+    header_style: 'standard' | 'centered' | 'transparent' | 'stacked' | 'sidebar';
+    color_palette_default: {
+      primary: string;
+      accent: string;
+      background: string;
+      surface: string;
+      text: string;
+    };
+  };
+  default_sections: string[];
+}
+
+export interface TemplateLicense {
+  id: string;
+  actor_id: string;
+  actor_type: 'PERSONAL' | 'ORGANIZATION';
+  template_id: string;
+  template_code: string;
+  purchase_order_id?: string;
+  status: 'ACTIVE' | 'REFUNDED' | 'REVOKED';
+  purchased_at: string;
+  price_snapshot: number;
+  currency_snapshot: 'VND';
+}
+
+export interface StoreCustomizationSettings {
+  brand_color?: string;
+  accent_color?: string;
+  hero_title?: string;
+  hero_subtitle?: string;
+  hero_banner_url?: string;
+  visible_sections?: {
+    hero?: boolean;
+    trust_bar?: boolean;
+    categories?: boolean;
+    featured_offers?: boolean;
+    products?: boolean;
+    services?: boolean;
+    about?: boolean;
+    reviews?: boolean;
+    policies?: boolean;
+    contact?: boolean;
+  };
 }
 

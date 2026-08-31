@@ -41,6 +41,8 @@ import {
   StoreFulfillmentSettings,
   PaymentMethodType,
   FulfillmentMethodType,
+  TemplateLicense,
+  StoreCustomizationSettings,
 } from "@/types";
 
 import {
@@ -80,6 +82,7 @@ import {
   INITIAL_SUBSCRIPTIONS,
   INITIAL_BILLING_ORDERS,
   INITIAL_BILLING_INVOICES,
+  INITIAL_TEMPLATE_LICENSES,
 } from "./mock-data";
 import { UserIdentity, PasskeyCredential, AuthSession, AuthMethodType } from "@/lib/auth/types";
 import { PhoneNormalizationService } from "@/lib/auth/phone";
@@ -97,6 +100,8 @@ import { EntitlementService } from "@/lib/billing/entitlement-service";
 import { ShippingCalculationService } from "@/lib/shipping/engine";
 import { PaymentSettingsService } from "@/lib/services/payment-settings-service";
 import { FulfillmentService } from "@/lib/services/fulfillment-service";
+import { STORE_TEMPLATES, DEFAULT_TEMPLATE_ID } from "@/lib/templates/definitions";
+import { TemplateEntitlementService } from "@/lib/templates/entitlement";
 
 import { 
   generateOrderNumber, 
@@ -148,6 +153,7 @@ const STORAGE_KEYS = {
   SUBSCRIPTIONS: "commerce_subscriptions_list",
   BILLING_ORDERS: "commerce_billing_orders",
   BILLING_INVOICES: "commerce_billing_invoices",
+  TEMPLATE_LICENSES: "commerce_template_licenses",
 };
 
 function getStored<T>(key: string, fallback: T): T {
@@ -230,6 +236,7 @@ export function useCommerceStore() {
   const [subscriptions, setSubscriptionsState] = useState<Subscription[]>(INITIAL_SUBSCRIPTIONS);
   const [billingOrders, setBillingOrdersState] = useState<BillingOrder[]>(INITIAL_BILLING_ORDERS);
   const [billingInvoices, setBillingInvoicesState] = useState<BillingInvoice[]>(INITIAL_BILLING_INVOICES);
+  const [templateLicenses, setTemplateLicensesState] = useState<TemplateLicense[]>(INITIAL_TEMPLATE_LICENSES);
 
   useEffect(() => {
     // PURGE GUARD: Automatically clear stale mock data from previous sessions
@@ -250,9 +257,11 @@ export function useCommerceStore() {
     const storedOrgs = getStored<Organization[]>(STORAGE_KEYS.ORGANIZATIONS, INITIAL_ORGANIZATIONS);
     const storedMembers = getStored<OrganizationMember[]>(STORAGE_KEYS.ORGANIZATION_MEMBERS, INITIAL_ORGANIZATION_MEMBERS);
     const storedSubs = getStored<Subscription[]>(STORAGE_KEYS.SUBSCRIPTIONS, INITIAL_SUBSCRIPTIONS);
+    const storedLicenses = getStored<TemplateLicense[]>(STORAGE_KEYS.TEMPLATE_LICENSES, INITIAL_TEMPLATE_LICENSES);
     const storedActiveContext = getStored<WorkContext | null>(STORAGE_KEYS.ACTIVE_CONTEXT, null);
 
     setCurrentUserState(storedUser);
+    setTemplateLicensesState(storedLicenses);
 
     const effectiveUserName = storedUser?.full_name || storedPersonal.display_name || "Cá nhân";
     const effectivePersonalActor: PersonalActor = {
@@ -2532,6 +2541,125 @@ export function useCommerceStore() {
     setStored(STORAGE_KEYS.SUBSCRIPTION, updated);
   };
 
+  // ==========================================
+  // STORE TEMPLATES & LICENSES ACTIONS
+  // ==========================================
+  const purchaseTemplateLicense = async (params: {
+    templateId: string;
+    price?: number;
+  }): Promise<TemplateLicense> => {
+    const targetTemplate = STORE_TEMPLATES.find((t) => t.id === params.templateId || t.code === params.templateId) || STORE_TEMPLATES[0];
+    const actorId = currentContext.actor_id || personalActor.id;
+    const actorType = currentContext.context_type || "PERSONAL";
+
+    const newLicense: TemplateLicense = {
+      id: `lic_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      actor_id: actorId,
+      actor_type: actorType,
+      template_id: targetTemplate.id,
+      template_code: targetTemplate.code,
+      purchase_order_id: `tpl_ord_${Date.now()}`,
+      status: "ACTIVE",
+      purchased_at: new Date().toISOString(),
+      price_snapshot: params.price ?? targetTemplate.price,
+      currency_snapshot: "VND",
+    };
+
+    const updated = [newLicense, ...templateLicenses.filter((l) => !(l.actor_id === actorId && l.template_id === targetTemplate.id))];
+    setTemplateLicensesState(updated);
+    setStored(STORAGE_KEYS.TEMPLATE_LICENSES, updated);
+
+    // Sync to Server API
+    try {
+      await fetch("/api/templates/purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ license: newLicense }),
+      });
+    } catch (err) {
+      console.warn("Failed to push template license to server:", err);
+    }
+
+    addNotification({
+      title: "Mở khóa Mẫu Giao Diện thành công",
+      message: `Bạn đã sở hữu vĩnh viễn mẫu giao diện "${targetTemplate.name}". Hãy áp dụng ngay cho cửa hàng!`,
+      type: "SUCCESS",
+      link: "/store?tab=TEMPLATES",
+    });
+
+    return newLicense;
+  };
+
+  const applyStoreTemplate = async (templateId: string): Promise<boolean> => {
+    const targetTemplate = STORE_TEMPLATES.find((t) => t.id === templateId || t.code === templateId) || STORE_TEMPLATES[0];
+    const actorId = currentContext.actor_id || personalActor.id;
+
+    const isOwned = TemplateEntitlementService.isTemplateOwnedByActor({
+      template: targetTemplate,
+      actorId,
+      licenses: templateLicenses,
+    });
+
+    if (!isOwned) {
+      addNotification({
+        title: "Chưa mở khóa bản quyền",
+        message: `Mẫu giao diện "${targetTemplate.name}" là mẫu Cao Cấp. Vui lòng thanh toán bản quyền để áp dụng.`,
+        type: "WARNING",
+      });
+      return false;
+    }
+
+    const updatedStore: Store = {
+      ...store,
+      active_template_id: targetTemplate.id,
+      template_version: targetTemplate.version,
+      updated_at: new Date().toISOString(),
+    };
+
+    setStoreState(updatedStore);
+    setStored(STORAGE_KEYS.STORE, updatedStore);
+    SyncBridgeService.syncStoreToServer(updatedStore, paymentAccounts);
+
+    // Notify backend
+    try {
+      await fetch("/api/templates/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId: store.id || "store_default",
+          templateId: targetTemplate.id,
+          actorId,
+        }),
+      });
+    } catch (err) {
+      console.warn("Failed to sync apply template to server:", err);
+    }
+
+    addNotification({
+      title: "Áp dụng Mẫu Giao Diện thành công",
+      message: `Cửa hàng đã được chuyển sang mẫu "${targetTemplate.name}". Dữ liệu sản phẩm và đơn hàng được giữ nguyên vẹn 100%.`,
+      type: "SUCCESS",
+      link: store.slug ? `/${store.slug}` : "/auto",
+    });
+
+    return true;
+  };
+
+  const updateStoreCustomization = (customization: Partial<StoreCustomizationSettings>) => {
+    const updatedStore: Store = {
+      ...store,
+      customization: {
+        ...(store.customization || {}),
+        ...customization,
+      },
+      updated_at: new Date().toISOString(),
+    };
+
+    setStoreState(updatedStore);
+    setStored(STORAGE_KEYS.STORE, updatedStore);
+    SyncBridgeService.syncStoreToServer(updatedStore, paymentAccounts);
+  };
+
   const totalSales = orders.reduce((acc, o) => (o.order_status !== "CANCELLED" ? acc + o.total_amount : acc), 0);
   const totalCashReceived = orders.reduce(
     (acc, o) => (o.payment?.payment_status === "PAID" ? acc + o.total_amount : acc),
@@ -2585,6 +2713,11 @@ export function useCommerceStore() {
     subscriptions,
     billingOrders,
     billingInvoices,
+    templateLicenses,
+    // Template Actions
+    purchaseTemplateLicense,
+    applyStoreTemplate,
+    updateStoreCustomization,
     // Context & Org Actions
     switchContext,
     createOrganization,

@@ -27,6 +27,7 @@ import {
   ShippingMethod,
   ShippingZone,
   ActorPaymentAccount,
+  TemplateLicense,
 } from "@/types";
 import { UserIdentity, PasskeyCredential, AuthSession } from "@/lib/auth/types";
 import { Subscription, BillingOrder, BillingInvoice } from "@/lib/billing/types";
@@ -167,3 +168,6 @@ export const INITIAL_SUBSCRIPTION: Subscription = INITIAL_SUBSCRIPTION_PERSONAL;
 export const INITIAL_SUBSCRIPTIONS: Subscription[] = [];
 export const INITIAL_BILLING_ORDERS: BillingOrder[] = [];
 export const INITIAL_BILLING_INVOICES: BillingInvoice[] = [];
+
+// 11. Template Licenses (Empty initial state)
+export const INITIAL_TEMPLATE_LICENSES: TemplateLicense[] = [];
