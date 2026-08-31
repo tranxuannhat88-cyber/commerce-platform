@@ -89,9 +89,9 @@ export default function DashboardPage() {
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-medium backdrop-blur-md transition-all border border-white/10"
             >
               <QrCode className="w-4 h-4 text-blue-400" />
-              <span>QR Storefront</span>
+              <span>QR Cửa Hàng</span>
             </button>
-            <CopyButton text={storeUrl} label="Copy Link Store" className="py-2.5 px-4 text-xs font-semibold bg-white text-neutral-900 border-none hover:bg-neutral-100" />
+            <CopyButton text={storeUrl} label="Copy Link Cửa Hàng" className="py-2.5 px-4 text-xs font-semibold bg-white text-neutral-900 border-none hover:bg-neutral-100" />
           </div>
         </div>
 

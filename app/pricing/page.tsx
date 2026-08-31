@@ -413,7 +413,7 @@ export default function PricingPage() {
               </tr>
               <tr>
                 <td className="py-3.5 px-6 font-bold text-neutral-800 dark:text-neutral-200">
-                  Cửa hàng Storefront
+                  Trang Cửa Hàng / Kênh Bán
                 </td>
                 <td className="py-3.5 px-4 text-center">1</td>
                 <td className="py-3.5 px-4 text-center">1</td>

@@ -75,7 +75,7 @@ export function DashboardSidebar() {
       title: "HỆ THỐNG",
       items: [
         { href: "/store", label: "Cửa hàng & Kênh bán", icon: StoreIcon },
-        { href: "/store/public-settings", label: "Cấu hình Hiển thị Public", icon: Eye },
+        { href: "/store/public-settings", label: "Hiển thị công khai", icon: Eye },
         { href: "/settings/billing", label: "Gói Dịch Vụ & Hạn Mức", icon: CreditCard },
         { href: "/settings/security", label: "Tài khoản & Passkey", icon: KeyRound },
         { href: "/settings", label: "Thiết lập Doanh nghiệp", icon: Settings },
@@ -112,9 +112,10 @@ export function DashboardSidebar() {
         <Link
           href={`/${store.slug}`}
           target="_blank"
+          title="Xem trang cửa hàng giống như khách hàng nhìn thấy."
           className="flex items-center justify-between px-3 py-2 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/60 rounded-xl transition-colors border border-blue-200 dark:border-blue-900/60"
         >
-          <span className="truncate">🏪 Mở Storefront</span>
+          <span className="truncate">🏬 Xem cửa hàng</span>
           <ExternalLink className="w-3.5 h-3.5 shrink-0" />
         </Link>
       </div>
@@ -257,9 +258,10 @@ export function MobileDashboardDrawer({
             href={`/${store.slug}`}
             target="_blank"
             onClick={onClose}
+            title="Xem trang cửa hàng giống như khách hàng nhìn thấy."
             className="flex items-center justify-between px-3 py-2 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 rounded-xl border border-blue-200 dark:border-blue-900/60"
           >
-            <span>🏪 Mở Storefront</span>
+            <span>🏬 Xem cửa hàng</span>
             <ExternalLink className="w-3.5 h-3.5 shrink-0" />
           </Link>
         </div>

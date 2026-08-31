@@ -17,6 +17,7 @@ import {
   Phone,
   MapPin,
   FileText,
+  CreditCard,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND, formatDateTime } from "@/lib/utils";
@@ -88,14 +89,33 @@ export default function SalesOrdersPage() {
     }
   };
 
-  const getPaymentBadge = (status?: string) => {
-    switch (status) {
-      case "PAID":
-        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500 text-white">✓ Đã thanh toán</span>;
-      case "COD_PENDING":
+  const getPaymentBadge = (order: Order) => {
+    const method = order.payment_snapshot?.method_type || order.payment?.payment_method || "VIETQR";
+    const status = order.payment?.payment_status;
+
+    if (status === "PAID") {
+      return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500 text-white">✓ Đã thanh toán</span>;
+    }
+
+    switch (method) {
+      case "COD":
         return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500 text-white">COD Chờ thu</span>;
+      case "DEPOSIT":
+        return (
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-600 text-white">
+            Cọc ({order.payment_snapshot?.deposit_amount ? formatVND(order.payment_snapshot.deposit_amount) : "30%"})
+          </span>
+        );
+      case "PAY_LATER":
+        return (
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-600 text-white">
+            Công nợ ({order.payment_snapshot?.terms?.replace('_', ' ') || "NET 30"})
+          </span>
+        );
+      case "PAY_AT_STORE":
+        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-600 text-white">Tại cửa hàng</span>;
       default:
-        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-300">Chưa thanh toán</span>;
+        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-300">VietQR Chưa trả</span>;
     }
   };
 
@@ -107,7 +127,7 @@ export default function SalesOrdersPage() {
           Quản Lý Đơn Bán Hàng
         </h2>
         <p className="text-xs text-neutral-500 mt-0.5">
-          Theo dõi đơn hàng phát sinh từ Offer Storefront và Báo giá đã chốt
+          Theo dõi đơn hàng phát sinh từ Trang cửa hàng, Offer và Báo giá đã chốt
         </p>
       </div>
 
@@ -141,18 +161,18 @@ export default function SalesOrdersPage() {
         </div>
       </div>
 
-      {/* Orders Table */}
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-xs">
+      {/* ORDERS LIST TABLE */}
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-neutral-50 dark:bg-neutral-800/60 text-neutral-500 border-b border-neutral-200 dark:border-neutral-800 uppercase font-bold text-[10px] tracking-wider">
+            <thead className="bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200 dark:border-neutral-800 text-neutral-400 font-bold uppercase">
               <tr>
-                <th className="py-3.5 px-4">Mã Đơn & Nguồn</th>
-                <th className="py-3.5 px-4">Khách Hàng</th>
-                <th className="py-3.5 px-4">Sản Phẩm / DV</th>
-                <th className="py-3.5 px-4">Tổng Tiền</th>
-                <th className="py-3.5 px-4">Thanh Toán</th>
-                <th className="py-3.5 px-4">Trạng Thái</th>
+                <th className="py-3 px-4">Mã Đơn & Nguồn</th>
+                <th className="py-3 px-4">Khách Hàng</th>
+                <th className="py-3 px-4">Sản Phẩm</th>
+                <th className="py-3 px-4">Tổng Tiền</th>
+                <th className="py-3 px-4">Thanh Toán</th>
+                <th className="py-3 px-4">Trạng Thái</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -174,7 +194,7 @@ export default function SalesOrdersPage() {
                         {order.order_number}
                       </div>
                       <div className="text-[10px] text-neutral-400 mt-0.5">
-                        {order.source_type === "SOURCE_QUOTATION" ? "📑 Từ Báo giá" : "🏪 Từ Store Offer"} • {formatDateTime(order.created_at)}
+                        {order.source_type === "SOURCE_QUOTATION" ? "📑 Từ Báo giá" : "🏪 Từ Trang cửa hàng"} • {formatDateTime(order.created_at)}
                       </div>
                     </td>
 
@@ -202,7 +222,7 @@ export default function SalesOrdersPage() {
 
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2">
-                        {getPaymentBadge(order.payment?.payment_status)}
+                        {getPaymentBadge(order)}
                         {order.payment?.payment_status === "UNPAID" && (
                           <button
                             onClick={(e) => {
@@ -352,6 +372,73 @@ export default function SalesOrdersPage() {
                     <span>Tổng tiền thanh toán:</span>
                     <span className="text-blue-600">{formatVND(selectedOrder.total_amount)}</span>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* PAYMENT & FULFILLMENT SNAPSHOT CARD */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Payment Snapshot */}
+              <div className="p-3.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/50 space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-blue-950 dark:text-blue-200 flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Điều Kiện Thanh Toán (Snapshot)</span>
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                    {selectedOrder.payment_snapshot?.method_type || selectedOrder.payment?.payment_method || "VIETQR"}
+                  </span>
+                </div>
+
+                <div className="space-y-1 text-neutral-600 dark:text-neutral-400 text-[11px]">
+                  <p>
+                    <strong>Phương thức:</strong> {selectedOrder.payment_snapshot?.method_name || selectedOrder.payment?.payment_method}
+                  </p>
+                  {selectedOrder.payment_snapshot?.deposit_amount !== undefined && (
+                    <div className="p-2 rounded-lg bg-white dark:bg-neutral-800 border border-blue-100 dark:border-blue-900/40 text-blue-900 dark:text-blue-200 space-y-0.5">
+                      <p>Tiền cọc cần thu: <strong>{formatVND(selectedOrder.payment_snapshot.deposit_amount)}</strong></p>
+                      <p className="text-neutral-500">Còn lại thu khi giao: {formatVND(selectedOrder.payment_snapshot.remaining_amount || 0)}</p>
+                    </div>
+                  )}
+                  {selectedOrder.payment_snapshot?.payment_due_date && (
+                    <p className="text-purple-700 dark:text-purple-300 font-medium">
+                      Hạn thanh toán công nợ: <strong>{new Date(selectedOrder.payment_snapshot.payment_due_date).toLocaleDateString("vi-VN")}</strong> ({selectedOrder.payment_snapshot.terms})
+                    </p>
+                  )}
+                  {selectedOrder.payment_snapshot?.bank_account_snapshot && (
+                    <p className="text-neutral-500">
+                      Tài khoản nhận: {selectedOrder.payment_snapshot.bank_account_snapshot.bank_short_name} - {selectedOrder.payment_snapshot.bank_account_snapshot.account_number} ({selectedOrder.payment_snapshot.bank_account_snapshot.account_name})
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Fulfillment Snapshot */}
+              <div className="p-3.5 rounded-2xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200/80 dark:border-purple-900/50 space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-purple-950 dark:text-purple-200 flex items-center gap-1.5">
+                    <Truck className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Hình Thức Giao Nhận (Snapshot)</span>
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
+                    {selectedOrder.fulfillment_snapshot?.method_type || "DELIVERY"}
+                  </span>
+                </div>
+
+                <div className="space-y-1 text-neutral-600 dark:text-neutral-400 text-[11px]">
+                  <p>
+                    <strong>Hình thức:</strong> {selectedOrder.fulfillment_snapshot?.method_name || "Giao hàng tận nơi"}
+                  </p>
+                  {selectedOrder.fulfillment_snapshot?.pickup_location && (
+                    <p className="text-neutral-700 dark:text-neutral-300 font-medium">
+                      Điểm nhận: {selectedOrder.fulfillment_snapshot.pickup_location}
+                    </p>
+                  )}
+                  {selectedOrder.fulfillment_snapshot?.estimated_delivery && (
+                    <p className="text-neutral-500">
+                      Thời gian dự kiến: {selectedOrder.fulfillment_snapshot.estimated_delivery}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

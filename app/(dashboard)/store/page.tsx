@@ -9,61 +9,82 @@ import {
   Save,
   CreditCard,
   Building,
-  Phone,
-  Mail,
-  MapPin,
-  Sparkles,
   Truck,
-  PackageCheck,
-  AlertCircle,
-  Boxes,
+  Sparkles,
+  ShieldCheck,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  FileText,
+  Landmark,
+  ArrowRight,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { CopyButton } from "@/components/shared/copy-button";
 import { QRModal } from "@/components/shared/qr-modal";
 import { AppUrlService } from "@/lib/services/url";
-import { formatVND } from "@/lib/utils";
+import {
+  PaymentMethodType,
+  FulfillmentMethodType,
+  StorePaymentSettings,
+  StoreFulfillmentSettings,
+} from "@/types";
+import { PaymentSettingsService } from "@/lib/services/payment-settings-service";
+import { FulfillmentService } from "@/lib/services/fulfillment-service";
+
+type ActiveTab = "INFO" | "PAYMENT_METHODS" | "PAYMENT_ACCOUNTS" | "FULFILLMENT" | "POLICIES";
 
 export default function StoreSettingsPage() {
-  const { store, updateStore, shippingMethods, updateShippingMethod } = useCommerceStore();
+  const {
+    store,
+    organization,
+    updateStore,
+    paymentAccounts,
+    addPaymentAccount,
+    deletePaymentAccount,
+    setDefaultPaymentAccount,
+    updateStorePaymentSettings,
+    updateStoreFulfillmentSettings,
+  } = useCommerceStore();
+
+  const [activeTab, setActiveTab] = useState<ActiveTab>("INFO");
+
+  // Tab 1: Info State
   const [storeName, setStoreName] = useState(store.store_name);
   const [slug, setSlug] = useState(store.slug);
   const [description, setDescription] = useState(store.description || "");
   const [phone, setPhone] = useState(store.phone || "");
   const [email, setEmail] = useState(store.email || "");
   const [address, setAddress] = useState(store.address || "");
-  const [bankBin, setBankBin] = useState(store.payment_settings?.bank_bin || "970422");
-  const [bankName, setBankName] = useState(store.payment_settings?.bank_name || "MBBank");
-  const [bankAccountNo, setBankAccountNo] = useState(store.payment_settings?.bank_account_no || "");
-  const [bankAccountName, setBankAccountName] = useState(store.payment_settings?.bank_account_name || "");
-  const [enableCod, setEnableCod] = useState(store.payment_settings?.enable_cod ?? true);
-  
-  // Shipping settings state
-  const [shippingEnabled, setShippingEnabled] = useState(store.shipping_settings?.shipping_enabled ?? true);
-  const [defaultFixedFee, setDefaultFixedFee] = useState(store.shipping_settings?.default_fixed_fee ?? 30000);
-  const [freeShippingThreshold, setFreeShippingThreshold] = useState(store.shipping_settings?.free_shipping_threshold ?? 500000);
-  const [enableStorePickup, setEnableStorePickup] = useState(store.shipping_settings?.enable_store_pickup ?? true);
-  const [enableQuoteLater, setEnableQuoteLater] = useState(store.shipping_settings?.enable_quote_later ?? true);
-  const [pickupAddress, setPickupAddress] = useState(store.shipping_settings?.pickup_address || store.address || "");
 
-  // Product Visibility Settings State
-  const [showOutOfStockProducts, setShowOutOfStockProducts] = useState(
-    store.product_visibility_settings?.show_out_of_stock_products ?? true
+  // Tab 2: Store Payment Methods State
+  const [paymentSettings, setPaymentSettings] = useState<StorePaymentSettings>(
+    store.advanced_payment_settings || PaymentSettingsService.getStorePaymentSettings(store)
   );
-  const [lowStockThreshold, setLowStockThreshold] = useState(
-    store.product_visibility_settings?.low_stock_threshold ?? 5
+
+  // Tab 3: Payment Accounts State & Add Modal
+  const [showAddAccountModal, setShowAddAccountModal] = useState(false);
+  const [newAccBankBin, setNewAccBankBin] = useState("970422");
+  const [newAccBankName, setNewAccBankName] = useState("Ngân Hàng TMCP Quân Đội (MBBank)");
+  const [newAccShortName, setNewAccShortName] = useState("MBBank");
+  const [newAccNumber, setNewAccNumber] = useState("");
+  const [newAccName, setNewAccName] = useState("");
+  const [newAccIsDefault, setNewAccIsDefault] = useState(false);
+
+  // Tab 4: Fulfillment State
+  const [fulfillmentSettings, setFulfillmentSettings] = useState<StoreFulfillmentSettings>(
+    store.advanced_fulfillment_settings || FulfillmentService.getStoreFulfillmentSettings(store)
   );
-  const [showLowStockBadge, setShowLowStockBadge] = useState(
-    store.product_visibility_settings?.show_low_stock_badge ?? true
-  );
-  
+
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [showQR, setShowQR] = useState(false);
 
   const storeUrl = AppUrlService.getStoreUrl(slug);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSaveAll = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Update Basic Store Info
     updateStore({
       store_name: storeName,
       slug: slug,
@@ -71,537 +92,860 @@ export default function StoreSettingsPage() {
       phone,
       email,
       address,
-      payment_settings: {
-        bank_bin: bankBin,
-        bank_name: bankName,
-        bank_account_no: bankAccountNo,
-        bank_account_name: bankAccountName,
-        enable_cod: enableCod,
-        enable_bank_transfer: true,
-      },
-      shipping_settings: {
-        shipping_enabled: shippingEnabled,
-        default_fixed_fee: Number(defaultFixedFee),
-        free_shipping_threshold: Number(freeShippingThreshold),
-        enable_store_pickup: enableStorePickup,
-        enable_quote_later: enableQuoteLater,
-        pickup_address: pickupAddress,
-      },
-      product_visibility_settings: {
-        show_out_of_stock_products: showOutOfStockProducts,
-        low_stock_threshold: Number(lowStockThreshold),
-        show_low_stock_badge: showLowStockBadge,
-      },
     });
+
+    // 2. Update Advanced Payment Settings
+    updateStorePaymentSettings(paymentSettings);
+
+    // 3. Update Advanced Fulfillment Settings
+    updateStoreFulfillmentSettings(fulfillmentSettings);
+
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
+  const handleCreateAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAccNumber || !newAccName) return;
+
+    const acc = addPaymentAccount({
+      actor_id: organization.id,
+      actor_type: "ORGANIZATION",
+      bank_bin: newAccBankBin,
+      bank_name: newAccBankName,
+      bank_short_name: newAccShortName,
+      account_number: newAccNumber.trim(),
+      account_name: newAccName.trim().toUpperCase(),
+      qr_template: "compact",
+      is_default: newAccIsDefault,
+      verification_status: "VERIFIED",
+    });
+
+    if (newAccIsDefault) {
+      setPaymentSettings({
+        ...paymentSettings,
+        default_payment_account_id: acc.id,
+      });
+    }
+
+    setNewAccNumber("");
+    setNewAccName("");
+    setNewAccIsDefault(false);
+    setShowAddAccountModal(false);
+  };
+
+  const togglePaymentMethod = (method: PaymentMethodType) => {
+    const isCurrentlyEnabled = paymentSettings.enabled_methods.includes(method);
+    const newEnabled = isCurrentlyEnabled
+      ? paymentSettings.enabled_methods.filter((m) => m !== method)
+      : [...paymentSettings.enabled_methods, method];
+
+    setPaymentSettings({
+      ...paymentSettings,
+      enabled_methods: newEnabled,
+    });
+  };
+
+  const toggleFulfillmentMethod = (method: FulfillmentMethodType) => {
+    const isCurrentlyEnabled = fulfillmentSettings.enabled_methods.includes(method);
+    const newEnabled = isCurrentlyEnabled
+      ? fulfillmentSettings.enabled_methods.filter((m) => m !== method)
+      : [...fulfillmentSettings.enabled_methods, method];
+
+    setFulfillmentSettings({
+      ...fulfillmentSettings,
+      enabled_methods: newEnabled,
+    });
+  };
+
   return (
-    <div className="space-y-6 max-w-4xl">
-      {/* Title */}
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Title & Quick Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl md:text-2xl font-black text-neutral-900 dark:text-neutral-100">
-            Cửa Hàng & Kênh Bán Hàng (Storefront)
-          </h2>
+          <h1 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-2.5">
+            <StoreIcon className="w-6 h-6 text-blue-600" />
+            <span>Thiết Lập Cửa Hàng & Kênh Bán</span>
+          </h1>
           <p className="text-xs text-neutral-500 mt-0.5">
-            Cấu hình địa chỉ URL công khai, thông tin nhận diện thương hiệu và tài khoản VietQR
+            Cấu hình phương thức thanh toán, tài khoản nhận tiền, vận chuyển và chính sách bán hàng.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowQR(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 text-neutral-800 dark:text-neutral-200"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 text-neutral-800 dark:text-neutral-200 transition-colors cursor-pointer"
           >
             <QrCode className="w-4 h-4 text-blue-600" />
             <span>Mã QR</span>
           </button>
-          <CopyButton text={storeUrl} label="Copy Link Store" className="py-2 text-xs" />
+          <CopyButton text={storeUrl} label="Copy Link Cửa Hàng" className="py-2 text-xs" />
           <Link
             href={`/${slug}`}
             target="_blank"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+            title="Xem trang cửa hàng giống như khách hàng nhìn thấy."
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
-            <span>Mở Store</span>
+            <span>Xem cửa hàng</span>
           </Link>
         </div>
       </div>
 
       {savedSuccess && (
-        <div className="p-3 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold animate-in fade-in">
-          ✓ Đã lưu cấu hình Cửa hàng & VietQR thành công!
+        <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>Đã lưu thành công toàn bộ thiết lập Cửa hàng, Thanh toán & Vận chuyển!</span>
         </div>
       )}
 
-      {/* Public Settings Card Banner */}
-      <div className="p-4 rounded-3xl bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/30 border border-blue-200/80 dark:border-blue-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-500/20 shrink-0">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="font-bold text-xs sm:text-sm text-neutral-900 dark:text-neutral-100">
-              Cấu Hình Hiển Thị & Bảo Mật Công Khai
-            </h4>
-            <p className="text-xs text-neutral-500">
-              Quản lý cờ bật/tắt hiển thị SĐT, email công khai, chính sách bán hàng và độ tin cậy.
-            </p>
-          </div>
-        </div>
-
-        <Link
-          href="/store/public-settings"
-          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs whitespace-nowrap text-center shadow-md transition-all self-start sm:self-auto cursor-pointer"
+      {/* Navigation Tabs (5 Tabs) */}
+      <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800 overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveTab("INFO")}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === "INFO"
+              ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
+              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
+          }`}
         >
-          Cấu Hình Công Khai →
-        </Link>
+          <Building className="w-4 h-4" />
+          <span>1. Thông Tin Cửa Hàng Công Khai</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("PAYMENT_METHODS")}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === "PAYMENT_METHODS"
+              ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
+              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
+          }`}
+        >
+          <CreditCard className="w-4 h-4" />
+          <span>2. Phương Thức Thanh Toán</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("PAYMENT_ACCOUNTS")}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === "PAYMENT_ACCOUNTS"
+              ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
+              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
+          }`}
+        >
+          <Landmark className="w-4 h-4" />
+          <span>3. Tài Khoản Nhận Tiền</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("FULFILLMENT")}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === "FULFILLMENT"
+              ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
+              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
+          }`}
+        >
+          <Truck className="w-4 h-4" />
+          <span>4. Vận Chuyển & Giao Hàng</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("POLICIES")}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === "POLICIES"
+              ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
+              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>5. Chính Sách & Hiển Thị</span>
+        </button>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-6">
-        {/* Store Profile */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4">
-          <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-            <StoreIcon className="w-4 h-4 text-blue-600" />
-            <span>Thông tin Storefront</span>
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                Tên Cửa hàng / Thương hiệu *
-              </label>
-              <input
-                type="text"
-                required
-                value={storeName}
-                onChange={(e) => setStoreName(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                Đường dẫn tĩnh (Slug URL) *
-              </label>
-              <div className="flex items-center">
-                <span className="px-3 py-2 text-xs bg-neutral-100 dark:bg-neutral-800 border border-r-0 border-neutral-200 dark:border-neutral-700 rounded-l-xl text-neutral-500">
-                  /
-                </span>
-                <input
-                  type="text"
-                  required
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-r-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 font-mono"
-                />
+      <form onSubmit={handleSaveAll} className="space-y-6">
+        {/* TAB 1: STORE BASIC INFO */}
+        {activeTab === "INFO" && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                  <StoreIcon className="w-4 h-4 text-blue-600" />
+                  <span>Thông tin cửa hàng công khai</span>
+                </h3>
+                <p className="text-xs text-neutral-500 mt-1">
+                  Đây là những thông tin khách hàng sẽ nhìn thấy khi truy cập trang cửa hàng của bạn.
+                </p>
               </div>
-            </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-              Giới thiệu ngắn gọn
-            </label>
-            <textarea
-              rows={2}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Số điện thoại liên hệ
-              </label>
-              <input
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Địa chỉ
-              </label>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Dynamic VietQR & Payment Account */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4">
-          <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-            <CreditCard className="w-4 h-4 text-emerald-600" />
-            <span>Tài Khoản Nhận Tiền & Cấu Hình VietQR</span>
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                Mã BIN Ngân Hàng (NAPAS) *
-              </label>
-              <select
-                value={bankBin}
-                onChange={(e) => {
-                  setBankBin(e.target.value);
-                  if (e.target.value === "970422") setBankName("MBBank (Ngân Hàng Quân Đội)");
-                  if (e.target.value === "970436") setBankName("Vietcombank");
-                  if (e.target.value === "970415") setBankName("VietinBank");
-                  if (e.target.value === "970407") setBankName("Techcombank");
-                  if (e.target.value === "970418") setBankName("BIDV");
-                  if (e.target.value === "970432") setBankName("VPBank");
-                  if (e.target.value === "970423") setBankName("TPBank");
-                }}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-              >
-                <option value="970422">970422 - MBBank (Ngân Hàng Quân Đội)</option>
-                <option value="970436">970436 - Vietcombank</option>
-                <option value="970415">970415 - VietinBank</option>
-                <option value="970407">970407 - Techcombank</option>
-                <option value="970418">970418 - BIDV</option>
-                <option value="970432">970432 - VPBank</option>
-                <option value="970423">970423 - TPBank</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                Số tài khoản ngân hàng *
-              </label>
-              <input
-                type="text"
-                required
-                value={bankAccountNo}
-                onChange={(e) => setBankAccountNo(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-mono focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                Tên chủ tài khoản (In hoa không dấu) *
-              </label>
-              <input
-                type="text"
-                required
-                value={bankAccountName}
-                onChange={(e) => setBankAccountName(e.target.value.toUpperCase())}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-mono uppercase"
-              />
-            </div>
-          </div>
-
-          <div className="pt-2 flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="enableCod"
-              checked={enableCod}
-              onChange={(e) => setEnableCod(e.target.checked)}
-              className="rounded text-emerald-600 focus:ring-emerald-500"
-            />
-            <label htmlFor="enableCod" className="text-xs text-neutral-700 dark:text-neutral-300">
-              Bật phương thức thanh toán COD (Thanh toán khi nhận hàng / Thu tiền tận nơi)
-            </label>
-          </div>
-        </div>
-
-        {/* Shipping & Fulfillment Configuration */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
-            <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-              <Truck className="w-4 h-4 text-blue-600" />
-              <span>Thiết Lập Vận Chuyển & Giao Hàng (Shipping Settings)</span>
-            </h3>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="shippingEnabled"
-                checked={shippingEnabled}
-                onChange={(e) => setShippingEnabled(e.target.checked)}
-                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor="shippingEnabled" className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                Cho phép giao hàng
-              </label>
-            </div>
-          </div>
-
-          {shippingEnabled ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                    Phí vận chuyển tiêu chuẩn mặc định (đ) *
+                  <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                    Tên cửa hàng / thương hiệu *
                   </label>
                   <input
-                    type="number"
-                    min={0}
-                    step={1000}
-                    value={defaultFixedFee}
-                    onChange={(e) => setDefaultFixedFee(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500"
+                    type="text"
+                    required
+                    value={storeName}
+                    onChange={(e) => setStoreName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-bold"
                   />
-                  <p className="text-[11px] text-neutral-500 mt-1">
-                    Áp dụng cho các đơn hàng giao toàn quốc thông thường.
-                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                    Ngưỡng Miễn phí vận chuyển (Freeship từ đ)
+                  <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                    Đường dẫn trang cửa hàng *
                   </label>
-                  <input
-                    type="number"
-                    min={0}
-                    step={10000}
-                    value={freeShippingThreshold}
-                    onChange={(e) => setFreeShippingThreshold(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500"
-                  />
-                  <p className="text-[11px] text-neutral-500 mt-1">
-                    Đơn hàng đạt giá trị tạm tính $\ge$ mức này sẽ tự động được miễn phí ship 0đ.
-                  </p>
-                </div>
-              </div>
-
-              {/* Store Pickup */}
-              <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/80 space-y-3">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="enableStorePickup"
-                    checked={enableStorePickup}
-                    onChange={(e) => setEnableStorePickup(e.target.checked)}
-                    className="rounded text-blue-600 focus:ring-blue-500"
-                  />
-                  <label htmlFor="enableStorePickup" className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                    <PackageCheck className="w-4 h-4 text-emerald-600" />
-                    <span>Cho phép khách nhận trực tiếp tại Cửa hàng / Xưởng (Phí 0đ)</span>
-                  </label>
-                </div>
-
-                {enableStorePickup && (
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                      Địa chỉ nhận hàng trực tiếp
-                    </label>
+                  <div className="flex items-center">
+                    <span className="px-3 py-2.5 bg-neutral-100 dark:bg-neutral-800 border border-r-0 border-neutral-200 dark:border-neutral-700 rounded-l-xl text-neutral-500 font-mono text-[11px]">
+                      /
+                    </span>
                     <input
                       type="text"
-                      value={pickupAddress}
-                      onChange={(e) => setPickupAddress(e.target.value)}
-                      placeholder="Nhập địa chỉ xưởng hoặc cửa hàng..."
-                      className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
+                      required
+                      value={slug}
+                      onChange={(e) => setSlug(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-r-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-mono text-xs"
                     />
                   </div>
-                )}
-              </div>
-
-              {/* Quote Later for B2B */}
-              <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 space-y-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="enableQuoteLater"
-                    checked={enableQuoteLater}
-                    onChange={(e) => setEnableQuoteLater(e.target.checked)}
-                    className="rounded text-amber-600 focus:ring-amber-500"
-                  />
-                  <label htmlFor="enableQuoteLater" className="text-xs font-bold text-amber-900 dark:text-amber-200">
-                    Hỗ trợ phương thức "Báo phí vận chuyển sau" (Dành cho máy móc / hàng cồng kềnh / xe tải)
-                  </label>
                 </div>
-                <p className="text-[11px] text-amber-700 dark:text-amber-300 pl-5">
-                  Khách đặt hàng gửi yêu cầu $\rightarrow$ Bạn nhập phí vận chuyển trong quản lý đơn $\rightarrow$ Khách duyệt tổng tiền mới sinh mã thanh toán.
+
+                <div className="md:col-span-2">
+                  <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                    Giới thiệu ngắn
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Mô tả tóm tắt về năng lực, sản phẩm kinh doanh hoặc giải pháp của doanh nghiệp..."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                    Số điện thoại công khai
+                  </label>
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="VD: 0988 123 456"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"
+                  />
+                  <p className="text-[10px] text-neutral-400 mt-1">
+                    Thông tin này có thể được hiển thị cho khách hàng trên Trang cửa hàng.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                    Email công khai
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="VD: contact@congty2k.vn"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"
+                  />
+                  <p className="text-[10px] text-neutral-400 mt-1">
+                    Thông tin này có thể được hiển thị cho khách hàng trên Trang cửa hàng.
+                  </p>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                    Địa chỉ cửa hàng
+                  </label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="VD: Tòa nhà 2K Tower, 123 Đường Công Nghệ, Q. Cầu Giấy, Hà Nội"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"
+                  />
+                  <p className="text-[10px] text-neutral-400 mt-1">
+                    Thông tin này có thể được hiển thị cho khách hàng trên Trang cửa hàng.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: STORE PAYMENT METHODS */}
+        {activeTab === "PAYMENT_METHODS" && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-5">
+              <div>
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-emerald-600" />
+                  <span>Phương Thức Thanh Toán Cho Phép Mặc Định (Store Defaults)</span>
+                </h3>
+                <p className="text-xs text-neutral-500 mt-1">
+                  Khách mua hàng sẽ được lựa chọn các phương thức này khi đặt hàng, trừ khi Offer có cấu hình tùy chỉnh riêng.
                 </p>
               </div>
 
-              {/* Active Shipping Methods List */}
-              <div className="space-y-2 pt-2">
-                <h4 className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                  Các phương thức vận chuyển khả dụng:
-                </h4>
-                <div className="space-y-2">
-                  {shippingMethods.map((sm) => (
-                    <div
-                      key={sm.id}
-                      className="p-3 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-between gap-3 text-xs"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-neutral-900 dark:text-neutral-100">{sm.name}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-medium">
-                            {sm.method_type}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-neutral-500 truncate">{sm.description || "Giao hàng tận nơi"}</p>
-                      </div>
+              <div className="space-y-3 text-xs">
+                {/* 1. VietQR */}
+                <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-neutral-900 dark:text-neutral-100">
+                        Chuyển Khoản Ngân Hàng / VietQR Tự Động
+                      </span>
+                      <span className="px-2 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">Khuyên dùng</span>
+                    </div>
+                    <p className="text-neutral-500 text-[11px]">
+                      Hệ thống tự động sinh mã VietQR theo đúng số tiền đơn hàng và tài khoản nhận tiền mặc định.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={paymentSettings.enabled_methods.includes("VIETQR")}
+                    onChange={() => togglePaymentMethod("VIETQR")}
+                    className="w-4 h-4 text-blue-600 rounded mt-1 cursor-pointer"
+                  />
+                </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="font-bold text-neutral-900 dark:text-neutral-100">
-                          {sm.method_type === "PICKUP" || sm.method_type === "FREE"
-                            ? "0đ"
-                            : sm.method_type === "QUOTE_LATER"
-                            ? "Báo sau"
-                            : `${formatVND(sm.fixed_fee || defaultFixedFee)}`}
-                        </span>
+                {/* 2. COD */}
+                <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
+                      Thanh Toán Khi Nhận Hàng (COD)
+                    </span>
+                    <p className="text-neutral-500 text-[11px]">
+                      Khách hàng thanh toán tiền mặt cho nhân viên giao hàng sau khi nhận và kiểm tra hàng.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={paymentSettings.enabled_methods.includes("COD")}
+                    onChange={() => togglePaymentMethod("COD")}
+                    className="w-4 h-4 text-blue-600 rounded mt-1 cursor-pointer"
+                  />
+                </div>
 
-                        <button
-                          type="button"
-                          onClick={() => updateShippingMethod(sm.id, { active: !sm.active })}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${
-                            sm.active
-                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-300"
-                              : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-400"
-                          }`}
-                        >
-                          {sm.active ? "Đang bật" : "Đã tắt"}
-                        </button>
+                {/* 3. Pay at Store */}
+                <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
+                      Thanh Toán Tại Cửa Hàng / Showroom
+                    </span>
+                    <p className="text-neutral-500 text-[11px]">
+                      Chỉ áp dụng khi khách hàng chọn phương thức nhận hàng tại cửa hàng.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={paymentSettings.enabled_methods.includes("PAY_AT_STORE")}
+                    onChange={() => togglePaymentMethod("PAY_AT_STORE")}
+                    className="w-4 h-4 text-blue-600 rounded mt-1 cursor-pointer"
+                  />
+                </div>
+
+                {/* 4. Deposit */}
+                <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
+                        Đặt Cọc Trước (Deposit)
+                      </span>
+                      <p className="text-neutral-500 text-[11px]">
+                        Yêu cầu khách thanh toán trước một phần giá trị đơn hàng, phần còn lại thanh toán khi giao hàng.
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={paymentSettings.enabled_methods.includes("DEPOSIT")}
+                      onChange={() => togglePaymentMethod("DEPOSIT")}
+                      className="w-4 h-4 text-blue-600 rounded mt-1 cursor-pointer"
+                    />
+                  </div>
+
+                  {paymentSettings.enabled_methods.includes("DEPOSIT") && (
+                    <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-700/60 flex items-center gap-3">
+                      <span className="text-neutral-600 dark:text-neutral-400">Tỷ lệ đặt cọc mặc định:</span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="5"
+                          max="90"
+                          value={paymentSettings.method_configs.DEPOSIT?.deposit_percentage || 30}
+                          onChange={(e) =>
+                            setPaymentSettings({
+                              ...paymentSettings,
+                              method_configs: {
+                                ...paymentSettings.method_configs,
+                                DEPOSIT: {
+                                  ...paymentSettings.method_configs.DEPOSIT,
+                                  deposit_percentage: Number(e.target.value),
+                                },
+                              },
+                            })
+                          }
+                          className="w-20 px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-center"
+                        />
+                        <span className="font-bold">%</span>
                       </div>
                     </div>
-                  ))}
+                  )}
+                </div>
+
+                {/* 5. Pay Later */}
+                <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
+                        Thanh Toán Sau / Bán Chịu Công Nợ (Pay Later)
+                      </span>
+                      <p className="text-neutral-500 text-[11px]">
+                        Cho phép khách hàng B2B / đối tác nhận hàng trước và thanh toán sau theo kỳ hạn thỏa thuận.
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={paymentSettings.enabled_methods.includes("PAY_LATER")}
+                      onChange={() => togglePaymentMethod("PAY_LATER")}
+                      className="w-4 h-4 text-blue-600 rounded mt-1 cursor-pointer"
+                    />
+                  </div>
+
+                  {paymentSettings.enabled_methods.includes("PAY_LATER") && (
+                    <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-700/60 flex items-center gap-3">
+                      <span className="text-neutral-600 dark:text-neutral-400">Kỳ hạn công nợ mặc định:</span>
+                      <select
+                        value={paymentSettings.method_configs.PAY_LATER?.pay_later_terms || "NET_30"}
+                        onChange={(e) =>
+                          setPaymentSettings({
+                            ...paymentSettings,
+                            method_configs: {
+                              ...paymentSettings.method_configs,
+                              PAY_LATER: {
+                                ...paymentSettings.method_configs.PAY_LATER,
+                                pay_later_terms: e.target.value as any,
+                              },
+                            },
+                          })
+                        }
+                        className="px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-xs font-bold bg-white dark:bg-neutral-900"
+                      >
+                        <option value="NET_7">NET 7 (Trong vòng 7 ngày)</option>
+                        <option value="NET_15">NET 15 (Trong vòng 15 ngày)</option>
+                        <option value="NET_30">NET 30 (Trong vòng 30 ngày)</option>
+                        <option value="NET_45">NET 45 (Trong vòng 45 ngày)</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="p-4 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-              <span>Đang tắt tính năng vận chuyển. Tất cả đơn hàng sẽ được áp dụng phí giao hàng 0đ (Thích hợp cho cửa hàng chuyên Dịch vụ/Sản phẩm số).</span>
-            </div>
-          )}
-        </div>
-
-        {/* Product Visibility & Inventory Rules Configuration */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
-            <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-              <Boxes className="w-4 h-4 text-purple-600" />
-              <span>Thiết Lập Hiển Thị Sản Phẩm & Quy Tắc Tồn Kho (Product Visibility)</span>
-            </h3>
           </div>
+        )}
 
-          <div className="space-y-4">
-            {/* Out of stock visibility options */}
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                Khi sản phẩm hết hàng trong kho:
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-start gap-2.5 p-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="outOfStockVisibility"
-                    checked={showOutOfStockProducts === true}
-                    onChange={() => setShowOutOfStockProducts(true)}
-                    className="mt-0.5 text-purple-600 focus:ring-purple-500"
-                  />
-                  <div>
-                    <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
-                      Vẫn hiển thị trên Storefront và gắn nhãn "Tạm hết hàng" (Khuyên dùng)
-                    </p>
-                    <p className="text-[11px] text-neutral-500 mt-0.5">
-                      Giúp khách hàng nắm được danh mục sản phẩm của xưởng/shop, nút mua sẽ bị vô hiệu hóa và tự động xếp xuống cuối danh sách.
-                    </p>
-                  </div>
-                </label>
+        {/* TAB 3: ACTOR PAYMENT ACCOUNTS */}
+        {activeTab === "PAYMENT_ACCOUNTS" && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                    <Landmark className="w-4 h-4 text-purple-600" />
+                    <span>Danh Sách Tài Khoản Ngân Hàng Nhận Tiền (Actor Accounts)</span>
+                  </h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    Các tài khoản thuộc quyền sở hữu của Doanh nghiệp / Người bán dùng để tạo mã VietQR tự động.
+                  </p>
+                </div>
 
-                <label className="flex items-start gap-2.5 p-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="outOfStockVisibility"
-                    checked={showOutOfStockProducts === false}
-                    onChange={() => setShowOutOfStockProducts(false)}
-                    className="mt-0.5 text-purple-600 focus:ring-purple-500"
-                  />
-                  <div>
-                    <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
-                      Ẩn hoàn toàn khỏi cửa hàng công khai
-                    </p>
-                    <p className="text-[11px] text-neutral-500 mt-0.5">
-                      Sản phẩm hết hàng sẽ biến mất khỏi Storefront và Offer, chỉ xuất hiện lại sau khi bạn nhập thêm tồn kho.
-                    </p>
-                  </div>
-                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowAddAccountModal(true)}
+                  className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all self-start sm:self-auto cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Thêm Tài Khoản Ngân Hàng</span>
+                </button>
+              </div>
+
+              {/* Accounts List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {paymentAccounts.map((acc) => {
+                  const isStoreDefault =
+                    paymentSettings.default_payment_account_id === acc.id ||
+                    (!paymentSettings.default_payment_account_id && acc.is_default);
+
+                  return (
+                    <div
+                      key={acc.id}
+                      className={`p-5 rounded-2xl border transition-all ${
+                        isStoreDefault
+                          ? "border-blue-500 bg-blue-50/50 dark:bg-blue-950/30 ring-2 ring-blue-500/20"
+                          : "border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
+                              {acc.bank_short_name}
+                            </span>
+                            {isStoreDefault && (
+                              <span className="px-2 py-0.2 rounded-full bg-blue-600 text-white text-[10px] font-bold">
+                                Mặc định Store
+                              </span>
+                            )}
+                            <span className="px-2 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center gap-0.5">
+                              <ShieldCheck className="w-3 h-3" />
+                              <span>Đã Xác Thực</span>
+                            </span>
+                          </div>
+                          <p className="font-mono text-sm font-black text-neutral-800 dark:text-neutral-200 tracking-wider">
+                            {acc.account_number}
+                          </p>
+                          <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400">
+                            {acc.account_name}
+                          </p>
+                          <p className="text-[11px] text-neutral-400">{acc.bank_name}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-xs">
+                        {!isStoreDefault ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDefaultPaymentAccount(acc.id);
+                              setPaymentSettings({
+                                ...paymentSettings,
+                                default_payment_account_id: acc.id,
+                              });
+                            }}
+                            className="font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+                          >
+                            Đặt Làm Mặc Định
+                          </button>
+                        ) : (
+                          <span className="text-neutral-400 text-[11px]">Đang sử dụng nhận tiền</span>
+                        )}
+
+                        {paymentAccounts.length > 1 && !isStoreDefault && (
+                          <button
+                            type="button"
+                            onClick={() => deletePaymentAccount(acc.id)}
+                            className="text-red-500 hover:text-red-700 text-xs p-1 cursor-pointer"
+                            title="Xóa tài khoản"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Low stock threshold */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+        {/* TAB 4: STORE FULFILLMENT & SHIPPING */}
+        {activeTab === "FULFILLMENT" && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-5">
               <div>
-                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                  Ngưỡng cảnh báo sắp hết hàng (Low Stock Threshold)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={lowStockThreshold}
-                  onChange={(e) => setLowStockThreshold(parseInt(e.target.value) || 1)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-                />
-                <p className="text-[10px] text-neutral-400 mt-1">
-                  Khi tồn kho khả dụng $\le$ mức này, hệ thống sẽ gắn nhãn "Sắp hết hàng".
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-blue-600" />
+                  <span>Phương Thức Vận Chuyển & Giao Hàng Mặc Định</span>
+                </h3>
+                <p className="text-xs text-neutral-500 mt-1">
+                  Thiết lập quy tắc tính phí giao hàng tận nơi và nhận hàng trực tiếp tại showroom.
                 </p>
               </div>
 
-              <div className="flex flex-col justify-center pt-2 sm:pt-4">
-                <label className="flex items-center gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-300 cursor-pointer">
+              {/* Methods Toggles */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <label className="flex items-start gap-3 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={showLowStockBadge}
-                    onChange={(e) => setShowLowStockBadge(e.target.checked)}
-                    className="rounded text-purple-600 focus:ring-purple-500"
+                    checked={fulfillmentSettings.enabled_methods.includes("DELIVERY")}
+                    onChange={() => toggleFulfillmentMethod("DELIVERY")}
+                    className="w-4 h-4 text-blue-600 rounded mt-0.5"
                   />
-                  <span>Hiển thị nhãn "Sắp hết (Còn X cái)" cho khách hàng</span>
+                  <div className="space-y-0.5">
+                    <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
+                      Giao Hàng Tiêu Chuẩn Toàn Quốc
+                    </span>
+                    <span className="text-neutral-500 text-[11px]">
+                      Giao hàng qua các đơn vị bưu chính chuyển phát nhanh
+                    </span>
+                  </div>
                 </label>
+
+                <label className="flex items-start gap-3 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={fulfillmentSettings.enabled_methods.includes("STORE_PICKUP")}
+                    onChange={() => toggleFulfillmentMethod("STORE_PICKUP")}
+                    className="w-4 h-4 text-blue-600 rounded mt-0.5"
+                  />
+                  <div className="space-y-0.5">
+                    <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
+                      Nhận Tại Cửa Hàng / Showroom
+                    </span>
+                    <span className="text-neutral-500 text-[11px]">
+                      Miễn phí 100%, khách tự đến lấy hàng tại kho
+                    </span>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={fulfillmentSettings.enabled_methods.includes("SHIPPING_QUOTE_LATER")}
+                    onChange={() => toggleFulfillmentMethod("SHIPPING_QUOTE_LATER")}
+                    className="w-4 h-4 text-blue-600 rounded mt-0.5"
+                  />
+                  <div className="space-y-0.5">
+                    <span className="font-bold text-neutral-900 dark:text-neutral-100 block">
+                      Báo Phí Giao Hàng Sau (Quote Later)
+                    </span>
+                    <span className="text-neutral-500 text-[11px]">
+                      Dành cho hàng cồng kềnh, máy móc hoặc đơn hàng số lượng lớn
+                    </span>
+                  </div>
+                </label>
+              </div>
+
+              {/* Fee Rules */}
+              <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-4 text-xs">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-neutral-700 dark:text-neutral-300">
+                  Quy Tắc Phí Giao Hàng Mặc Định
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                      Phí Vận Chuyển Cố Định (đ)
+                    </label>
+                    <input
+                      type="number"
+                      step="1000"
+                      value={fulfillmentSettings.fixed_fee}
+                      onChange={(e) =>
+                        setFulfillmentSettings({
+                          ...fulfillmentSettings,
+                          fixed_fee: Number(e.target.value),
+                        })
+                      }
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-bold text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                      Miễn Phí Vận Chuyển Cho Đơn Hàng Từ (đ)
+                    </label>
+                    <input
+                      type="number"
+                      step="10000"
+                      value={fulfillmentSettings.free_shipping_threshold || 0}
+                      onChange={(e) =>
+                        setFulfillmentSettings({
+                          ...fulfillmentSettings,
+                          free_shipping_threshold: Number(e.target.value),
+                        })
+                      }
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-bold text-xs"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                      Địa Chỉ & Hướng Dẫn Nhận Tại Cửa Hàng
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={fulfillmentSettings.pickup_config?.address || ""}
+                      onChange={(e) =>
+                        setFulfillmentSettings({
+                          ...fulfillmentSettings,
+                          pickup_config: {
+                            store_name: store.store_name,
+                            address: e.target.value,
+                            instructions: fulfillmentSettings.pickup_config?.instructions || "",
+                          },
+                        })
+                      }
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Submit */}
-        <div className="flex justify-end">
+        {/* TAB 5: POLICIES & PUBLIC DISPLAY */}
+        {activeTab === "POLICIES" && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="p-6 rounded-3xl bg-linear-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/40 dark:to-indigo-950/30 border border-blue-200/80 dark:border-blue-900/50 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-md">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm text-neutral-900 dark:text-neutral-100">
+                    Cấu Hình Chi Tiết Chính Sách & Cờ Hiển Thị Công Khai
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    Quản lý 11 cờ bảo mật (Privacy Whitelist) và văn bản cam kết dịch vụ cho Buyer.
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                href="/store/public-settings"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+              >
+                <span>Mở Trình Quản Lý Hiển Thị Công Khai</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Submit Bar */}
+        <div className="pt-2">
           <button
             type="submit"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-white text-white dark:text-neutral-900 font-bold text-xs shadow-lg transition-all cursor-pointer"
+            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             <Save className="w-4 h-4" />
-            <span>Lưu Thiết Lập Cửa Hàng</span>
+            <span>LƯU TOÀN BỘ CẤU HÌNH CỬA HÀNG</span>
           </button>
         </div>
       </form>
 
-      {/* QR MODAL */}
-      {showQR && (
-        <QRModal
-          isOpen={true}
-          onClose={() => setShowQR(false)}
-          url={storeUrl}
-          title="Mã QR Cửa Hàng"
-          subtitle={storeName}
-        />
+      {/* Modal: Add Payment Account */}
+      {showAddAccountModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-6 max-w-md w-full border border-neutral-200 dark:border-neutral-800 shadow-2xl space-y-4">
+            <h3 className="text-base font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+              <Landmark className="w-5 h-5 text-blue-600" />
+              <span>Thêm Tài Khoản Ngân Hàng VietQR</span>
+            </h3>
+
+            <form onSubmit={handleCreateAccount} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                  Chọn Ngân Hàng *
+                </label>
+                <select
+                  value={newAccBankBin}
+                  onChange={(e) => {
+                    const bin = e.target.value;
+                    setNewAccBankBin(bin);
+                    if (bin === "970422") {
+                      setNewAccBankName("Ngân Hàng TMCP Quân Đội (MBBank)");
+                      setNewAccShortName("MBBank");
+                    } else if (bin === "970436") {
+                      setNewAccBankName("Ngân Hàng TMCP Ngoại Thương Việt Nam (Vietcombank)");
+                      setNewAccShortName("Vietcombank");
+                    } else if (bin === "970407") {
+                      setNewAccBankName("Ngân Hàng TMCP Kỹ Thương Việt Nam (Techcombank)");
+                      setNewAccShortName("Techcombank");
+                    } else if (bin === "970415") {
+                      setNewAccBankName("Ngân Hàng TMCP Công Thương Việt Nam (VietinBank)");
+                      setNewAccShortName("VietinBank");
+                    } else if (bin === "970418") {
+                      setNewAccBankName("Ngân Hàng TMCP Đầu Tư & Phát Triển (BIDV)");
+                      setNewAccShortName("BIDV");
+                    } else if (bin === "970405") {
+                      setNewAccBankName("Ngân Hàng Nông Nghiệp & Phát Triển Nông Thôn (Agribank)");
+                      setNewAccShortName("Agribank");
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-bold"
+                >
+                  <option value="970422">MBBank (Ngân Hàng Quân Đội)</option>
+                  <option value="970436">Vietcombank (Ngoại Thương Việt Nam)</option>
+                  <option value="970407">Techcombank (Kỹ Thương)</option>
+                  <option value="970415">VietinBank (Công Thương)</option>
+                  <option value="970418">BIDV (Đầu Tư & Phát Triển)</option>
+                  <option value="970405">Agribank (Nông Nghiệp)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                  Số Tài Khoản Ngân Hàng *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="098812345688"
+                  value={newAccNumber}
+                  onChange={(e) => setNewAccNumber(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-mono font-bold text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                  Tên Chủ Tài Khoản (Không Dấu) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="CONG TY TNHH KY THUAT 2K"
+                  value={newAccName}
+                  onChange={(e) => setNewAccName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-bold text-xs uppercase"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={newAccIsDefault}
+                  onChange={(e) => setNewAccIsDefault(e.target.checked)}
+                  className="rounded text-blue-600 w-4 h-4"
+                />
+                <span className="font-bold text-neutral-800 dark:text-neutral-200 text-xs">
+                  Đặt làm tài khoản nhận tiền mặc định cho Store
+                </span>
+              </label>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAddAccountModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                >
+                  Hủy Bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md cursor-pointer"
+                >
+                  Lưu Tài Khoản
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
+
+      {/* QR Modal */}
+      <QRModal isOpen={showQR} onClose={() => setShowQR(false)} url={storeUrl} title={store.store_name} />
     </div>
   );
 }

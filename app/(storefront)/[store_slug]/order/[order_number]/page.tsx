@@ -89,10 +89,17 @@ export default function OrderStatusPage() {
     return () => clearInterval(timer);
   }, [modalStep, otpCountdown]);
 
+  const paymentMethod = order?.payment_snapshot?.method_type || order?.payment?.payment_method || "VIETQR";
+  const isDeposit = paymentMethod === "DEPOSIT";
+  const isPayLater = paymentMethod === "PAY_LATER";
+  const isPayAtStore = paymentMethod === "PAY_AT_STORE";
   const isPaid = order?.payment?.payment_status === "PAID";
-  const isCOD = order?.payment?.payment_method === "COD";
+  const isCOD = paymentMethod === "COD";
   const isQuoting = order?.shipping_status === "QUOTING";
   const isQuoted = order?.shipping_status === "QUOTED";
+
+  const depositPayable = order?.payment_snapshot?.deposit_amount || (order ? order.total_amount * 0.3 : 0);
+  const remainingBalance = order?.payment_snapshot?.remaining_amount || (order ? order.total_amount - depositPayable : 0);
 
   // Trigger confetti when paid
   useEffect(() => {
@@ -149,19 +156,15 @@ export default function OrderStatusPage() {
       setPhoneError(err);
       return;
     }
+    setPhoneError(null);
 
-    if (!regPassword || regPassword.length < 6) {
-      alert("Mật khẩu cần ít nhất 6 ký tự để bảo mật tài khoản.");
-      return;
-    }
-
-    // Generate simulated OTP
-    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOTP(newOtp);
-    setEnteredOTP("");
-    setOtpError(null);
+    // Mock send OTP
+    const mockOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedOTP(mockOTP);
     setOtpCountdown(60);
     setCanResendOtp(false);
+    setEnteredOTP("");
+    setOtpError(null);
     setModalStep("OTP");
   };
 
@@ -178,30 +181,28 @@ export default function OrderStatusPage() {
   // Step 2: Verify OTP
   const handleVerifyOTP = (e: React.FormEvent) => {
     e.preventDefault();
-    if (enteredOTP !== generatedOTP && enteredOTP !== "686868") {
-      setOtpError("Mã OTP không chính xác. Vui lòng kiểm tra lại tin nhắn hoặc điền mã đúng.");
+    if (enteredOTP.trim() !== generatedOTP) {
+      setOtpError("Mã xác thực không đúng. Vui lòng thử lại.");
       return;
     }
-
-    setIsVerifyingOtp(true);
     setOtpError(null);
+    setIsVerifyingOtp(true);
 
     setTimeout(() => {
       setIsVerifyingOtp(false);
-      setModalStep("SUCCESS");
       setIsOrderSaved(true);
-
+      setModalStep("SUCCESS");
       confetti({
-        particleCount: 120,
-        spread: 80,
-        origin: { y: 0.5 },
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
       });
-    }, 600);
+    }, 800);
   };
 
-  const bankAccount = store.payment_settings?.bank_account_no || "098812345688";
-  const bankName = store.payment_settings?.bank_name || "MBBank";
-  const accountHolder = store.payment_settings?.bank_account_name || "CONG TY TNHH KY THUAT 2K";
+  const bankAccount = order.payment_snapshot?.bank_account_snapshot?.account_number || store.payment_settings?.bank_account_no || "098812345688";
+  const bankName = order.payment_snapshot?.bank_account_snapshot?.bank_short_name || order.payment_snapshot?.bank_account_snapshot?.bank_name || store.payment_settings?.bank_name || "MBBank";
+  const accountHolder = order.payment_snapshot?.bank_account_snapshot?.account_name || store.payment_settings?.bank_account_name || "CONG TY TNHH KY THUAT 2K";
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 font-sans pb-24 text-neutral-900 dark:text-neutral-100">
@@ -258,6 +259,38 @@ export default function OrderStatusPage() {
               Người bán đã xác nhận cước vận chuyển {formatVND(order.shipping_fee)}. Quý khách vui lòng quét mã VietQR bên dưới để thanh toán.
             </p>
           </div>
+        ) : isDeposit ? (
+          <div className="p-6 md:p-8 rounded-3xl bg-linear-to-b from-blue-700 to-indigo-800 text-white text-center space-y-3 shadow-xl">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-xs font-semibold backdrop-blur-md">
+              <span>Đặt Cọc Xác Nhận Đơn Hàng</span>
+            </div>
+            <h2 className="text-2xl font-black tracking-tight">
+              CẦN CỌC: {formatVND(depositPayable)}
+            </h2>
+            <p className="text-xs text-blue-100 max-w-md mx-auto">
+              Vui lòng chuyển khoản tiền cọc để người bán bắt đầu giao hàng. Khoản còn lại <strong>{formatVND(remainingBalance)}</strong> sẽ thanh toán khi nhận kiện hàng.
+            </p>
+          </div>
+        ) : isPayLater ? (
+          <div className="p-6 md:p-8 rounded-3xl bg-linear-to-b from-amber-600 to-orange-700 text-white text-center space-y-3 shadow-xl">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-xs font-semibold backdrop-blur-md">
+              <span>Mua Trước Trả Sau ({order.payment_snapshot?.terms?.replace('_', ' ') || 'NET 30'})</span>
+            </div>
+            <h2 className="text-2xl font-black tracking-tight">ĐÃ XÁC NHẬN CÔNG NỢ</h2>
+            <p className="text-xs text-amber-100 max-w-md mx-auto">
+              Đơn hàng trị giá {formatVND(order.total_amount)} đã được ghi nhận. Hạn thanh toán công nợ: <strong>{order.payment_snapshot?.payment_due_date ? new Date(order.payment_snapshot.payment_due_date).toLocaleDateString("vi-VN") : "NET 30"}</strong>.
+            </p>
+          </div>
+        ) : isPayAtStore ? (
+          <div className="p-6 md:p-8 rounded-3xl bg-linear-to-b from-teal-600 to-emerald-700 text-white text-center space-y-3 shadow-xl">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-xs font-semibold backdrop-blur-md">
+              <span>Thanh Toán Tại Cửa Hàng</span>
+            </div>
+            <h2 className="text-2xl font-black tracking-tight">{formatVND(order.total_amount)}</h2>
+            <p className="text-xs text-teal-100 max-w-md mx-auto">
+              Quý khách vui lòng đến địa chỉ {order.fulfillment_snapshot?.pickup_location || store.address || "Showroom"} để nhận hàng và thanh toán trực tiếp.
+            </p>
+          </div>
         ) : isCOD ? (
           <div className="p-6 md:p-8 rounded-3xl bg-amber-600 text-white text-center space-y-3 shadow-xl">
             <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto text-white backdrop-blur-md">
@@ -283,8 +316,8 @@ export default function OrderStatusPage() {
           </div>
         )}
 
-        {/* Dynamic QR Payment Box (if not paid & Bank transfer & not quoting) */}
-        {!isPaid && !isCOD && !isQuoting && (
+        {/* Dynamic QR Payment Box (if not paid & needs QR transfer & not quoting & not pay later & not pay at store) */}
+        {!isPaid && !isCOD && !isQuoting && !isPayLater && !isPayAtStore && (
           <div className="p-6 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-6">
             <div className="flex flex-col md:flex-row items-center justify-center gap-8">
               {/* Dynamic QR Code Image */}

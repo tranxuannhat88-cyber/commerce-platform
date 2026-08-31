@@ -30,6 +30,13 @@ import {
   Sparkles,
   PlusCircle,
   FolderPlus,
+  Truck,
+  Percent,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  Settings2,
+  Coins,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND, slugify, formatThousands, parseThousands, compressImageFile } from "@/lib/utils";
@@ -37,7 +44,20 @@ import { CopyButton } from "@/components/shared/copy-button";
 import { QRModal } from "@/components/shared/qr-modal";
 import { ConfirmModal } from "@/components/shared/confirm-modal";
 import { AppUrlService } from "@/lib/services/url";
-import { Offer, OfferType, OfferStructure, OfferItem, OfferAttachment, OfferVariant, Product } from "@/types";
+import {
+  Offer,
+  OfferType,
+  OfferStructure,
+  OfferItem,
+  OfferAttachment,
+  OfferVariant,
+  Product,
+  PaymentMethodType,
+  FulfillmentMethodType,
+  ShippingFeeRuleType,
+  OfferPaymentOverride,
+  OfferFulfillmentOverride,
+} from "@/types";
 
 const POPULAR_BANKS = [
   { bin: "970422", name: "MBBank (Ngân Hàng Quân Đội)" },
@@ -111,6 +131,7 @@ function OffersContent() {
     updateProduct,
     deleteProduct,
     syncProductsFromOfferItems,
+    paymentAccounts,
   } = useCommerceStore();
 
   const [activeTab, setActiveTab] = useState<"ALL" | "SINGLE" | "CATALOG" | "LIBRARY">("ALL");
@@ -147,6 +168,22 @@ function OffersContent() {
 
   // Dynamic Product / Service Items List
   const [catalogItemsList, setCatalogItemsList] = useState<FormItemState[]>([createDefaultItem()]);
+
+  // Payment Override State
+  const [paymentOverrideMode, setPaymentOverrideMode] = useState<"STORE_DEFAULT" | "OFFER_OVERRIDE">("STORE_DEFAULT");
+  const [customPaymentAccountId, setCustomPaymentAccountId] = useState<string>("");
+  const [customPaymentMethods, setCustomPaymentMethods] = useState<PaymentMethodType[]>(["VIETQR", "COD"]);
+  const [customDepositType, setCustomDepositType] = useState<"PERCENTAGE" | "FIXED_AMOUNT">("PERCENTAGE");
+  const [customDepositPercentage, setCustomDepositPercentage] = useState<number>(30);
+  const [customDepositFixed, setCustomDepositFixed] = useState<string>("");
+  const [customPayLaterTerms, setCustomPayLaterTerms] = useState<"NET_7" | "NET_15" | "NET_30" | "NET_45" | "CUSTOM">("NET_30");
+
+  // Fulfillment Override State
+  const [fulfillmentOverrideMode, setFulfillmentOverrideMode] = useState<"STORE_DEFAULT" | "OFFER_OVERRIDE">("STORE_DEFAULT");
+  const [customFulfillmentMethods, setCustomFulfillmentMethods] = useState<FulfillmentMethodType[]>(["DELIVERY", "STORE_PICKUP"]);
+  const [customFeeRuleType, setCustomFeeRuleType] = useState<ShippingFeeRuleType>("FIXED");
+  const [customFixedFee, setCustomFixedFee] = useState<string>("30000");
+  const [customFreeThreshold, setCustomFreeThreshold] = useState<string>("500000");
 
   // Bank & VietQR Payment Settings State
   const defaultBankBin = store.payment_settings?.bank_bin || "970422";
@@ -531,6 +568,40 @@ function OffersContent() {
       setCustomCoverImage("");
     }
 
+    // Load Payment Override
+    if (offer.payment_override?.mode === "OFFER_OVERRIDE") {
+      setPaymentOverrideMode("OFFER_OVERRIDE");
+      setCustomPaymentAccountId(offer.payment_override.custom_payment_account_id || "");
+      setCustomPaymentMethods(offer.payment_override.enabled_methods || ["VIETQR", "COD"]);
+      setCustomDepositType(offer.payment_override.deposit_type || "PERCENTAGE");
+      setCustomDepositPercentage(offer.payment_override.deposit_percentage || 30);
+      setCustomDepositFixed(offer.payment_override.deposit_fixed_amount ? formatThousands(offer.payment_override.deposit_fixed_amount) : "");
+      setCustomPayLaterTerms((offer.payment_override.pay_later_terms as any) || "NET_30");
+    } else {
+      setPaymentOverrideMode("STORE_DEFAULT");
+      setCustomPaymentAccountId("");
+      setCustomPaymentMethods(["VIETQR", "COD"]);
+      setCustomDepositType("PERCENTAGE");
+      setCustomDepositPercentage(30);
+      setCustomDepositFixed("");
+      setCustomPayLaterTerms("NET_30");
+    }
+
+    // Load Fulfillment Override
+    if (offer.fulfillment_override?.mode === "OFFER_OVERRIDE") {
+      setFulfillmentOverrideMode("OFFER_OVERRIDE");
+      setCustomFulfillmentMethods(offer.fulfillment_override.enabled_methods || ["DELIVERY", "STORE_PICKUP"]);
+      setCustomFeeRuleType(offer.fulfillment_override.fee_rule_type || "FIXED");
+      setCustomFixedFee(offer.fulfillment_override.fixed_fee ? formatThousands(offer.fulfillment_override.fixed_fee) : "30000");
+      setCustomFreeThreshold(offer.fulfillment_override.free_shipping_threshold ? formatThousands(offer.fulfillment_override.free_shipping_threshold) : "500000");
+    } else {
+      setFulfillmentOverrideMode("STORE_DEFAULT");
+      setCustomFulfillmentMethods(["DELIVERY", "STORE_PICKUP"]);
+      setCustomFeeRuleType("FIXED");
+      setCustomFixedFee("30000");
+      setCustomFreeThreshold("500000");
+    }
+
     if (offer.payment_settings?.bank_account_no) {
       setUseCustomBank(true);
       setFormBankBin(offer.payment_settings.bank_bin || "970422");
@@ -552,6 +623,18 @@ function OffersContent() {
     setCustomCoverImage("");
     setCatalogItemsList([createDefaultItem()]);
     setUseCustomBank(false);
+    setPaymentOverrideMode("STORE_DEFAULT");
+    setCustomPaymentAccountId("");
+    setCustomPaymentMethods(["VIETQR", "COD"]);
+    setCustomDepositType("PERCENTAGE");
+    setCustomDepositPercentage(30);
+    setCustomDepositFixed("");
+    setCustomPayLaterTerms("NET_30");
+    setFulfillmentOverrideMode("STORE_DEFAULT");
+    setCustomFulfillmentMethods(["DELIVERY", "STORE_PICKUP"]);
+    setCustomFeeRuleType("FIXED");
+    setCustomFixedFee("30000");
+    setCustomFreeThreshold("500000");
     if (searchParams.get("create") === "true") {
       router.replace("/sell/offers");
     }
@@ -643,6 +726,24 @@ function OffersContent() {
       const orgId = organization.id || store.organization_id || "org-2k-tech";
       const storeId = store.id || "store-2k-official";
 
+      const paymentOverridePayload: OfferPaymentOverride = {
+        mode: paymentOverrideMode,
+        custom_payment_account_id: paymentOverrideMode === "OFFER_OVERRIDE" && customPaymentAccountId ? customPaymentAccountId : undefined,
+        enabled_methods: paymentOverrideMode === "OFFER_OVERRIDE" ? customPaymentMethods : undefined,
+        deposit_type: paymentOverrideMode === "OFFER_OVERRIDE" && customPaymentMethods.includes("DEPOSIT") ? customDepositType : undefined,
+        deposit_percentage: paymentOverrideMode === "OFFER_OVERRIDE" && customPaymentMethods.includes("DEPOSIT") ? customDepositPercentage : undefined,
+        deposit_fixed_amount: paymentOverrideMode === "OFFER_OVERRIDE" && customPaymentMethods.includes("DEPOSIT") && customDepositFixed ? parseThousands(customDepositFixed) : undefined,
+        pay_later_terms: paymentOverrideMode === "OFFER_OVERRIDE" && customPaymentMethods.includes("PAY_LATER") ? customPayLaterTerms : undefined,
+      };
+
+      const fulfillmentOverridePayload: OfferFulfillmentOverride = {
+        mode: fulfillmentOverrideMode,
+        enabled_methods: fulfillmentOverrideMode === "OFFER_OVERRIDE" ? customFulfillmentMethods : undefined,
+        fee_rule_type: fulfillmentOverrideMode === "OFFER_OVERRIDE" ? customFeeRuleType : undefined,
+        fixed_fee: fulfillmentOverrideMode === "OFFER_OVERRIDE" && customFixedFee ? parseThousands(customFixedFee) : undefined,
+        free_shipping_threshold: fulfillmentOverrideMode === "OFFER_OVERRIDE" && customFreeThreshold ? parseThousands(customFreeThreshold) : undefined,
+      };
+
       if (editingOffer) {
         updateOffer(editingOffer.id, {
           name: resolvedName,
@@ -659,6 +760,8 @@ function OffersContent() {
           variants: topVariants,
           items: validItems,
           payment_settings: offerPaymentSettings,
+          payment_override: paymentOverridePayload,
+          fulfillment_override: fulfillmentOverridePayload,
         });
       } else {
         createOffer({
@@ -681,6 +784,8 @@ function OffersContent() {
           inventory_tracking: !isMultiple,
           items: validItems,
           payment_settings: offerPaymentSettings,
+          payment_override: paymentOverridePayload,
+          fulfillment_override: fulfillmentOverridePayload,
         });
       }
 
@@ -1593,110 +1698,229 @@ function OffersContent() {
                   )}
                 </div>
 
-                {/* Bank & VietQR Payment Setup */}
-                <div className="p-4 rounded-2xl bg-linear-to-b from-blue-50/70 to-indigo-50/70 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-900/60 space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                {/* ========================================================================= */}
+                {/* 1. PAYMENT OVERRIDE SECTION                                               */}
+                {/* ========================================================================= */}
+                <div className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 space-y-3">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <CreditCard className="w-4 h-4 text-blue-600" />
                       <span className="text-xs font-bold text-blue-950 dark:text-blue-200">
-                        Tài Khoản Ngân Hàng Nhận Tiền VietQR 24/7
+                        Cấu Hình Phương Thức Thanh Toán
                       </span>
                     </div>
-
-                    {hasStoreBankProfile && (
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="checkbox"
-                          id="customBankToggle"
-                          checked={useCustomBank}
-                          onChange={(e) => setUseCustomBank(e.target.checked)}
-                          className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
-                        />
-                        <label htmlFor="customBankToggle" className="text-[11px] font-semibold text-blue-900 dark:text-blue-300 cursor-pointer">
-                          Đổi tài khoản ngân hàng khác cho Offer này
-                        </label>
-                      </div>
-                    )}
                   </div>
 
-                  {hasStoreBankProfile && !useCustomBank ? (
-                    <div className="p-3 rounded-xl bg-white dark:bg-neutral-900 border border-blue-200 dark:border-blue-800 flex items-center justify-between gap-3 text-xs">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center font-bold">
-                          <Check className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="font-bold text-neutral-900 dark:text-neutral-100">
-                            {POPULAR_BANKS.find((b) => b.bin === defaultBankBin)?.name || "MBBank"} - {defaultAccountNo}
-                          </div>
-                          <div className="text-[10px] text-neutral-500 uppercase">
-                            Chủ tài khoản: {defaultAccountName} • (Đã tự động lấy từ Hồ sơ Cửa hàng)
-                          </div>
-                        </div>
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <label className={`p-3 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-all ${paymentOverrideMode === "STORE_DEFAULT" ? "bg-white dark:bg-neutral-900 border-blue-500 ring-1 ring-blue-500/30 font-bold text-blue-900 dark:text-blue-200" : "bg-neutral-50 dark:bg-neutral-800/40 border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400"}`}>
+                      <input
+                        type="radio"
+                        name="paymentOverrideMode"
+                        checked={paymentOverrideMode === "STORE_DEFAULT"}
+                        onChange={() => setPaymentOverrideMode("STORE_DEFAULT")}
+                        className="text-blue-600"
+                      />
+                      <span>Kế thừa thiết lập Cửa hàng (Mặc định)</span>
+                    </label>
 
-                      <span className="text-[10px] font-bold text-blue-600 px-2 py-1 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                        Mặc định
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 pt-1 animate-in fade-in">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <label className={`p-3 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-all ${paymentOverrideMode === "OFFER_OVERRIDE" ? "bg-white dark:bg-neutral-900 border-blue-500 ring-1 ring-blue-500/30 font-bold text-blue-900 dark:text-blue-200" : "bg-neutral-50 dark:bg-neutral-800/40 border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400"}`}>
+                      <input
+                        type="radio"
+                        name="paymentOverrideMode"
+                        checked={paymentOverrideMode === "OFFER_OVERRIDE"}
+                        onChange={() => setPaymentOverrideMode("OFFER_OVERRIDE")}
+                        className="text-blue-600"
+                      />
+                      <span>Tùy chỉnh riêng cho Offer này</span>
+                    </label>
+                  </div>
+
+                  {paymentOverrideMode === "OFFER_OVERRIDE" && (
+                    <div className="pt-3 border-t border-blue-200 dark:border-blue-900/60 space-y-3 animate-in fade-in text-xs">
+                      {/* Choose Payment Account */}
+                      {paymentAccounts && paymentAccounts.length > 0 && (
                         <div>
                           <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                            Ngân hàng thụ hưởng *
+                            Tài khoản ngân hàng nhận tiền VietQR:
                           </label>
                           <select
-                            value={formBankBin}
-                            onChange={(e) => setFormBankBin(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
+                            value={customPaymentAccountId}
+                            onChange={(e) => setCustomPaymentAccountId(e.target.value)}
+                            className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 font-bold"
                           >
-                            {POPULAR_BANKS.map((b) => (
-                              <option key={b.bin} value={b.bin}>
-                                {b.name}
+                            <option value="">-- Dùng tài khoản mặc định của Cửa hàng --</option>
+                            {paymentAccounts.map((acc) => (
+                              <option key={acc.id} value={acc.id}>
+                                {acc.bank_short_name} - {acc.account_number} ({acc.account_name}) {acc.is_default ? "★ Mặc định" : ""}
                               </option>
                             ))}
                           </select>
                         </div>
+                      )}
 
-                        <div>
-                          <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                            Số tài khoản ngân hàng *
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Ví dụ: 098812345688"
-                            value={formBankAccountNo}
-                            onChange={(e) => setFormBankAccountNo(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 font-mono text-neutral-900 dark:text-neutral-100 font-bold"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                            Tên chủ tài khoản (In hoa) *
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="NGUYEN VAN A"
-                            value={formBankAccountName}
-                            onChange={(e) => setFormBankAccountName(e.target.value.toUpperCase())}
-                            className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 font-mono uppercase text-neutral-900 dark:text-neutral-100 font-bold"
-                          />
+                      {/* Payment Methods Checkboxes */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300">
+                          Cho phép các phương thức:
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {[
+                            { id: "VIETQR", label: "VietQR / Chuyển khoản" },
+                            { id: "COD", label: "Thu tiền COD" },
+                            { id: "PAY_AT_STORE", label: "Tại cửa hàng" },
+                            { id: "DEPOSIT", label: "Đặt cọc trước" },
+                            { id: "PAY_LATER", label: "Trả sau (NET terms)" },
+                          ].map((pm) => {
+                            const isChecked = customPaymentMethods.includes(pm.id as PaymentMethodType);
+                            return (
+                              <label
+                                key={pm.id}
+                                className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                                  isChecked
+                                    ? "bg-white dark:bg-neutral-900 border-blue-400 font-bold text-blue-900 dark:text-blue-200"
+                                    : "bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => {
+                                    if (isChecked) {
+                                      setCustomPaymentMethods(customPaymentMethods.filter((m) => m !== pm.id));
+                                    } else {
+                                      setCustomPaymentMethods([...customPaymentMethods, pm.id as PaymentMethodType]);
+                                    }
+                                  }}
+                                  className="rounded text-blue-600"
+                                />
+                                <span className="text-[11px]">{pm.label}</span>
+                              </label>
+                            );
+                          })}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 pt-1">
-                        <input
-                          type="checkbox"
-                          id="saveAsDefault"
-                          checked={saveAsDefaultStoreBank}
-                          onChange={(e) => setSaveAsDefaultStoreBank(e.target.checked)}
-                          className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
-                        />
-                        <label htmlFor="saveAsDefault" className="text-[11px] text-neutral-600 dark:text-neutral-400 cursor-pointer">
-                          Đồng thời lưu tài khoản này làm mặc định cho các Offer sau
-                        </label>
+                      {/* Deposit Config */}
+                      {customPaymentMethods.includes("DEPOSIT") && (
+                        <div className="p-3 rounded-xl bg-white dark:bg-neutral-900 border border-blue-200 dark:border-blue-800 flex items-center gap-3">
+                          <span className="text-[11px] text-neutral-600 dark:text-neutral-400 font-bold">Mức đặt cọc:</span>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min="5"
+                              max="95"
+                              value={customDepositPercentage}
+                              onChange={(e) => setCustomDepositPercentage(Number(e.target.value))}
+                              className="w-16 px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-center font-bold text-xs"
+                            />
+                            <span className="font-bold">%</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Pay Later Config */}
+                      {customPaymentMethods.includes("PAY_LATER") && (
+                        <div className="p-3 rounded-xl bg-white dark:bg-neutral-900 border border-blue-200 dark:border-blue-800 flex items-center gap-3">
+                          <span className="text-[11px] text-neutral-600 dark:text-neutral-400 font-bold">Kỳ hạn trả sau:</span>
+                          <select
+                            value={customPayLaterTerms}
+                            onChange={(e) => setCustomPayLaterTerms(e.target.value as any)}
+                            className="px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 font-bold text-xs"
+                          >
+                            <option value="NET_7">NET 7 (7 ngày)</option>
+                            <option value="NET_15">NET 15 (15 ngày)</option>
+                            <option value="NET_30">NET 30 (30 ngày)</option>
+                            <option value="NET_45">NET 45 (45 ngày)</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* ========================================================================= */}
+                {/* 2. FULFILLMENT OVERRIDE SECTION                                           */}
+                {/* ========================================================================= */}
+                <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Truck className="w-4 h-4 text-emerald-600" />
+                      <span className="text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                        Cấu Hình Vận Chuyển & Giao Hàng
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <label className={`p-3 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-all ${fulfillmentOverrideMode === "STORE_DEFAULT" ? "bg-white dark:bg-neutral-900 border-emerald-500 ring-1 ring-emerald-500/30 font-bold text-emerald-900 dark:text-emerald-200" : "bg-neutral-50 dark:bg-neutral-800/40 border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400"}`}>
+                      <input
+                        type="radio"
+                        name="fulfillmentOverrideMode"
+                        checked={fulfillmentOverrideMode === "STORE_DEFAULT"}
+                        onChange={() => setFulfillmentOverrideMode("STORE_DEFAULT")}
+                        className="text-emerald-600"
+                      />
+                      <span>Kế thừa thiết lập Cửa hàng (Mặc định)</span>
+                    </label>
+
+                    <label className={`p-3 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-all ${fulfillmentOverrideMode === "OFFER_OVERRIDE" ? "bg-white dark:bg-neutral-900 border-emerald-500 ring-1 ring-emerald-500/30 font-bold text-emerald-900 dark:text-emerald-200" : "bg-neutral-50 dark:bg-neutral-800/40 border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400"}`}>
+                      <input
+                        type="radio"
+                        name="fulfillmentOverrideMode"
+                        checked={fulfillmentOverrideMode === "OFFER_OVERRIDE"}
+                        onChange={() => setFulfillmentOverrideMode("OFFER_OVERRIDE")}
+                        className="text-emerald-600"
+                      />
+                      <span>Tùy chỉnh riêng cho Offer này</span>
+                    </label>
+                  </div>
+
+                  {fulfillmentOverrideMode === "OFFER_OVERRIDE" && (
+                    <div className="pt-3 border-t border-emerald-200 dark:border-emerald-900/60 space-y-3 animate-in fade-in text-xs">
+                      {/* Fee Rule Type */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                            Quy tắc phí giao hàng:
+                          </label>
+                          <select
+                            value={customFeeRuleType}
+                            onChange={(e) => setCustomFeeRuleType(e.target.value as any)}
+                            className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 font-bold"
+                          >
+                            <option value="FIXED">Phí cố định (đ)</option>
+                            <option value="FREE">Miễn phí vận chuyển (0đ)</option>
+                            <option value="FREE_THRESHOLD">Miễn phí khi đạt ngưỡng giá trị</option>
+                          </select>
+                        </div>
+
+                        {customFeeRuleType !== "FREE" && (
+                          <div>
+                            <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                              Phí giao hàng (đ):
+                            </label>
+                            <input
+                              type="text"
+                              value={customFixedFee}
+                              onChange={(e) => setCustomFixedFee(formatThousands(e.target.value))}
+                              className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 font-bold font-mono"
+                            />
+                          </div>
+                        )}
+
+                        {customFeeRuleType === "FREE_THRESHOLD" && (
+                          <div className="sm:col-span-2">
+                            <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                              Miễn phí ship cho đơn từ (đ):
+                            </label>
+                            <input
+                              type="text"
+                              value={customFreeThreshold}
+                              onChange={(e) => setCustomFreeThreshold(formatThousands(e.target.value))}
+                              className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 font-bold font-mono"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

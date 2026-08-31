@@ -56,11 +56,11 @@ export default function StorePublicSettingsPage() {
               <Eye className="w-5 h-5" />
             </div>
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-neutral-900 dark:text-neutral-100">
-              Cấu Hình Hiển Thị & Bảo Mật Công Khai
+              Hiển Thị Công Khai & Bảo Mật
             </h1>
           </div>
           <p className="text-xs text-neutral-500 mt-1">
-            Kiểm soát chi tiết các thông tin được phép hiển thị trên Storefront và Hồ Sơ Người Bán.
+            Kiểm soát chi tiết các thông tin được phép hiển thị trên Trang cửa hàng và Hồ sơ người bán.
           </p>
         </div>
 
@@ -69,9 +69,10 @@ export default function StorePublicSettingsPage() {
           <Link
             href={`/${store.slug}`}
             target="_blank"
+            title="Xem trang cửa hàng giống như khách hàng nhìn thấy."
             className="px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5 transition-colors"
           >
-            <span>Xem Storefront</span>
+            <span>Xem cửa hàng</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </Link>
           <Link
@@ -79,7 +80,7 @@ export default function StorePublicSettingsPage() {
             target="_blank"
             className="px-3.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100 text-xs font-bold flex items-center gap-1.5 transition-colors"
           >
-            <span>Xem Seller Profile</span>
+            <span>Xem hồ sơ người bán</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -89,7 +90,7 @@ export default function StorePublicSettingsPage() {
         <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center gap-3 text-emerald-800 dark:text-emerald-200 animate-in fade-in">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
           <div className="text-xs">
-            <strong className="font-bold">Đã lưu cài đặt thành công!</strong> Các thay đổi đã được áp dụng tức thì lên Storefront và Seller Profile.
+            <strong className="font-bold">Đã lưu cài đặt thành công!</strong> Các thay đổi đã được áp dụng tức thì lên Trang cửa hàng và Hồ sơ người bán.
           </div>
         </div>
       )}
@@ -273,7 +274,7 @@ export default function StorePublicSettingsPage() {
               />
               <div className="space-y-0.5 text-xs">
                 <span className="font-bold text-neutral-900 dark:text-neutral-100 block">Danh Mục Sản Phẩm</span>
-                <span className="text-neutral-500 text-[11px]">Hiển thị danh sách sản phẩm trong kho trên Storefront</span>
+                <span className="text-neutral-500 text-[11px]">Hiển thị danh sách sản phẩm trong kho trên Trang cửa hàng</span>
               </div>
             </label>
 

@@ -41,6 +41,7 @@ export interface Store {
   address?: string;
   social_links?: Record<string, string>;
   business_hours?: Record<string, string>;
+  // Legacy / Quick settings
   payment_settings?: {
     bank_bin?: string;
     bank_name?: string;
@@ -58,6 +59,9 @@ export interface Store {
     pickup_address?: string;
     pickup_instructions?: string;
   };
+  // Advanced Normalized Settings
+  advanced_payment_settings?: StorePaymentSettings;
+  advanced_fulfillment_settings?: StoreFulfillmentSettings;
   product_visibility_settings?: {
     show_out_of_stock_products: boolean;
     show_low_stock_badge?: boolean;
@@ -71,6 +75,117 @@ export interface Store {
 }
 
 export type OfferVisibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
+
+// ==========================================
+// ACTOR PAYMENT ACCOUNTS & STORE SETTINGS
+// ==========================================
+
+export interface ActorPaymentAccount {
+  id: string;
+  actor_id: string;
+  actor_type: 'ORGANIZATION' | 'PERSONAL';
+  bank_bin: string;
+  bank_name: string;
+  bank_short_name: string;
+  account_number: string;
+  account_name: string;
+  qr_template?: 'compact' | 'qr_only' | 'print';
+  is_default: boolean;
+  verification_status: 'UNVERIFIED' | 'VERIFIED' | 'SUSPENDED';
+  created_at: string;
+  updated_at: string;
+}
+
+export type PaymentMethodType =
+  | 'VIETQR'
+  | 'BANK_TRANSFER'
+  | 'COD'
+  | 'PAY_AT_STORE'
+  | 'DEPOSIT'
+  | 'PAY_LATER'
+  | 'ONLINE_GATEWAY'
+  | 'OTHER';
+
+export interface StorePaymentMethodConfig {
+  id: string;
+  method_type: PaymentMethodType;
+  name: string;
+  is_enabled: boolean;
+  display_order: number;
+  deposit_percentage?: number;
+  deposit_fixed_amount?: number;
+  pay_later_terms?: 'NET_7' | 'NET_15' | 'NET_30' | 'NET_45' | 'CUSTOM';
+  pay_later_days?: number;
+  custom_instructions?: string;
+}
+
+export interface StorePaymentSettings {
+  store_id: string;
+  default_payment_account_id?: string;
+  enabled_methods: PaymentMethodType[];
+  method_configs: Record<PaymentMethodType, Partial<StorePaymentMethodConfig>>;
+  allow_offer_override: boolean;
+}
+
+export type FulfillmentMethodType =
+  | 'DELIVERY'
+  | 'SELLER_DELIVERY'
+  | 'EXPRESS_DELIVERY'
+  | 'STORE_PICKUP'
+  | 'CARRIER'
+  | 'SHIPPING_QUOTE_LATER'
+  | 'NO_DELIVERY'
+  | 'ON_SITE_SERVICE'
+  | 'DIGITAL';
+
+export type ShippingFeeRuleType =
+  | 'FREE'
+  | 'FIXED'
+  | 'ZONE'
+  | 'FREE_THRESHOLD'
+  | 'QUOTE_LATER'
+  | 'WEIGHT'
+  | 'DISTANCE'
+  | 'CARRIER_CALCULATED';
+
+export interface StoreFulfillmentSettings {
+  store_id: string;
+  enabled_methods: FulfillmentMethodType[];
+  default_method: FulfillmentMethodType;
+  fee_rule_type: ShippingFeeRuleType;
+  fixed_fee: number;
+  free_shipping_threshold?: number;
+  pickup_config?: {
+    store_name: string;
+    address: string;
+    business_hours?: string;
+    instructions?: string;
+  };
+  zones: ShippingZone[];
+}
+
+export interface OfferPaymentOverride {
+  mode: 'STORE_DEFAULT' | 'OFFER_OVERRIDE';
+  enabled_methods?: PaymentMethodType[];
+  custom_payment_account_id?: string;
+  deposit_type?: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  deposit_percentage?: number;
+  deposit_fixed_amount?: number;
+  pay_later_terms?: 'NET_7' | 'NET_15' | 'NET_30' | 'NET_45' | 'CUSTOM';
+  pay_later_days?: number;
+  pay_later_due_date_basis?: 'ORDER_CONFIRMATION' | 'DELIVERY' | 'INVOICE_DATE';
+}
+
+export interface OfferFulfillmentOverride {
+  mode: 'STORE_DEFAULT' | 'OFFER_OVERRIDE';
+  enabled_methods?: FulfillmentMethodType[];
+  default_method?: FulfillmentMethodType;
+  fee_rule_type?: ShippingFeeRuleType;
+  fixed_fee?: number;
+  free_shipping_threshold?: number;
+  zone_overrides?: Array<{ zone_id: string; fee: number }>;
+  pickup_instructions_override?: string;
+}
 
 export interface StorePublicSettings {
   show_logo: boolean;
@@ -333,6 +448,8 @@ export interface Offer {
     enable_cod?: boolean;
     enable_bank_transfer?: boolean;
   };
+  payment_override?: OfferPaymentOverride;
+  fulfillment_override?: OfferFulfillmentOverride;
   metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -526,6 +643,8 @@ export interface Order {
   total_amount: number;
   shipping_status?: ShippingStatus;
   shipping_snapshot?: OrderShippingSnapshot;
+  payment_snapshot?: OrderPaymentSnapshot;
+  fulfillment_snapshot?: OrderFulfillmentSnapshot;
   customer_notes?: string;
   internal_notes?: string;
   items?: OrderItem[];
@@ -614,6 +733,39 @@ export interface OrderShippingSnapshot {
   quote_notes?: string;
   quoted_at?: string;
   quoted_by?: string;
+}
+
+export interface OrderPaymentSnapshot {
+  method_type: PaymentMethodType;
+  method_name: string;
+  payment_status: PaymentStatus;
+  terms?: string;
+  deposit_type?: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  deposit_amount?: number;
+  remaining_amount?: number;
+  payment_due_date?: string;
+  due_date_basis?: string;
+  bank_account_snapshot?: {
+    bank_bin: string;
+    bank_name: string;
+    bank_short_name: string;
+    account_number: string;
+    account_name: string;
+  };
+  custom_instructions?: string;
+}
+
+export interface OrderFulfillmentSnapshot {
+  method_type: FulfillmentMethodType;
+  method_name: string;
+  fee_rule_type: ShippingFeeRuleType;
+  base_shipping_fee: number;
+  shipping_discount: number;
+  final_shipping_fee: number;
+  pickup_location?: string;
+  pickup_instructions?: string;
+  zone_name?: string;
+  estimated_delivery?: string;
 }
 
 export type PaymentMethod = 'BANK_TRANSFER' | 'COD' | 'CASH' | 'MOMO' | 'VNPAY' | 'OTHER';

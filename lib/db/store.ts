@@ -33,11 +33,17 @@ import {
   ShippingZone,
   OrderShippingSnapshot,
   ShippingStatus,
+  ActorPaymentAccount,
+  StorePaymentSettings,
+  StoreFulfillmentSettings,
+  PaymentMethodType,
+  FulfillmentMethodType,
 } from "@/types";
 
 import {
   INITIAL_ORGANIZATION,
   INITIAL_STORE,
+  INITIAL_PAYMENT_ACCOUNTS,
   INITIAL_CATEGORIES,
   INITIAL_COLLECTIONS,
   INITIAL_OFFERS,
@@ -81,6 +87,8 @@ import { BillingService } from "@/lib/billing/billing-service";
 import { EntitlementService } from "@/lib/billing/entitlement-service";
 
 import { ShippingCalculationService } from "@/lib/shipping/engine";
+import { PaymentSettingsService } from "@/lib/services/payment-settings-service";
+import { FulfillmentService } from "@/lib/services/fulfillment-service";
 
 import { 
   generateOrderNumber, 
@@ -118,6 +126,7 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: "commerce_notifications",
   SHIPPING_METHODS: "commerce_shipping_methods",
   SHIPPING_ZONES: "commerce_shipping_zones",
+  PAYMENT_ACCOUNTS: "commerce_payment_accounts",
   USER: "commerce_user",
   PASSKEYS: "commerce_passkeys",
   SESSION: "commerce_session",
@@ -233,6 +242,7 @@ export function useCommerceStore() {
   const [notifications, setNotificationsState] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
   const [shippingMethods, setShippingMethodsState] = useState<ShippingMethod[]>(INITIAL_SHIPPING_METHODS);
   const [shippingZones, setShippingZonesState] = useState<ShippingZone[]>(INITIAL_SHIPPING_ZONES);
+  const [paymentAccounts, setPaymentAccountsState] = useState<ActorPaymentAccount[]>(INITIAL_PAYMENT_ACCOUNTS);
   const [currentUser, setCurrentUserState] = useState<UserIdentity | null>(INITIAL_USER_IDENTITY);
   const [currentSession, setCurrentSessionState] = useState<AuthSession | null>(INITIAL_AUTH_SESSION);
   const [passkeys, setPasskeysState] = useState<PasskeyCredential[]>(INITIAL_PASSKEYS);
@@ -268,6 +278,7 @@ export function useCommerceStore() {
     setNotificationsState(getStored(STORAGE_KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS));
     setShippingMethodsState(getStored(STORAGE_KEYS.SHIPPING_METHODS, INITIAL_SHIPPING_METHODS));
     setShippingZonesState(getStored(STORAGE_KEYS.SHIPPING_ZONES, INITIAL_SHIPPING_ZONES));
+    setPaymentAccountsState(getStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, INITIAL_PAYMENT_ACCOUNTS));
     setCurrentUserState(getStored(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY));
     setCurrentSessionState(getStored(STORAGE_KEYS.SESSION, INITIAL_AUTH_SESSION));
     setPasskeysState(getStored(STORAGE_KEYS.PASSKEYS, INITIAL_PASSKEYS));
@@ -301,6 +312,7 @@ export function useCommerceStore() {
       setNotificationsState(getStored(STORAGE_KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS));
       setShippingMethodsState(getStored(STORAGE_KEYS.SHIPPING_METHODS, INITIAL_SHIPPING_METHODS));
       setShippingZonesState(getStored(STORAGE_KEYS.SHIPPING_ZONES, INITIAL_SHIPPING_ZONES));
+      setPaymentAccountsState(getStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, INITIAL_PAYMENT_ACCOUNTS));
       setCurrentUserState(getStored(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY));
       setCurrentSessionState(getStored(STORAGE_KEYS.SESSION, INITIAL_AUTH_SESSION));
       setPasskeysState(getStored(STORAGE_KEYS.PASSKEYS, INITIAL_PASSKEYS));
@@ -700,6 +712,79 @@ export function useCommerceStore() {
     return updatedStore;
   };
 
+  // PAYMENT ACCOUNT & STORE SETTINGS ACTIONS
+  const addPaymentAccount = (newAcc: Omit<ActorPaymentAccount, "id" | "created_at" | "updated_at">) => {
+    const accId = `acc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const isFirst = paymentAccounts.length === 0 || newAcc.is_default;
+    const current = isFirst ? paymentAccounts.map((a) => ({ ...a, is_default: false })) : [...paymentAccounts];
+    const account: ActorPaymentAccount = {
+      ...newAcc,
+      id: accId,
+      is_default: isFirst,
+      verification_status: "VERIFIED",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const updated = [account, ...current];
+    setPaymentAccountsState(updated);
+    setStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, updated);
+    return account;
+  };
+
+  const updatePaymentAccount = (id: string, updates: Partial<ActorPaymentAccount>) => {
+    const updated = paymentAccounts.map((a) =>
+      a.id === id ? { ...a, ...updates, updated_at: new Date().toISOString() } : a
+    );
+    setPaymentAccountsState(updated);
+    setStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, updated);
+  };
+
+  const deletePaymentAccount = (id: string) => {
+    const updated = paymentAccounts.filter((a) => a.id !== id);
+    setPaymentAccountsState(updated);
+    setStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, updated);
+  };
+
+  const setDefaultPaymentAccount = (id: string) => {
+    const updated = paymentAccounts.map((a) => ({
+      ...a,
+      is_default: a.id === id,
+      updated_at: new Date().toISOString(),
+    }));
+    setPaymentAccountsState(updated);
+    setStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, updated);
+
+    // Also update default account in store payment settings
+    if (store.advanced_payment_settings) {
+      updateStorePaymentSettings({
+        ...store.advanced_payment_settings,
+        default_payment_account_id: id,
+      });
+    }
+  };
+
+  const updateStorePaymentSettings = (settings: StorePaymentSettings) => {
+    const updatedStore: Store = {
+      ...store,
+      advanced_payment_settings: settings,
+      updated_at: new Date().toISOString(),
+    };
+    setStoreState(updatedStore);
+    setStored(STORAGE_KEYS.STORE, updatedStore);
+    return updatedStore;
+  };
+
+  const updateStoreFulfillmentSettings = (settings: StoreFulfillmentSettings) => {
+    const updatedStore: Store = {
+      ...store,
+      advanced_fulfillment_settings: settings,
+      updated_at: new Date().toISOString(),
+    };
+    setStoreState(updatedStore);
+    setStored(STORAGE_KEYS.STORE, updatedStore);
+    return updatedStore;
+  };
+
   // REQUEST & RFQ ACTIONS
   const createRequest = (newReq: Omit<RequestRFQ, "id" | "request_number" | "created_at" | "updated_at">) => {
     const reqId = `req-${Date.now()}`;
@@ -1031,9 +1116,10 @@ export function useCommerceStore() {
       variant?: OfferVariant;
       quantity: number;
     }>;
-    payment_method: "BANK_TRANSFER" | "COD" | "CASH";
+    payment_method: string;
     customer_notes?: string;
     shipping_method_id?: string;
+    fulfillment_method_type?: FulfillmentMethodType;
   }) => {
     const orderNumber = generateOrderNumber();
     const orderId = `order-${Date.now()}`;
@@ -1091,16 +1177,43 @@ export function useCommerceStore() {
     const primaryOffer = orderData.items[0]?.offer;
     const customBankSettings = primaryOffer?.payment_settings;
 
+    // Resolve Payment Method Type
+    const chosenMethod = (orderData.payment_method === "BANK_TRANSFER" ? "VIETQR" : orderData.payment_method) as PaymentMethodType;
+    const effectivePayment = PaymentSettingsService.getEffectivePaymentMethods(store, primaryOffer, paymentAccounts);
+    const activeAccount = effectivePayment.active_account;
+
+    // Generate Immutable Payment Snapshot
+    const paymentSnapshot = PaymentSettingsService.createOrderPaymentSnapshot(
+      chosenMethod,
+      totalAmount,
+      activeAccount,
+      primaryOffer?.payment_override
+    );
+
+    // Generate Immutable Fulfillment Snapshot
+    const chosenFulfillmentMethod: FulfillmentMethodType = orderData.fulfillment_method_type || (isQuoteLater ? "SHIPPING_QUOTE_LATER" : "DELIVERY");
+    const fulfillmentSnapshot = FulfillmentService.createOrderFulfillmentSnapshot(
+      chosenFulfillmentMethod,
+      store,
+      primaryOffer,
+      totalAmount,
+      orderData.shipping_address?.province
+    );
+
     const newPayment: Payment = {
       id: `pay-${Date.now()}`,
       organization_id: organization.id,
       order_id: orderId,
-      payment_method: orderData.payment_method,
-      payment_status: isQuoteLater ? "PENDING" : (orderData.payment_method === "COD" ? "COD_PENDING" : "UNPAID"),
+      payment_method: orderData.payment_method as any,
+      payment_status: isQuoteLater ? "PENDING" : (chosenMethod === "COD" || chosenMethod === "PAY_LATER" ? "COD_PENDING" : "UNPAID"),
       amount: totalAmount,
       currency: "VND",
       provider: "VIETQR",
-      qr_code_url: !isQuoteLater ? generateVietQRUrl(totalAmount, orderNumber, customBankSettings) : undefined,
+      qr_code_url: (!isQuoteLater && paymentSnapshot?.bank_account_snapshot) ? generateVietQRUrl(totalAmount, orderNumber, {
+        bank_bin: paymentSnapshot.bank_account_snapshot.bank_bin,
+        bank_account_no: paymentSnapshot.bank_account_snapshot.account_number,
+        bank_account_name: paymentSnapshot.bank_account_snapshot.account_name,
+      }) : (!isQuoteLater ? generateVietQRUrl(totalAmount, orderNumber, customBankSettings) : undefined),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -1123,6 +1236,8 @@ export function useCommerceStore() {
       total_amount: totalAmount,
       shipping_status: isQuoteLater ? "QUOTING" : shippingSnapshot.shipping_status,
       shipping_snapshot: shippingSnapshot,
+      payment_snapshot: paymentSnapshot,
+      fulfillment_snapshot: fulfillmentSnapshot,
       customer_notes: orderData.customer_notes,
       items: orderItems,
       payment: newPayment,
@@ -1916,6 +2031,7 @@ export function useCommerceStore() {
     notifications,
     shippingMethods,
     shippingZones,
+    paymentAccounts,
     currentUser,
     currentSession,
     passkeys,
@@ -1925,6 +2041,12 @@ export function useCommerceStore() {
     // Actions
     updateOrganization,
     updateStore,
+    addPaymentAccount,
+    updatePaymentAccount,
+    deletePaymentAccount,
+    setDefaultPaymentAccount,
+    updateStorePaymentSettings,
+    updateStoreFulfillmentSettings,
     updateShippingSettings,
     addShippingMethod,
     updateShippingMethod,

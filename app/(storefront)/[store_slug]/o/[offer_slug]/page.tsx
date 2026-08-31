@@ -40,8 +40,10 @@ import { formatVND, getPhoneValidationError } from "@/lib/utils";
 import { CartProvider, CartDrawer, useCart } from "@/components/storefront/cart-drawer";
 import { QRModal } from "@/components/shared/qr-modal";
 import { CopyButton } from "@/components/shared/copy-button";
-import { Offer, OfferVariant, OfferItem } from "@/types";
+import { Offer, OfferVariant, OfferItem, PaymentMethodType, FulfillmentMethodType } from "@/types";
 import { ShippingCalculationService } from "@/lib/shipping/engine";
+import { PaymentSettingsService } from "@/lib/services/payment-settings-service";
+import { FulfillmentService } from "@/lib/services/fulfillment-service";
 import { ProductAvailabilityService } from "@/lib/inventory/availability";
 import { SellerMiniCard } from "@/components/storefront/seller-mini-card";
 import { SellerTrustSummary } from "@/components/storefront/seller-trust-summary";
@@ -57,7 +59,7 @@ function DirectOfferContent() {
   const storeSlug = (params?.store_slug as string) || "2k-store";
   const offerSlug = params?.offer_slug as string;
 
-  const { offers, store, organization, products, createOrder, shippingMethods, shippingZones } = useCommerceStore();
+  const { offers, store, organization, products, createOrder, shippingMethods, shippingZones, paymentAccounts } = useCommerceStore();
   const { addToCart } = useCart();
 
   const offer = offers.find((o) => o.slug === offerSlug);
@@ -94,7 +96,7 @@ function DirectOfferContent() {
   const [deliveryLocation, setDeliveryLocation] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
   const [selectedShippingMethodId, setSelectedShippingMethodId] = useState<string | undefined>(undefined);
-  const [paymentMethod, setPaymentMethod] = useState<"BANK_TRANSFER" | "CASH">("BANK_TRANSFER");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>("VIETQR");
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
   // GPS Geolocation State
@@ -1240,38 +1242,88 @@ function DirectOfferContent() {
                 </div>
               )}
 
-              <div>
-                <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-2">
-                  Phương thức thanh toán
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("BANK_TRANSFER")}
-                    className={`p-3 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
-                      paymentMethod === "BANK_TRANSFER"
-                        ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20 font-bold"
-                        : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400"
-                    }`}
-                  >
-                    <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="text-xs">Thanh toán ngay qua chuyển khoản/QR</span>
-                  </button>
+              {/* Dynamic Payment Method Resolution */}
+              {(() => {
+                const effectivePayment = PaymentSettingsService.getEffectivePaymentMethods(store, offer, paymentAccounts);
+                const activeMethods = effectivePayment.methods;
+                const depositMethod = activeMethods.find((m) => m.type === "DEPOSIT");
+                const payLaterMethod = activeMethods.find((m) => m.type === "PAY_LATER");
 
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("CASH")}
-                    className={`p-3 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
-                      paymentMethod === "CASH"
-                        ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20 font-bold"
-                        : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400"
-                    }`}
-                  >
-                    <Building className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span className="text-xs">Thanh toán khi nhận hàng</span>
-                  </button>
-                </div>
-              </div>
+                const depositCalc = paymentMethod === "DEPOSIT" && depositMethod?.deposit
+                  ? PaymentSettingsService.calculateDepositAmount(
+                      finalMenuGrandTotal,
+                      depositMethod.deposit.type,
+                      depositMethod.deposit.percentage,
+                      depositMethod.deposit.fixed_amount
+                    )
+                  : null;
+
+                const dueDate = paymentMethod === "PAY_LATER" && payLaterMethod?.pay_later
+                  ? PaymentSettingsService.calculatePaymentDueDate(
+                      new Date().toISOString(),
+                      (payLaterMethod.pay_later.terms as any) || "NET_30",
+                      payLaterMethod.pay_later.days || 30
+                    )
+                  : null;
+
+                return (
+                  <div className="space-y-2">
+                    <label className="block font-bold text-neutral-700 dark:text-neutral-300">
+                      Phương thức thanh toán ({activeMethods.length} lựa chọn)
+                    </label>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {activeMethods.map((m) => {
+                        const isSelected = paymentMethod === m.type;
+                        return (
+                          <button
+                            key={m.type}
+                            type="button"
+                            onClick={() => setPaymentMethod(m.type)}
+                            className={`p-3 rounded-xl border flex items-center gap-2 cursor-pointer transition-all text-left ${
+                              isSelected
+                                ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20 font-bold"
+                                : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400"
+                            }`}
+                          >
+                            <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <div className="min-w-0">
+                              <span className="text-xs block font-bold">
+                                {m.name}
+                              </span>
+                              <span className="text-[10px] text-neutral-400 block truncate">
+                                {m.description || "Thanh toán đơn hàng"}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Deposit info banner */}
+                    {depositCalc && (
+                      <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-xs space-y-1">
+                        <div className="flex justify-between font-bold text-blue-900 dark:text-blue-200">
+                          <span>Số tiền đặt cọc cần thanh toán ngay:</span>
+                          <span className="text-blue-600 dark:text-blue-400">{formatVND(depositCalc.depositPayable)}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] text-neutral-500">
+                          <span>Số tiền còn lại thanh toán khi nhận hàng:</span>
+                          <span>{formatVND(depositCalc.remainingBalance)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Pay later info banner */}
+                    {dueDate && (
+                      <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between">
+                        <span>Hạn thanh toán công nợ:</span>
+                        <span className="font-bold">{new Date(dueDate).toLocaleDateString("vi-VN")}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Order Total Breakdown */}
               <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 space-y-1.5 text-xs">

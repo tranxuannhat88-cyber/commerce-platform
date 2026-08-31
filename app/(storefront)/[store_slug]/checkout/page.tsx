@@ -22,13 +22,15 @@ import { useCommerceStore } from "@/lib/db/store";
 import { formatVND } from "@/lib/utils";
 import { CartProvider, useCart } from "@/components/storefront/cart-drawer";
 import { ShippingCalculationService } from "@/lib/shipping/engine";
+import { PaymentSettingsService } from "@/lib/services/payment-settings-service";
 import { ProductAvailabilityService } from "@/lib/inventory/availability";
+import { PaymentMethodType } from "@/types";
 
 function CheckoutContent() {
   const params = useParams();
   const router = useRouter();
   const storeSlug = (params?.store_slug as string) || "2k-store";
-  const { store, createOrder, shippingMethods, shippingZones } = useCommerceStore();
+  const { store, createOrder, shippingMethods, shippingZones, paymentAccounts } = useCommerceStore();
   const { cart, subtotal, clearCart, removeFromCart } = useCart();
 
   // Availability Revalidation
@@ -44,7 +46,7 @@ function CheckoutContent() {
   const [shippingAddress, setShippingAddress] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
   const [selectedShippingMethodId, setSelectedShippingMethodId] = useState<string | undefined>(undefined);
-  const [paymentMethod, setPaymentMethod] = useState<"BANK_TRANSFER" | "COD">("BANK_TRANSFER");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>("VIETQR");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLocatingGPS, setIsLocatingGPS] = useState(false);
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number; map_url: string } | null>(null);
@@ -372,62 +374,85 @@ function CheckoutContent() {
                 <span>{shippingCalculation.requires_shipping ? "3" : "2"}. Phương thức thanh toán</span>
               </h3>
 
-              <div className="space-y-3">
-                <label
-                  onClick={() => setPaymentMethod("BANK_TRANSFER")}
-                  className={`p-4 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
-                    paymentMethod === "BANK_TRANSFER"
-                      ? "border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 ring-2 ring-blue-500/20"
-                      : "border-neutral-200 dark:border-neutral-700"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full border-2 border-blue-600 flex items-center justify-center">
-                      {paymentMethod === "BANK_TRANSFER" && (
-                        <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
-                        Thanh toán ngay qua chuyển khoản/QR (Khuyên dùng)
-                      </p>
-                      <p className="text-[11px] text-neutral-500">
-                        Quét mã QR tự động điền số tiền & nội dung, xác nhận tức thì
-                      </p>
-                    </div>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                    Tức thì
-                  </span>
-                </label>
+              {(() => {
+                const primaryOffer = cart[0]?.offer;
+                const effectivePayment = PaymentSettingsService.getEffectivePaymentMethods(store, primaryOffer, paymentAccounts);
+                const activeMethods = effectivePayment.methods;
+                const depositMethod = activeMethods.find((m) => m.type === "DEPOSIT");
+                const payLaterMethod = activeMethods.find((m) => m.type === "PAY_LATER");
 
-                {store.payment_settings?.enable_cod && (
-                  <label
-                    onClick={() => setPaymentMethod("COD")}
-                    className={`p-4 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
-                      paymentMethod === "COD"
-                        ? "border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 ring-2 ring-blue-500/20"
-                        : "border-neutral-200 dark:border-neutral-700"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded-full border-2 border-blue-600 flex items-center justify-center">
-                        {paymentMethod === "COD" && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
-                          Thanh toán khi nhận hàng (COD)
-                        </p>
-                        <p className="text-[11px] text-neutral-500">
-                          Kiểm tra hàng và trả tiền mặt cho bưu tá
-                        </p>
-                      </div>
+                const depositCalc = paymentMethod === "DEPOSIT" && depositMethod?.deposit
+                  ? PaymentSettingsService.calculateDepositAmount(
+                      grandTotal,
+                      depositMethod.deposit.type,
+                      depositMethod.deposit.percentage,
+                      depositMethod.deposit.fixed_amount
+                    )
+                  : null;
+
+                const dueDate = paymentMethod === "PAY_LATER" && payLaterMethod?.pay_later
+                  ? PaymentSettingsService.calculatePaymentDueDate(
+                      new Date().toISOString(),
+                      (payLaterMethod.pay_later.terms as any) || "NET_30",
+                      payLaterMethod.pay_later.days || 30
+                    )
+                  : null;
+
+                return (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {activeMethods.map((m) => {
+                        const isSelected = paymentMethod === m.type;
+                        return (
+                          <label
+                            key={m.type}
+                            onClick={() => setPaymentMethod(m.type)}
+                            className={`p-4 rounded-2xl border flex items-start gap-3 cursor-pointer transition-all ${
+                              isSelected
+                                ? "border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 ring-2 ring-blue-500/20 font-bold"
+                                : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-300"
+                            }`}
+                          >
+                            <div className="w-5 h-5 rounded-full border-2 border-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+                              {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />}
+                            </div>
+                            <div className="space-y-0.5 min-w-0">
+                              <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
+                                {m.name}
+                              </p>
+                              <p className="text-[11px] text-neutral-500">
+                                {m.description || "Thanh toán cho đơn hàng"}
+                              </p>
+                            </div>
+                          </label>
+                        );
+                      })}
                     </div>
-                  </label>
-                )}
-              </div>
+
+                    {/* Deposit info banner */}
+                    {depositCalc && (
+                      <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-xs space-y-1">
+                        <div className="flex justify-between font-bold text-blue-900 dark:text-blue-200">
+                          <span>Số tiền đặt cọc cần thanh toán ngay:</span>
+                          <span className="text-blue-600 dark:text-blue-400">{formatVND(depositCalc.depositPayable)}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] text-neutral-500">
+                          <span>Số tiền còn lại thanh toán khi nhận hàng:</span>
+                          <span>{formatVND(depositCalc.remainingBalance)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Pay later info banner */}
+                    {dueDate && (
+                      <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between">
+                        <span>Hạn thanh toán công nợ:</span>
+                        <span className="font-bold">{new Date(dueDate).toLocaleDateString("vi-VN")}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
