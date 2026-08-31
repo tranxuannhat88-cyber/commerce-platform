@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -160,6 +160,32 @@ function OffersContent() {
   const [enableCustomCover, setEnableCustomCover] = useState(false);
   const [customCoverImage, setCustomCoverImage] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Dynamic available categories from products, offers, and store defaults
+  const availableCategories = useMemo(() => {
+    const set = new Set<string>();
+    const defaults = [
+      "Chung",
+      "Thiết bị & Máy móc",
+      "Vật tư & Linh kiện",
+      "Gia công cơ khí",
+      "Dịch vụ kỹ thuật",
+      "Điện tử & Tự động hóa",
+      "Nội thất xưởng",
+      "Dụng cụ & Đồ nghề",
+    ];
+    defaults.forEach((c) => set.add(c));
+    products.forEach((p) => {
+      if (p.category && p.category.trim()) set.add(p.category.trim());
+    });
+    offers.forEach((o) => {
+      if (o.category_id && o.category_id.trim()) set.add(o.category_id.trim());
+      o.items?.forEach((it) => {
+        if (it.category && it.category.trim()) set.add(it.category.trim());
+      });
+    });
+    return Array.from(set);
+  }, [products, offers]);
 
   // Dynamic Product / Service Items List
   const [catalogItemsList, setCatalogItemsList] = useState<FormItemState[]>([createDefaultItem()]);
@@ -1401,25 +1427,22 @@ function OffersContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                      Danh mục phân loại
+                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1">
+                      <Tag className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Danh mục phân loại</span>
                     </label>
                     <input
                       type="text"
-                      list="offer-categories-datalist"
-                      placeholder="vd: Thiết bị xưởng, Cơ khí..."
+                      list="dynamic-categories-datalist"
+                      placeholder="Chọn hoặc nhập phân loại mới..."
                       value={formCategory}
                       onChange={(e) => setFormCategory(e.target.value)}
                       className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-semibold focus:ring-2 focus:ring-blue-500"
                     />
-                    <datalist id="offer-categories-datalist">
-                      <option value="Chung" />
-                      <option value="Thiết bị & Máy móc" />
-                      <option value="Vật tư & Linh kiện" />
-                      <option value="Gia công cơ khí" />
-                      <option value="Dịch vụ kỹ thuật" />
-                      <option value="Điện tử & Tự động hóa" />
-                      <option value="Nội thất xưởng" />
+                    <datalist id="dynamic-categories-datalist">
+                      {availableCategories.map((cat) => (
+                        <option key={cat} value={cat} />
+                      ))}
                     </datalist>
                   </div>
                 </div>
@@ -1558,25 +1581,31 @@ function OffersContent() {
                         </div>
 
                         {/* Description & Category Row */}
-                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800">
-                          <div className="sm:col-span-3">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                          <div className="flex-1">
                             <input
                               type="text"
                               placeholder="Mô tả ngắn gọn (thông số kỹ thuật, quy cách, kích thước, bảo hành...)"
                               value={item.description}
                               onChange={(e) => handleUpdateCatalogItemField(idx, "description", e.target.value)}
-                              className="w-full px-3 py-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800 border text-[11px] text-neutral-700 dark:text-neutral-300"
+                              className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border text-xs text-neutral-700 dark:text-neutral-300 placeholder:text-neutral-400 focus:ring-2 focus:ring-emerald-500"
                             />
                           </div>
-                          <div>
-                            <input
-                              type="text"
-                              list="offer-categories-datalist"
-                              placeholder="Phân loại (vd: Cơ khí...)"
-                              value={item.category || ""}
-                              onChange={(e) => handleUpdateCatalogItemField(idx, "category", e.target.value)}
-                              className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800 border text-[11px] text-neutral-600 dark:text-neutral-300"
-                            />
+                          <div className="flex items-center gap-1.5 shrink-0 bg-neutral-50 dark:bg-neutral-800/80 p-1 rounded-xl border border-neutral-200 dark:border-neutral-700">
+                            <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 pl-2 whitespace-nowrap flex items-center gap-1">
+                              <Tag className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Phân loại:</span>
+                            </span>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                list="dynamic-categories-datalist"
+                                placeholder="Chọn hoặc nhập mới..."
+                                value={item.category || ""}
+                                onChange={(e) => handleUpdateCatalogItemField(idx, "category", e.target.value)}
+                                className="w-44 sm:w-52 px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-xs font-semibold text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                              />
+                            </div>
                           </div>
                         </div>
 
@@ -2519,25 +2548,31 @@ function OffersContent() {
                   </div>
 
                   {/* Description & Category Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800">
-                    <div className="sm:col-span-3">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                    <div className="flex-1">
                       <input
                         type="text"
                         placeholder="Mô tả ngắn gọn (thông số kỹ thuật, quy cách, kích thước, bảo hành...)"
                         value={libProdItem.description}
                         onChange={(e) => handleUpdateLibProdField("description", e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800 border text-[11px] text-neutral-700 dark:text-neutral-300"
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border text-xs text-neutral-700 dark:text-neutral-300 placeholder:text-neutral-400 focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
-                    <div>
-                      <input
-                        type="text"
-                        list="offer-categories-datalist"
-                        placeholder="Phân loại (vd: Cơ khí...)"
-                        value={libProdItem.category || ""}
-                        onChange={(e) => handleUpdateLibProdField("category", e.target.value)}
-                        className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800 border text-[11px] text-neutral-600 dark:text-neutral-300"
-                      />
+                    <div className="flex items-center gap-1.5 shrink-0 bg-neutral-50 dark:bg-neutral-800/80 p-1 rounded-xl border border-neutral-200 dark:border-neutral-700">
+                      <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 pl-2 whitespace-nowrap flex items-center gap-1">
+                        <Tag className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Phân loại:</span>
+                      </span>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          list="dynamic-categories-datalist"
+                          placeholder="Chọn hoặc nhập mới..."
+                          value={libProdItem.category || ""}
+                          onChange={(e) => handleUpdateLibProdField("category", e.target.value)}
+                          className="w-44 sm:w-52 px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-xs font-semibold text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:ring-2 focus:ring-purple-500 shadow-2xs"
+                        />
+                      </div>
                     </div>
                   </div>
 
