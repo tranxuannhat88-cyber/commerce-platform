@@ -32,6 +32,7 @@ export function PublicStoreHero({
   accentColor = "#3b82f6",
 }: PublicStoreHeroProps) {
   const [copied, setCopied] = React.useState(false);
+  const [logoLoadError, setLogoLoadError] = React.useState(false);
 
   const handleShare = async () => {
     const storeUrl = AppUrlService.getStoreUrl(storeSlug);
@@ -90,10 +91,11 @@ export function PublicStoreHero({
         <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 -mt-10 sm:-mt-14 mb-4">
           {/* Avatar / Logo */}
           <div className="relative w-20 h-20 sm:w-28 sm:h-28 rounded-2xl sm:rounded-3xl bg-white dark:bg-neutral-900 p-1.5 shadow-lg border-2 border-white dark:border-neutral-800 shrink-0 overflow-hidden flex items-center justify-center">
-            {logoUrl ? (
+            {logoUrl && !logoLoadError ? (
               <img
                 src={logoUrl}
                 alt={storeName}
+                onError={() => setLogoLoadError(true)}
                 className="w-full h-full object-contain rounded-xl sm:rounded-2xl"
               />
             ) : (

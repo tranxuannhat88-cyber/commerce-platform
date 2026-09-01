@@ -39,9 +39,12 @@ export function StoreLogoSection({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageObjRef = useRef<HTMLImageElement | null>(null);
 
+  const [imgError, setImgError] = useState(false);
+
   useEffect(() => {
     setLogoUrl(initialLogoUrl || "");
     setLogoAssetId(initialLogoAssetId || "");
+    setImgError(false);
   }, [initialLogoUrl, initialLogoAssetId]);
 
   // Deterministic Initials Fallback
@@ -255,10 +258,11 @@ export function StoreLogoSection({
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
         {/* LOGO PREVIEW BOX (1:1 CONTAINER) */}
         <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/60 p-1.5 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
-          {logoUrl ? (
+          {logoUrl && !imgError ? (
             <img
               src={logoUrl}
               alt={storeName || "Store Logo"}
+              onError={() => setImgError(true)}
               className="w-full h-full object-contain rounded-xl"
             />
           ) : (
@@ -267,7 +271,7 @@ export function StoreLogoSection({
                 {getInitials(storeName)}
               </span>
               <span className="text-[9px] uppercase font-semibold tracking-wider text-neutral-400 mt-1">
-                Chưa có logo
+                {imgError ? "Lỗi tải ảnh" : "Chưa có logo"}
               </span>
             </div>
           )}

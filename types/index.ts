@@ -1107,6 +1107,7 @@ export interface MediaAsset {
   mime_type: string;
   file_size: number;
   file_extension: string;
+  public_url?: string;
   width?: number;
   height?: number;
   duration_seconds?: number;

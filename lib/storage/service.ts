@@ -158,6 +158,9 @@ export class MediaStorageService {
       uploaded_by_user_id: user_id,
       uploaded_by_guest_identity_id: guest_identity_id,
       upload_intent_token,
+      public_url: STORAGE_CONFIG.r2.accessKeyId
+        ? `${STORAGE_CONFIG.cdn.publicBaseUrl}/${object_key}`
+        : `/uploads/${original_file_name.split('/').pop()?.split('\\').pop() || object_key.split('/').pop()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
