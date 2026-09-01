@@ -73,13 +73,13 @@ export default function StoreSettingsPage() {
 
   // Synchronize with initial store load without overwriting active edits
   useEffect(() => {
-    if (store) {
-      if (store.store_name) setStoreName(store.store_name);
-      if (store.slug) setSlug(store.slug);
-      if (store.description) setDescription(store.description);
-      if (store.phone) setPhone(store.phone);
-      if (store.email) setEmail(store.email);
-      if (store.address) setAddress(store.address);
+    if (store && !isLoadedOnce) {
+      setStoreName(store.store_name || "");
+      setSlug(store.slug || "");
+      setDescription(store.description || "");
+      setPhone(store.phone || "");
+      setEmail(store.email || "");
+      setAddress(store.address || "");
       if (store.advanced_payment_settings) {
         setPaymentSettings(store.advanced_payment_settings);
       }
@@ -88,7 +88,7 @@ export default function StoreSettingsPage() {
       }
       setIsLoadedOnce(true);
     }
-  }, [store.id]);
+  }, [store, isLoadedOnce]);
 
   const handleStoreNameChange = (val: string) => {
     setStoreName(val);
