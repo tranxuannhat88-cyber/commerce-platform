@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     const db = ServerDbManager.getDb();
 
     // 1. Sync Store
-    if (store && store.slug && store.slug !== "auto") {
+    if (store && (store.store_name || store.id || store.slug)) {
       ServerDbManager.upsertStore(store as Store, sellerProfile);
     }
 

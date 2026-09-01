@@ -47,16 +47,8 @@ export class StorefrontDataResolver {
     if (!storeSlug) return null;
 
     const db = ServerDbManager.getDb();
-    const clean = storeSlug.trim().toLowerCase();
-
-    // 1. Resolve Store
-    const store = db.stores.find((s) => s.id === storeSlug || s.slug?.toLowerCase() === clean);
+    const store = ServerDbManager.getStoreBySlug(storeSlug);
     if (!store) {
-      // Check if auto/single store exists in mock or internal db
-      const firstStore = db.stores[0];
-      if (clean === "auto" && firstStore) {
-        return this.resolveFromStoreObject(firstStore, db);
-      }
       return null;
     }
 

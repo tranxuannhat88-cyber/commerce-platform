@@ -66,12 +66,50 @@ function ensureDataDir() {
 
 function getInitialDb(): ServerDatabase {
   return {
-    stores: [],
+    stores: [
+      {
+        id: "store_invamax_workspace",
+        organization_id: "org_invamax",
+        owner_actor_id: "usr_owner",
+        owner_actor_type: "ORGANIZATION",
+        store_name: "INVAMAX workspace",
+        slug: "invamax-workspace",
+        logo_url: "",
+        cover_image_url: "",
+        description: "",
+        phone: "",
+        email: "",
+        address: "",
+        is_active: true,
+        payment_settings: {
+          enable_cod: true,
+          enable_bank_transfer: true,
+        },
+        shipping_settings: {
+          shipping_enabled: true,
+          default_fixed_fee: 30000,
+          free_shipping_threshold: 500000,
+          enable_store_pickup: true,
+          enable_quote_later: true,
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ],
     offers: [],
     products: [],
     paymentAccounts: [],
     orders: [],
-    organizations: [],
+    organizations: [
+      {
+        id: "org_invamax",
+        name: "INVAMAX workspace",
+        slug: "invamax-workspace",
+        org_type: "COMPANY",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ],
     template_licenses: [],
     sellerProfiles: {},
     reviews: [],
@@ -98,13 +136,14 @@ export class ServerDbManager {
       try {
         const raw = fs.readFileSync(DB_FILE, "utf-8");
         const parsed = JSON.parse(raw) as ServerDatabase;
+        const initial = getInitialDb();
         memoryDb = {
-          stores: parsed.stores || [],
+          stores: (parsed.stores && parsed.stores.length > 0) ? parsed.stores : initial.stores,
           offers: parsed.offers || [],
           products: parsed.products || [],
           paymentAccounts: parsed.paymentAccounts || [],
           orders: parsed.orders || [],
-          organizations: parsed.organizations || [],
+          organizations: (parsed.organizations && parsed.organizations.length > 0) ? parsed.organizations : initial.organizations,
           template_licenses: parsed.template_licenses || [],
           sellerProfiles: parsed.sellerProfiles || {},
           reviews: parsed.reviews || [],
@@ -151,14 +190,31 @@ export class ServerDbManager {
     const cleanSlug = slug.trim().toLowerCase();
     const slugified = slugify(slug);
 
-    const found = db.stores.find((s) =>
-      s.slug?.toLowerCase() === cleanSlug ||
-      s.id === slug ||
-      (s.store_name && slugify(s.store_name) === slugified) ||
-      (s.slug && slugify(s.slug) === slugified)
-    );
+    const found = db.stores.find((s) => {
+      if (!s) return false;
+      const sSlug = (s.slug || "").trim().toLowerCase();
+      const sNameSlug = slugify(s.store_name || "");
+      const sId = (s.id || "").trim().toLowerCase();
 
-    return found || db.stores[0] || null;
+      return (
+        sSlug === cleanSlug ||
+        sId === cleanSlug ||
+        sNameSlug === slugified ||
+        sNameSlug === cleanSlug ||
+        slugify(sSlug) === slugified ||
+        (s.organization_id && s.organization_id.toLowerCase() === cleanSlug) ||
+        (s.owner_actor_id && s.owner_actor_id.toLowerCase() === cleanSlug)
+      );
+    });
+
+    if (found) return found;
+
+    // If requested is "invamax-workspace" or "auto" and we have a store in db
+    if ((cleanSlug === "invamax-workspace" || cleanSlug === "auto") && db.stores.length > 0) {
+      return db.stores[0];
+    }
+
+    return null;
   }
 
   public static getSellerProfile(storeIdOrActorId?: string): ServerSellerProfile | undefined {
@@ -181,25 +237,39 @@ export class ServerDbManager {
 
   public static upsertStore(store: Store, sellerProfile?: ServerSellerProfile): Store {
     const db = this.getDb();
-    const existingIndex = db.stores.findIndex((s) => s.id === store.id || s.slug === store.slug);
+    const cleanSlug = (store.slug && store.slug !== "auto") 
+      ? store.slug.trim().toLowerCase() 
+      : (store.store_name ? slugify(store.store_name) : "invamax-workspace");
+
+    const canonicalStore: Store = {
+      ...store,
+      slug: cleanSlug,
+      updated_at: new Date().toISOString(),
+    };
+
+    const existingIndex = db.stores.findIndex((s) => 
+      (store.id && s.id === store.id) || 
+      (s.slug && s.slug.toLowerCase() === cleanSlug) ||
+      (store.organization_id && s.organization_id === store.organization_id)
+    );
 
     if (existingIndex >= 0) {
-      db.stores[existingIndex] = { ...db.stores[existingIndex], ...store, updated_at: new Date().toISOString() };
+      db.stores[existingIndex] = { ...db.stores[existingIndex], ...canonicalStore };
     } else {
-      db.stores.push({ ...store, created_at: store.created_at || new Date().toISOString() });
+      db.stores.push({ ...canonicalStore, created_at: store.created_at || new Date().toISOString() });
     }
 
     if (!db.sellerProfiles) {
       db.sellerProfiles = {};
     }
     if (sellerProfile) {
-      if (store.id) db.sellerProfiles[store.id] = sellerProfile;
-      if (store.owner_actor_id) db.sellerProfiles[store.owner_actor_id] = sellerProfile;
+      if (canonicalStore.id) db.sellerProfiles[canonicalStore.id] = sellerProfile;
+      if (canonicalStore.owner_actor_id) db.sellerProfiles[canonicalStore.owner_actor_id] = sellerProfile;
       if (sellerProfile.actor_id) db.sellerProfiles[sellerProfile.actor_id] = sellerProfile;
     }
 
     this.saveDb(db);
-    return store;
+    return canonicalStore;
   }
 
   // =========================================================================

@@ -1,10 +1,48 @@
 {
-  "stores": [],
+  "stores": [
+    {
+      "id": "store_invamax_workspace",
+      "organization_id": "org_invamax",
+      "owner_actor_id": "usr_owner",
+      "owner_actor_type": "ORGANIZATION",
+      "store_name": "INVAMAX workspace",
+      "slug": "invamax-workspace",
+      "logo_url": "",
+      "cover_image_url": "",
+      "description": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "is_active": true,
+      "payment_settings": {
+        "enable_cod": true,
+        "enable_bank_transfer": true
+      },
+      "shipping_settings": {
+        "shipping_enabled": true,
+        "default_fixed_fee": 30000,
+        "free_shipping_threshold": 500000,
+        "enable_store_pickup": true,
+        "enable_quote_later": true
+      },
+      "created_at": "2026-09-01T00:00:00.000Z",
+      "updated_at": "2026-09-01T00:00:00.000Z"
+    }
+  ],
   "offers": [],
   "products": [],
   "paymentAccounts": [],
   "orders": [],
-  "organizations": [],
+  "organizations": [
+    {
+      "id": "org_invamax",
+      "name": "INVAMAX workspace",
+      "slug": "invamax-workspace",
+      "org_type": "COMPANY",
+      "created_at": "2026-09-01T00:00:00.000Z",
+      "updated_at": "2026-09-01T00:00:00.000Z"
+    }
+  ],
   "template_licenses": [],
   "sellerProfiles": {},
   "reviews": [],

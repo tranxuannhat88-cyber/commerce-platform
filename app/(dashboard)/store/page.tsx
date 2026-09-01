@@ -218,7 +218,7 @@ export default function StoreSettingsPage() {
           </button>
           <CopyButton text={storeUrl} label="Copy Link Cửa Hàng" className="py-2 text-xs" />
           <Link
-            href={`/${slug}`}
+            href={`/s/${slug || "invamax-workspace"}`}
             target="_blank"
             title="Xem trang cửa hàng giống như khách hàng nhìn thấy."
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors"
