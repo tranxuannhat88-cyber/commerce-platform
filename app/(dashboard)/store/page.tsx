@@ -351,7 +351,6 @@ export default function StoreSettingsPage() {
                   <input
                     type="text"
                     required
-                    placeholder="VD: Cửa Hàng Thiết Bị 2K"
                     value={storeName}
                     onChange={(e) => handleStoreNameChange(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-bold"
@@ -384,7 +383,6 @@ export default function StoreSettingsPage() {
                     rows={2}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Mô tả tóm tắt về năng lực, sản phẩm kinh doanh hoặc giải pháp của doanh nghiệp..."
                     className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"
                   />
                 </div>
@@ -397,7 +395,6 @@ export default function StoreSettingsPage() {
                     type="text"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="VD: 0988 123 456"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"
                   />
                   <p className="text-[10px] text-neutral-400 mt-1">
@@ -413,7 +410,6 @@ export default function StoreSettingsPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="VD: contact@congty2k.vn"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"
                   />
                   <p className="text-[10px] text-neutral-400 mt-1">
@@ -429,7 +425,6 @@ export default function StoreSettingsPage() {
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    placeholder="VD: Tòa nhà 2K Tower, 123 Đường Công Nghệ, Q. Cầu Giấy, Hà Nội"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"
                   />
                   <p className="text-[10px] text-neutral-400 mt-1">
@@ -965,7 +960,6 @@ export default function StoreSettingsPage() {
                       </label>
                       <textarea
                         rows={2}
-                        placeholder="Số nhà, tên đường, thời gian mở cửa nhận hàng..."
                         value={fulfillmentSettings.pickup_config?.address || address || ""}
                         onChange={(e) =>
                           setFulfillmentSettings({

@@ -1799,7 +1799,6 @@ function OffersContent() {
                     </label>
                     <input
                       type="text"
-                      placeholder="Ví dụ: Bàn thao tác cơ khí chuyên dụng (hoặc Bảng Giá Thiết Bị Xưởng 2K)"
                       value={formName}
                       onChange={(e) => setFormName(e.target.value)}
                       className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-bold focus:ring-2 focus:ring-blue-500"
@@ -1895,7 +1894,7 @@ function OffersContent() {
                           <div className="flex-1 w-full">
                             <input
                               type="text"
-                              placeholder="Tên sản phẩm / dịch vụ * (vd: Bàn thao tác...)"
+                              placeholder="Tên sản phẩm / dịch vụ *"
                               value={item.name}
                               onChange={(e) => handleUpdateCatalogItemField(idx, "name", e.target.value)}
                               className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-emerald-500"
@@ -2063,7 +2062,7 @@ function OffersContent() {
                                 <div key={v.id || vIdx} className="flex items-center gap-2">
                                   <input
                                     type="text"
-                                    placeholder="Tên phiên bản (vd: Khung Inox, Bản 1.2m...)"
+                                    placeholder="Tên phiên bản"
                                     value={v.name}
                                     onChange={(e) => handleUpdateVariantField(idx, vIdx, "name", e.target.value)}
                                     className="flex-1 px-2.5 py-1.5 rounded-lg bg-white dark:bg-neutral-900 border text-xs font-semibold text-neutral-800 dark:text-neutral-200"
@@ -2227,7 +2226,6 @@ function OffersContent() {
                   </label>
                   <input
                     type="text"
-                    placeholder="Ví dụ: Báo giá thiết bị cơ khí xưởng sản xuất, bảo hành 12 tháng tận nơi..."
                     value={formShortDesc}
                     onChange={(e) => setFormShortDesc(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
@@ -3224,7 +3222,7 @@ function OffersContent() {
                       <input
                         type="text"
                         required
-                        placeholder="Tên sản phẩm / dịch vụ * (vd: Bàn thao tác...)"
+                        placeholder="Tên sản phẩm / dịch vụ *"
                         value={libProdItem.name}
                         onChange={(e) => handleUpdateLibProdField("name", e.target.value)}
                         className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-purple-500"
@@ -3382,7 +3380,7 @@ function OffersContent() {
                           <div key={v.id || vIdx} className="flex items-center gap-2">
                             <input
                               type="text"
-                              placeholder="Tên phiên bản (vd: Màu đen / Size XL / Inox 304)"
+                              placeholder="Tên phiên bản"
                               value={v.name}
                               onChange={(e) => handleUpdateLibProdVariantField(vIdx, "name", e.target.value)}
                               className="flex-1 px-2.5 py-1.5 rounded-lg bg-white dark:bg-neutral-900 border text-[11px] font-medium"
@@ -3634,7 +3632,6 @@ function OffersContent() {
                       <input
                         type="text"
                         required
-                        placeholder="Ví dụ: 0988123456 hoặc 1029384756"
                         value={bankAccNumber}
                         onChange={(e) => setBankAccNumber(e.target.value.replace(/\s+/g, ""))}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-xs font-mono font-bold focus:ring-2 focus:ring-blue-500 focus:outline-hidden tracking-wide"
@@ -3649,7 +3646,6 @@ function OffersContent() {
                       <input
                         type="text"
                         required
-                        placeholder="Ví dụ: NGUYEN VAN A"
                         value={bankAccHolder}
                         onChange={(e) => setBankAccHolder(e.target.value.toUpperCase())}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-xs font-bold uppercase focus:ring-2 focus:ring-blue-500 focus:outline-hidden"

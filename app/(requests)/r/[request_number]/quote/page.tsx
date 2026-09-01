@@ -149,7 +149,6 @@ export default function QuickQuotationPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Ví dụ: Phạm Quốc Tuấn"
                   value={sellerName}
                   onChange={(e) => setSellerName(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500"
@@ -162,7 +161,6 @@ export default function QuickQuotationPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Ví dụ: Cơ Khí Chính Xác Tân Bình"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
@@ -288,7 +286,6 @@ export default function QuickQuotationPage() {
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Ví dụ: Xưởng có sẵn phôi Inox 304, dùng máy Mazak độ chính xác cao..."
                   value={sellerNote}
                   onChange={(e) => setSellerNote(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"

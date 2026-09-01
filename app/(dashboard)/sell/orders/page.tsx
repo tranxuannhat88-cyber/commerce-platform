@@ -483,7 +483,6 @@ export default function SalesOrdersPage() {
                       type="number"
                       min={0}
                       step={10000}
-                      placeholder="Ví dụ: 2500000"
                       value={quoteFeeInput || ""}
                       onChange={(e) => setQuoteFeeInput(Number(e.target.value))}
                       className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-bold"
@@ -496,7 +495,6 @@ export default function SalesOrdersPage() {
                     </label>
                     <input
                       type="text"
-                      placeholder="Ví dụ: Đã gồm cước xe tải 5 tấn + bốc xếp tận nơi..."
                       value={quoteNotesInput}
                       onChange={(e) => setQuoteNotesInput(e.target.value)}
                       className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"

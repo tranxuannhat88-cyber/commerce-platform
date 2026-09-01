@@ -221,7 +221,6 @@ export default function StorePublicSettingsPage() {
               {publicSettings.show_business_email && (
                 <input
                   type="email"
-                  placeholder="contact@2k-tech.vn"
                   value={publicSettings.public_business_email || ""}
                   onChange={(e) => setPublicSettings({ ...publicSettings, public_business_email: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-xs font-bold"
@@ -245,7 +244,6 @@ export default function StorePublicSettingsPage() {
               {publicSettings.show_website && (
                 <input
                   type="url"
-                  placeholder="https://invamax.com"
                   value={publicSettings.website_url || ""}
                   onChange={(e) => setPublicSettings({ ...publicSettings, website_url: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-xs font-bold"

@@ -541,7 +541,6 @@ export default function SettingsPage() {
                 <input
                   type="text"
                   required
-                  placeholder="VD: CÔNG TY CỔ PHẦN INVAMAX VIỆT NAM"
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
                   className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
@@ -554,7 +553,6 @@ export default function SettingsPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="VD: INVAMAX"
                   value={shortName}
                   onChange={(e) => setShortName(e.target.value)}
                   className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-bold focus:ring-2 focus:ring-blue-500 outline-none"
@@ -597,7 +595,6 @@ export default function SettingsPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="VD: 0109988776"
                   value={taxCode}
                   onChange={(e) => setTaxCode(e.target.value)}
                   className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-mono focus:ring-2 focus:ring-blue-500 outline-none"
@@ -610,7 +607,6 @@ export default function SettingsPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="VD: 0988 123 456"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -623,7 +619,6 @@ export default function SettingsPage() {
                 </label>
                 <input
                   type="email"
-                  placeholder="VD: contact@invamax.vn"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -638,7 +633,6 @@ export default function SettingsPage() {
               </label>
               <input
                 type="text"
-                placeholder="VD: Xã Vĩnh Thịnh, thành phố Hải Phòng"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none"

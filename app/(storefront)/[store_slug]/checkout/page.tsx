@@ -285,7 +285,6 @@ function CheckoutContent() {
                   </label>
                   <input
                     type="text"
-                    placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi giao..."
                     value={customerNotes}
                     onChange={(e) => setCustomerNotes(e.target.value)}
                     className="w-full px-3.5 py-2.5 text-base sm:text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"

@@ -341,7 +341,6 @@ export default function BuyerRequestsPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Ví dụ: Cần gia công 200 chi tiết trục Inox 304 theo bản vẽ"
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 font-bold"
@@ -372,7 +371,7 @@ export default function BuyerRequestsPage() {
                       <div className="flex items-center gap-2">
                         <input
                           type="text"
-                          placeholder="Tên chi tiết / vật tư (vd: Trục Inox 304 D25)"
+                          placeholder="Tên chi tiết / vật tư"
                           value={item.name}
                           onChange={(e) => handleUpdateItemField(idx, "name", e.target.value)}
                           className="flex-1 px-2.5 py-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800 border text-xs font-bold"

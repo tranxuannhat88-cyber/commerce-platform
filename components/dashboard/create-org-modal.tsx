@@ -115,7 +115,6 @@ export function CreateOrgModal({ isOpen, onClose, onSuccess }: CreateOrgModalPro
               <input
                 type="text"
                 required
-                placeholder="VD: CÔNG TY CỔ PHẦN INVAMAX VIỆT NAM"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-medium focus:ring-2 focus:ring-blue-500 outline-none"
@@ -128,7 +127,6 @@ export function CreateOrgModal({ isOpen, onClose, onSuccess }: CreateOrgModalPro
               </label>
               <input
                 type="text"
-                placeholder="VD: INVAMAX"
                 value={shortName}
                 onChange={(e) => setShortName(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-bold focus:ring-2 focus:ring-blue-500 outline-none"
@@ -171,7 +169,6 @@ export function CreateOrgModal({ isOpen, onClose, onSuccess }: CreateOrgModalPro
               </label>
               <input
                 type="text"
-                placeholder="VD: 0109988776"
                 value={taxCode}
                 onChange={(e) => setTaxCode(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"
@@ -184,7 +181,6 @@ export function CreateOrgModal({ isOpen, onClose, onSuccess }: CreateOrgModalPro
               </label>
               <input
                 type="tel"
-                placeholder="VD: 0988 123 456"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"
@@ -197,7 +193,6 @@ export function CreateOrgModal({ isOpen, onClose, onSuccess }: CreateOrgModalPro
               </label>
               <input
                 type="text"
-                placeholder="VD: Tầng 6, Tòa nhà 2K Tower, Cầu Giấy, Hà Nội"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"

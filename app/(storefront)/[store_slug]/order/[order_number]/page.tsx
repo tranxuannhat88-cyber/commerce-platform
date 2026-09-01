@@ -721,7 +721,6 @@ export default function OrderStatusPage() {
                         type="tel"
                         required
                         maxLength={11}
-                        placeholder="Ví dụ: 0912345678"
                         value={regPhone}
                         onChange={(e) => handlePhoneChange(e.target.value)}
                         className={`w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 border font-mono font-bold text-neutral-900 dark:text-neutral-100 focus:outline-hidden transition-all ${
