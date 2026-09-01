@@ -122,11 +122,11 @@ export async function GET(req: NextRequest) {
               🛍️
             </div>
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontSize: "24px", fontWeight: "bold", color: "#93c5fd" }}>
-                {displayStore}
+              <span style={{ fontSize: "26px", fontWeight: "bold", color: "#60a5fa" }}>
+                Go • Nền tảng giao dịch trực tuyến
               </span>
               <span style={{ fontSize: "14px", color: "#94a3b8" }}>
-                Xác thực giao dịch & Báo giá trực tuyến
+                {displayStore} • Báo giá & Đặt hàng trực tiếp
               </span>
             </div>
           </div>
@@ -135,7 +135,7 @@ export async function GET(req: NextRequest) {
           <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "950px" }}>
             <div
               style={{
-                display: "inline-flex",
+                display: "flex",
                 alignItems: "center",
                 padding: "8px 18px",
                 borderRadius: "30px",
