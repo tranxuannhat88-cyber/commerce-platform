@@ -16,8 +16,8 @@ export async function GET(req: NextRequest) {
     const offer = offerSlug ? ServerDbManager.getOfferBySlug(storeSlug, offerSlug) : null;
     const store = storeSlug ? ServerDbManager.getStoreBySlug(storeSlug) : null;
 
-    // 1. Check if offer has an image (Prioritize product item image, then custom banner, then store logo)
-    const rawImage = offer?.items?.[0]?.image_url || offer?.image_url || store?.logo_url;
+    // 1. Check if offer has an image (Prioritize offer's cover image, then first item's image, then store logo)
+    const rawImage = offer?.image_url || (offer?.items && offer.items.length > 0 && offer.items[0]?.image_url) || store?.logo_url;
 
     if (rawImage && rawImage.startsWith("data:image/")) {
       const match = rawImage.match(/^data:(image\/[a-zA-Z0-9+-]+);base64,(.+)$/);
@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
                 width: "fit-content",
               }}
             >
-              {itemCount > 1 ? `📋 BẢNG GIÁ (${itemCount} SẢN PHẨM)` : "📦 SẢN PHẨM ƯU ĐÃI"}
+              {itemCount > 1 ? `📋 OFFER (${itemCount} SẢN PHẨM)` : "📦 SẢN PHẨM ƯU ĐÃI"}
             </div>
 
             <div

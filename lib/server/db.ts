@@ -256,11 +256,8 @@ export class ServerDbManager {
 
     if (existingIndex >= 0) {
       const existing = db.offers[existingIndex];
-      const mergedImage = offer.image_url || existing.image_url || "";
-      const mergedItems = offer.items?.map((it, idx) => ({
-        ...it,
-        image_url: it.image_url || existing.items?.[idx]?.image_url || "",
-      })) || offer.items;
+      const mergedImage = offer.image_url !== undefined ? offer.image_url : (existing.image_url || "");
+      const mergedItems = offer.items !== undefined ? offer.items : existing.items;
 
       db.offers[existingIndex] = {
         ...existing,
