@@ -33,6 +33,7 @@ import {
 import { PaymentSettingsService } from "@/lib/services/payment-settings-service";
 import { FulfillmentService } from "@/lib/services/fulfillment-service";
 import { StoreCustomizer } from "@/components/templates/store-customizer";
+import { StoreLogoSection } from "@/components/storefront/store-logo-section";
 
 type ActiveTab = "INFO" | "TEMPLATES" | "PAYMENT_METHODS" | "PAYMENT_ACCOUNTS" | "FULFILLMENT" | "POLICIES";
 
@@ -59,6 +60,8 @@ export default function StoreSettingsPage() {
   // Tab 1: Info State
   const [storeName, setStoreName] = useState(store.store_name || "");
   const [slug, setSlug] = useState(store.slug || "");
+  const [logoUrl, setLogoUrl] = useState(store.logo_url || "");
+  const [logoAssetId, setLogoAssetId] = useState(store.logo_asset_id || "");
   const [description, setDescription] = useState(store.description || "");
   const [phone, setPhone] = useState(store.phone || "");
   const [email, setEmail] = useState(store.email || "");
@@ -76,6 +79,8 @@ export default function StoreSettingsPage() {
     if (store && !isLoadedOnce) {
       setStoreName(store.store_name || "");
       setSlug(store.slug || "");
+      setLogoUrl(store.logo_url || "");
+      setLogoAssetId(store.logo_asset_id || "");
       setDescription(store.description || "");
       setPhone(store.phone || "");
       setEmail(store.email || "");
@@ -126,6 +131,8 @@ export default function StoreSettingsPage() {
     updateStore({
       store_name: storeName.trim(),
       slug: cleanSlug,
+      logo_url: logoUrl.trim(),
+      logo_asset_id: logoAssetId.trim(),
       description: description.trim(),
       phone: phone.trim(),
       email: email.trim(),
@@ -342,6 +349,19 @@ export default function StoreSettingsPage() {
                   Đây là những thông tin khách hàng sẽ nhìn thấy khi truy cập trang cửa hàng của bạn.
                 </p>
               </div>
+
+              {/* STORE LOGO SECTION */}
+              <StoreLogoSection
+                storeId={store.id || "store_current"}
+                storeName={storeName}
+                logoUrl={logoUrl}
+                logoAssetId={logoAssetId}
+                onChange={({ logoUrl: newLogoUrl, logoAssetId: newLogoAssetId }) => {
+                  setLogoUrl(newLogoUrl);
+                  setLogoAssetId(newLogoAssetId);
+                }}
+                brandColor={store.customization?.brand_color || "#2563eb"}
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 <div>

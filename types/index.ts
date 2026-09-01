@@ -66,6 +66,7 @@ export interface Store {
   store_name: string;
   slug: string;
   logo_url?: string;
+  logo_asset_id?: string;
   cover_image_url?: string;
   description?: string;
   phone?: string;

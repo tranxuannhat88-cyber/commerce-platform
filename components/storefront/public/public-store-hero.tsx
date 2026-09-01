@@ -54,7 +54,12 @@ export function PublicStoreHero({
     }
   };
 
-  const initialLetter = (storeName || "C").trim().charAt(0).toUpperCase();
+  const getInitials = (name: string) => {
+    if (!name) return "🏬";
+    const words = name.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  };
 
   return (
     <section className="relative w-full bg-white dark:bg-neutral-900 border-b border-neutral-200/80 dark:border-neutral-800 overflow-hidden">
@@ -84,19 +89,19 @@ export function PublicStoreHero({
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-6 pt-0 relative">
         <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 -mt-10 sm:-mt-14 mb-4">
           {/* Avatar / Logo */}
-          <div className="relative w-20 h-20 sm:w-28 sm:h-28 rounded-2xl sm:rounded-3xl bg-white dark:bg-neutral-900 p-1 shadow-lg border-2 border-white dark:border-neutral-800 shrink-0 overflow-hidden flex items-center justify-center">
+          <div className="relative w-20 h-20 sm:w-28 sm:h-28 rounded-2xl sm:rounded-3xl bg-white dark:bg-neutral-900 p-1.5 shadow-lg border-2 border-white dark:border-neutral-800 shrink-0 overflow-hidden flex items-center justify-center">
             {logoUrl ? (
               <img
                 src={logoUrl}
                 alt={storeName}
-                className="w-full h-full object-cover rounded-xl sm:rounded-2xl"
+                className="w-full h-full object-contain rounded-xl sm:rounded-2xl"
               />
             ) : (
               <div
-                className="w-full h-full rounded-xl sm:rounded-2xl flex items-center justify-center font-black text-xl sm:text-3xl text-white shadow-inner"
+                className="w-full h-full rounded-xl sm:rounded-2xl flex items-center justify-center font-black text-xl sm:text-2xl text-white shadow-inner"
                 style={{ backgroundColor: brandColor }}
               >
-                {initialLetter}
+                {getInitials(storeName)}
               </div>
             )}
           </div>
