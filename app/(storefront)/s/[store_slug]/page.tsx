@@ -75,9 +75,5 @@ export default async function PublicStoreCanonicalPage({ params }: Props) {
   const { store_slug } = await params;
   const data = StorefrontDataResolver.resolvePublicStore(store_slug);
 
-  if (!data) {
-    notFound();
-  }
-
-  return <PublicStoreView data={data} />;
+  return <PublicStoreView initialData={data} storeSlug={store_slug} />;
 }
