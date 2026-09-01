@@ -42,27 +42,27 @@ export function BuyerReviewForm({
     required: boolean = true
   ) => {
     return (
-      <div className="space-y-1">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+      <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200/70 dark:border-neutral-700/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="space-y-0.5">
+          <p className="font-bold text-xs text-neutral-800 dark:text-neutral-200">
             {label} {required && <span className="text-red-500">*</span>}
-          </span>
-          <span className="font-bold text-amber-500 text-[11px]">{value} / 5 sao</span>
+          </p>
+          <p className="text-[11px] font-semibold text-amber-500">{value} / 5 sao</p>
         </div>
-        <div className="flex items-center gap-1.5" role="radiogroup" aria-label={label}>
+        <div className="flex items-center gap-1 shrink-0" role="radiogroup" aria-label={label}>
           {[1, 2, 3, 4, 5].map((star) => (
             <button
               key={star}
               type="button"
               onClick={() => onChange(star)}
-              className="p-1 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-all focus:outline-hidden cursor-pointer"
+              className="p-1 rounded-lg hover:bg-amber-100/50 dark:hover:bg-amber-950/40 transition-all focus:outline-hidden cursor-pointer"
               aria-label={`${star} sao`}
             >
               <Star
                 className={`w-6 h-6 transition-all ${
                   star <= value
                     ? "fill-amber-400 text-amber-400 scale-105"
-                    : "text-neutral-300 dark:text-neutral-700 hover:text-amber-300"
+                    : "text-neutral-300 dark:text-neutral-600 hover:text-amber-300"
                 }`}
               />
             </button>
@@ -103,7 +103,7 @@ export function BuyerReviewForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* Header Info */}
       <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/50 flex items-start gap-3">
         <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
@@ -127,15 +127,13 @@ export function BuyerReviewForm({
         </div>
       )}
 
-      {/* Star Criteria */}
-      <div className="space-y-4 pt-1">
+      {/* Star Criteria: 1 item per row */}
+      <div className="space-y-2.5 pt-1">
         {renderStars(overall, setOverall, "Trải nghiệm tổng thể", true)}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-neutral-100 dark:border-neutral-800">
-          {renderStars(accuracy, setAccuracy, "Sản phẩm đúng mô tả", true)}
-          {renderStars(timeliness, setTimeliness, "Giao hàng đúng hẹn", true)}
-          {renderStars(communication, setCommunication, "Giao tiếp & hỗ trợ", true)}
-          {renderStars(quality, setQuality, "Chất lượng sản phẩm / dịch vụ", false)}
-        </div>
+        {renderStars(accuracy, setAccuracy, "Sản phẩm đúng mô tả", true)}
+        {renderStars(timeliness, setTimeliness, "Giao hàng đúng hẹn", true)}
+        {renderStars(communication, setCommunication, "Giao tiếp & hỗ trợ", true)}
+        {renderStars(quality, setQuality, "Chất lượng sản phẩm / dịch vụ", false)}
       </div>
 
       {/* Comment */}
