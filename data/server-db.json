@@ -7,7 +7,7 @@
       "owner_actor_type": "PERSONAL",
       "store_name": "INVAMAX workspace",
       "slug": "invamax-workspace",
-      "logo_url": "https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=400&q=80",
+      "logo_url": "/uploads/avatar-nhat.png",
       "cover_image_url": "",
       "description": "Không Gian Cá Nhân — Trần Xuân Nhất. Đặt hàng, báo giá và xác thực giao dịch trực tiếp.",
       "phone": "0988123456",
@@ -50,7 +50,7 @@
       "description": "Chất liệu gỗ sồi cao cấp, hoàn thiện tỉ mỉ, độ bền cao.",
       "price": 2000,
       "cost_price": 1000,
-      "image_url": "https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=800&q=80",
+      "image_url": "/uploads/tu-trang-tri.png",
       "status": "ACTIVE",
       "service_unit": "cái",
       "items": [
@@ -62,7 +62,7 @@
           "unit": "cái",
           "category": "Chung",
           "description": "Chất liệu gỗ sồi",
-          "image_url": "https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=800&q=80",
+          "image_url": "/uploads/tu-trang-tri.png",
           "is_available": true
         }
       ],
@@ -91,7 +91,7 @@
       "description": "Báo giá và danh mục sản phẩm tháng 9.",
       "price": 1000,
       "cost_price": 500,
-      "image_url": "https://images.unsplash.com/photo-1581783342308-f792dbdd27c5?w=800&q=80",
+      "image_url": "/uploads/danh-muc-hang-thang-9.png",
       "status": "ACTIVE",
       "service_unit": "cái",
       "items": [
@@ -103,7 +103,7 @@
           "unit": "cái",
           "category": "Chung",
           "description": "Danh mục hàng hóa tháng 9",
-          "image_url": "https://images.unsplash.com/photo-1581783342308-f792dbdd27c5?w=800&q=80",
+          "image_url": "/uploads/danh-muc-hang-thang-9.png",
           "is_available": true
         }
       ],
@@ -143,7 +143,7 @@
       "actor_type": "PERSONAL",
       "display_name": "Trần Xuân Nhất",
       "full_name": "Trần Xuân Nhất",
-      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80",
+      "avatar_url": "/uploads/avatar-nhat.png",
       "phone": "0988123456",
       "email": "nhat@invamax.com"
     },
@@ -152,7 +152,7 @@
       "actor_type": "PERSONAL",
       "display_name": "Trần Xuân Nhất",
       "full_name": "Trần Xuân Nhất",
-      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80",
+      "avatar_url": "/uploads/avatar-nhat.png",
       "phone": "0988123456",
       "email": "nhat@invamax.com"
     }
