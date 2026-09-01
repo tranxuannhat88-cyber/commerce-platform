@@ -48,10 +48,14 @@ import {
   ActorReviewStats,
   ReviewRole,
   ReviewResponse,
+  GuestIdentity,
+  ReviewInvitation,
 } from "@/types";
 import { TransactionReviewService } from "@/lib/services/transaction-review-service";
 import { ReviewRevealService } from "@/lib/services/review-reveal-service";
 import { ReviewEligibilityService } from "@/lib/services/review-eligibility-service";
+import { GuestIdentityService } from "@/lib/services/guest-identity-service";
+import { GuestClaimService } from "@/lib/services/guest-claim-service";
 
 import {
   INITIAL_PERSONAL_ACTOR,
@@ -165,6 +169,8 @@ const STORAGE_KEYS = {
   REVIEWS: "commerce_reviews",
   REVIEW_REPORTS: "commerce_review_reports",
   ACTOR_REVIEW_STATS: "commerce_actor_review_stats",
+  GUEST_IDENTITIES: "commerce_guest_identities",
+  REVIEW_INVITATIONS: "commerce_review_invitations",
 };
 
 function getStored<T>(key: string, fallback: T): T {
@@ -251,6 +257,8 @@ export function useCommerceStore() {
   const [reviews, setReviewsState] = useState<TransactionReview[]>([]);
   const [reviewReports, setReviewReportsState] = useState<ReviewReport[]>([]);
   const [actorReviewStats, setActorReviewStatsState] = useState<Record<string, ActorReviewStats>>({});
+  const [guestIdentities, setGuestIdentitiesState] = useState<GuestIdentity[]>([]);
+  const [reviewInvitations, setReviewInvitationsState] = useState<ReviewInvitation[]>([]);
 
   useEffect(() => {
     // PURGE GUARD: Automatically clear stale mock data from previous sessions
@@ -373,6 +381,8 @@ export function useCommerceStore() {
     setReviewsState(getStored(STORAGE_KEYS.REVIEWS, []));
     setReviewReportsState(getStored(STORAGE_KEYS.REVIEW_REPORTS, []));
     setActorReviewStatsState(getStored(STORAGE_KEYS.ACTOR_REVIEW_STATS, {}));
+    setGuestIdentitiesState(getStored(STORAGE_KEYS.GUEST_IDENTITIES, []));
+    setReviewInvitationsState(getStored(STORAGE_KEYS.REVIEW_INVITATIONS, []));
     setIsLoaded(true);
 
     const handleStorageUpdate = (e: Event) => {
@@ -1817,6 +1827,17 @@ export function useCommerceStore() {
       updated_at: new Date().toISOString(),
     };
 
+    // Resolve Guest Identity for Buyer
+    const guestIdentity = GuestIdentityService.resolveOrCreateGuestIdentity({
+      customerPhone: orderData.customer_phone,
+      customerName: orderData.customer_name,
+      customerEmail: orderData.customer_email,
+      existingGuests: guestIdentities,
+    });
+    const updatedGuests = [...guestIdentities.filter((g) => g.id !== guestIdentity.id), guestIdentity];
+    setGuestIdentitiesState(updatedGuests);
+    setStored(STORAGE_KEYS.GUEST_IDENTITIES, updatedGuests);
+
     const newOrder: Order = {
       id: orderId,
       organization_id: organization.id,
@@ -1826,6 +1847,8 @@ export function useCommerceStore() {
       customer_name: orderData.customer_name,
       customer_phone: orderData.customer_phone,
       customer_email: orderData.customer_email,
+      buyer_participant_type: "GUEST",
+      buyer_guest_identity_id: guestIdentity.id,
       shipping_address: orderData.shipping_address,
       has_physical_items: orderData.items.some((i) => i.offer.offer_type === "PRODUCT"),
       order_status: "NEW",
@@ -1851,6 +1874,18 @@ export function useCommerceStore() {
     // Sync order to server database for cross-device / multi-user access
     SyncBridgeService.submitOrderToServer(newOrder);
 
+    // Issue Review Invitation with secure unguessable token
+    const { invitation: reviewInv } = GuestIdentityService.issueReviewInvitation({
+      transaction: { id: `tx-${Date.now()}`, order_id: orderId, order_number: orderNumber },
+      guestIdentity,
+      customerName: orderData.customer_name,
+      customerPhone: orderData.customer_phone,
+      reviewDirection: "BUYER_TO_SELLER",
+    });
+    const updatedInvs = [reviewInv, ...reviewInvitations];
+    setReviewInvitationsState(updatedInvs);
+    setStored(STORAGE_KEYS.REVIEW_INVITATIONS, updatedInvs);
+
     // Reserve stock
     orderData.items.forEach((it) => {
       if (it.offer.inventory_tracking) {
@@ -1871,6 +1906,8 @@ export function useCommerceStore() {
       order_id: orderId,
       order_number: orderNumber,
       quotation_version: 1,
+      buyer_participant_type: "GUEST",
+      buyer_guest_identity_id: guestIdentity.id,
       buyer_name: orderData.customer_name || "Khách Hàng",
       seller_name: sellerDisplayName,
       total_amount: totalAmount,
@@ -2972,6 +3009,111 @@ export function useCommerceStore() {
     return report;
   };
 
+  const createGuestReview = async (reviewData: {
+    transaction_id: string;
+    order_id?: string;
+    order_number?: string;
+    guest_identity_id: string;
+    reviewer_name?: string;
+    reviewee_actor_id: string;
+    reviewee_name?: string;
+    overall_rating: number;
+    accuracy_rating?: number;
+    timeliness_rating?: number;
+    communication_rating?: number;
+    quality_rating?: number;
+    comment?: string;
+    invitation_token?: string;
+    transaction_completed_at?: string;
+  }) => {
+    const review = TransactionReviewService.buildReviewPayload({
+      transactionId: reviewData.transaction_id,
+      orderId: reviewData.order_id,
+      orderNumber: reviewData.order_number,
+      reviewerGuestIdentityId: reviewData.guest_identity_id,
+      reviewerPartyType: "GUEST",
+      reviewerName: reviewData.reviewer_name || "Khách hàng đã xác minh",
+      revieweeActorId: reviewData.reviewee_actor_id,
+      revieweeName: reviewData.reviewee_name || "Nhà bán hàng",
+      reviewerRole: "BUYER",
+      overallRating: reviewData.overall_rating,
+      accuracyRating: reviewData.accuracy_rating,
+      timelinessRating: reviewData.timeliness_rating,
+      communicationRating: reviewData.communication_rating,
+      qualityRating: reviewData.quality_rating,
+      comment: reviewData.comment,
+      performedByUserId: null,
+      verificationMethod: "PHONE_OTP",
+      transactionCompletedAt: reviewData.transaction_completed_at,
+    });
+
+    const currentReviews = getStored<TransactionReview[]>(STORAGE_KEYS.REVIEWS, reviews) || [];
+    const updatedReviews = [review, ...currentReviews];
+    setReviewsState(updatedReviews);
+    setStored(STORAGE_KEYS.REVIEWS, updatedReviews);
+
+    // If token passed, mark invitation as USED
+    if (reviewData.invitation_token) {
+      const currentInvs = getStored<ReviewInvitation[]>(STORAGE_KEYS.REVIEW_INVITATIONS, reviewInvitations) || [];
+      const updatedInvs = currentInvs.map((inv) =>
+        inv.secure_token_hash === reviewData.invitation_token
+          ? { ...inv, status: "USED" as const, used_at: new Date().toISOString() }
+          : inv
+      );
+      setReviewInvitationsState(updatedInvs);
+      setStored(STORAGE_KEYS.REVIEW_INVITATIONS, updatedInvs);
+    }
+
+    SyncBridgeService.submitReviewToServer({
+      ...review,
+      invitation_token: reviewData.invitation_token,
+    } as any);
+
+    return review;
+  };
+
+  const claimGuestHistory = async (actorId: string, verifiedPhone: string) => {
+    const currentGuests = getStored<GuestIdentity[]>(STORAGE_KEYS.GUEST_IDENTITIES, guestIdentities) || [];
+    const currentOrders = getStored<Order[]>(STORAGE_KEYS.ORDERS, orders) || [];
+    const currentTxs = getStored<Transaction[]>(STORAGE_KEYS.TRANSACTIONS, transactions) || [];
+
+    const result = GuestClaimService.applyClaim({
+      actorId,
+      verifiedPhone,
+      guestIdentities: currentGuests,
+      orders: currentOrders,
+      transactions: currentTxs,
+    });
+
+    setGuestIdentitiesState(result.updatedGuestIdentities);
+    setStored(STORAGE_KEYS.GUEST_IDENTITIES, result.updatedGuestIdentities);
+
+    setOrdersState(result.updatedOrders);
+    setStored(STORAGE_KEYS.ORDERS, result.updatedOrders);
+
+    setTransactionsState(result.updatedTransactions);
+    setStored(STORAGE_KEYS.TRANSACTIONS, result.updatedTransactions);
+
+    try {
+      await fetch("/api/guest/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actorId, phone: verifiedPhone }),
+      });
+    } catch (e) {
+      console.error("Error claiming guest history on server:", e);
+    }
+
+    addNotification({
+      type: "ORDER_STATUS_CHANGED",
+      title: "Đã liên kết lịch sử giao dịch",
+      message: `Đã liên kết thành công ${result.claimedCount} đơn hàng/giao dịch trước đây vào tài khoản của bạn.`,
+      link: `/transactions`,
+    });
+
+    return result;
+  };
+
   const totalSales = orders.reduce((acc, o) => (o.order_status !== "CANCELLED" ? acc + o.total_amount : acc), 0);
   const totalCashReceived = orders.reduce(
     (acc, o) => (o.payment?.payment_status === "PAID" ? acc + o.total_amount : acc),
@@ -3029,11 +3171,15 @@ export function useCommerceStore() {
     reviews,
     reviewReports,
     actorReviewStats,
+    guestIdentities,
+    reviewInvitations,
     // Review Actions
     submitReview,
     updateReview,
     respondToReview,
     reportReview,
+    createGuestReview,
+    claimGuestHistory,
     // Template Actions
     purchaseTemplateLicense,
     applyStoreTemplate,

@@ -12,9 +12,13 @@ import {
   ReviewReport,
   ActorReviewStats,
   ReviewResponse,
+  GuestIdentity,
+  ReviewInvitation,
 } from "@/types";
 import { ReviewRevealService } from "@/lib/services/review-reveal-service";
 import { TransactionReviewService } from "@/lib/services/transaction-review-service";
+import { GuestClaimService } from "@/lib/services/guest-claim-service";
+import { cleanPhoneNumber } from "@/lib/utils";
 
 export interface ServerSellerProfile {
   actor_id?: string;
@@ -39,6 +43,8 @@ export interface ServerDatabase {
   reviews: TransactionReview[];
   reviewReports: ReviewReport[];
   actorReviewStats?: Record<string, ActorReviewStats>;
+  guestIdentities?: GuestIdentity[];
+  reviewInvitations?: ReviewInvitation[];
   last_updated_at: string;
 }
 
@@ -71,6 +77,8 @@ function getInitialDb(): ServerDatabase {
     reviews: [],
     reviewReports: [],
     actorReviewStats: {},
+    guestIdentities: [],
+    reviewInvitations: [],
     last_updated_at: new Date().toISOString(),
   };
 }
@@ -102,6 +110,8 @@ export class ServerDbManager {
           reviews: parsed.reviews || [],
           reviewReports: parsed.reviewReports || [],
           actorReviewStats: parsed.actorReviewStats || {},
+          guestIdentities: parsed.guestIdentities || [],
+          reviewInvitations: parsed.reviewInvitations || [],
           last_updated_at: parsed.last_updated_at || new Date().toISOString(),
         };
         return memoryDb;
@@ -417,8 +427,9 @@ export class ServerDbManager {
       (r) =>
         r.id === review.id ||
         (r.transaction_id === review.transaction_id &&
-          r.reviewer_actor_id === review.reviewer_actor_id &&
-          r.reviewee_actor_id === review.reviewee_actor_id)
+          (review.reviewer_guest_identity_id
+            ? r.reviewer_guest_identity_id === review.reviewer_guest_identity_id
+            : r.reviewer_actor_id === review.reviewer_actor_id))
     );
 
     if (existingIdx >= 0) {
@@ -467,6 +478,77 @@ export class ServerDbManager {
     db.reviewReports.unshift(report);
     this.saveDb(db);
     return report;
+  }
+
+  // ==========================================
+  // GUEST IDENTITIES & REVIEW INVITATIONS
+  // ==========================================
+
+  public static getGuestIdentities(): GuestIdentity[] {
+    const db = this.getDb();
+    return db.guestIdentities || [];
+  }
+
+  public static upsertGuestIdentity(guest: GuestIdentity): GuestIdentity {
+    const db = this.getDb();
+    if (!db.guestIdentities) db.guestIdentities = [];
+
+    const idx = db.guestIdentities.findIndex((g) => g.id === guest.id || (g.verified_phone && g.verified_phone === guest.verified_phone));
+    if (idx >= 0) {
+      db.guestIdentities[idx] = {
+        ...db.guestIdentities[idx],
+        ...guest,
+        updated_at: new Date().toISOString(),
+      };
+    } else {
+      db.guestIdentities.push(guest);
+    }
+    this.saveDb(db);
+    return guest;
+  }
+
+  public static getReviewInvitations(): ReviewInvitation[] {
+    const db = this.getDb();
+    return db.reviewInvitations || [];
+  }
+
+  public static getReviewInvitationByToken(token: string): ReviewInvitation | null {
+    const db = this.getDb();
+    const invitations = db.reviewInvitations || [];
+    return invitations.find((i) => i.secure_token_hash === token || i.secure_token_hash === `tok_${token}`) || null;
+  }
+
+  public static upsertReviewInvitation(invitation: ReviewInvitation): ReviewInvitation {
+    const db = this.getDb();
+    if (!db.reviewInvitations) db.reviewInvitations = [];
+
+    const idx = db.reviewInvitations.findIndex((i) => i.id === invitation.id || i.secure_token_hash === invitation.secure_token_hash);
+    if (idx >= 0) {
+      db.reviewInvitations[idx] = {
+        ...db.reviewInvitations[idx],
+        ...invitation,
+      };
+    } else {
+      db.reviewInvitations.push(invitation);
+    }
+    this.saveDb(db);
+    return invitation;
+  }
+
+  public static claimGuestHistoryForActor(actorId: string, phone: string) {
+    const db = this.getDb();
+    const result = GuestClaimService.applyClaim({
+      actorId,
+      verifiedPhone: phone,
+      guestIdentities: db.guestIdentities || [],
+      orders: db.orders || [],
+      transactions: [],
+    });
+
+    db.guestIdentities = result.updatedGuestIdentities;
+    db.orders = result.updatedOrders;
+    this.saveDb(db);
+    return result;
   }
 }
 

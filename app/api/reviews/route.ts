@@ -94,10 +94,14 @@ export async function POST(req: NextRequest) {
       order_number,
       reviewer_actor_id,
       reviewer_actor_type = "PERSONAL",
+      reviewer_party_type,
+      reviewer_guest_identity_id,
       reviewer_name,
       reviewer_avatar,
       reviewee_actor_id,
       reviewee_actor_type = "PERSONAL",
+      reviewee_party_type,
+      reviewee_guest_identity_id,
       reviewee_name,
       reviewer_role,
       overall_rating,
@@ -110,17 +114,22 @@ export async function POST(req: NextRequest) {
       cooperation_rating,
       comment,
       performed_by_user_id,
+      verification_method,
+      invitation_token,
       transaction_completed_at,
     } = body;
 
-    if (!transaction_id || !reviewer_actor_id || !reviewee_actor_id || !reviewer_role) {
+    const hasReviewer = !!reviewer_actor_id || !!reviewer_guest_identity_id;
+    const hasReviewee = !!reviewee_actor_id || !!reviewee_guest_identity_id;
+
+    if (!transaction_id || !hasReviewer || !hasReviewee || !reviewer_role) {
       return NextResponse.json(
         { success: false, error: "Thiếu thông tin bắt buộc của giao dịch hoặc người đánh giá." },
         { status: 400 }
       );
     }
 
-    if (reviewer_actor_id === reviewee_actor_id) {
+    if (reviewer_actor_id && reviewee_actor_id && reviewer_actor_id === reviewee_actor_id) {
       return NextResponse.json(
         { success: false, error: "Không thể tự đánh giá chính mình." },
         { status: 400 }
@@ -134,10 +143,14 @@ export async function POST(req: NextRequest) {
       orderNumber: order_number,
       reviewerActorId: reviewer_actor_id,
       reviewerActorType: reviewer_actor_type,
+      reviewerPartyType: reviewer_party_type,
+      reviewerGuestIdentityId: reviewer_guest_identity_id,
       reviewerName: reviewer_name,
       reviewerAvatar: reviewer_avatar,
       revieweeActorId: reviewee_actor_id,
       revieweeActorType: reviewee_actor_type,
+      revieweePartyType: reviewee_party_type,
+      revieweeGuestIdentityId: reviewee_guest_identity_id,
       revieweeName: reviewee_name,
       reviewerRole: reviewer_role,
       overallRating: overall_rating,
@@ -149,12 +162,26 @@ export async function POST(req: NextRequest) {
       clarityRating: clarity_rating,
       cooperationRating: cooperation_rating,
       comment,
-      performedByUserId: performed_by_user_id || "usr_default",
+      performedByUserId: performed_by_user_id || null,
+      verificationMethod: verification_method || (reviewer_guest_identity_id ? "PHONE_OTP" : "AUTH_SESSION"),
       transactionCompletedAt: transaction_completed_at,
     });
 
     const result = ServerDbManager.upsertReview(review);
-    const updatedStats = ServerDbManager.getActorReviewStats(reviewee_actor_id, reviewee_actor_type);
+
+    // If invitation token provided, mark as USED
+    if (invitation_token) {
+      const inv = ServerDbManager.getReviewInvitationByToken(invitation_token);
+      if (inv) {
+        inv.status = "USED";
+        inv.used_at = new Date().toISOString();
+        ServerDbManager.upsertReviewInvitation(inv);
+      }
+    }
+
+    const updatedStats = reviewee_actor_id
+      ? ServerDbManager.getActorReviewStats(reviewee_actor_id, reviewee_actor_type)
+      : undefined;
 
     return NextResponse.json({
       success: true,

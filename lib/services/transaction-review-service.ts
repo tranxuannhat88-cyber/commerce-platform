@@ -43,12 +43,16 @@ export class TransactionReviewService {
     transactionId: string;
     orderId?: string;
     orderNumber?: string;
-    reviewerActorId: string;
-    reviewerActorType: "PERSONAL" | "ORGANIZATION";
+    reviewerActorId?: string | null;
+    reviewerActorType?: "PERSONAL" | "ORGANIZATION";
+    reviewerPartyType?: "ACTOR" | "GUEST";
+    reviewerGuestIdentityId?: string | null;
     reviewerName?: string;
     reviewerAvatar?: string;
-    revieweeActorId: string;
-    revieweeActorType: "PERSONAL" | "ORGANIZATION";
+    revieweeActorId?: string | null;
+    revieweeActorType?: "PERSONAL" | "ORGANIZATION";
+    revieweePartyType?: "ACTOR" | "GUEST";
+    revieweeGuestIdentityId?: string | null;
     revieweeName?: string;
     reviewerRole: ReviewRole;
     overallRating: number;
@@ -65,7 +69,8 @@ export class TransactionReviewService {
     cooperationRating?: number;
     
     comment?: string;
-    performedByUserId: string;
+    performedByUserId?: string | null;
+    verificationMethod?: "PHONE_OTP" | "AUTH_SESSION" | "INVITATION_TOKEN";
     transactionCompletedAt?: string;
   }): TransactionReview {
     const now = new Date();
@@ -87,7 +92,9 @@ export class TransactionReviewService {
     let cooperation = this.validateRating(params.cooperationRating, false);
 
     // Generate deterministic hash for review
-    const canonicalStr = `${params.transactionId}|${params.reviewerActorId}|${params.revieweeActorId}|${overall}|${now.toISOString()}`;
+    const reviewerIdKey = params.reviewerActorId || params.reviewerGuestIdentityId || "guest";
+    const revieweeIdKey = params.revieweeActorId || params.revieweeGuestIdentityId || "counterparty";
+    const canonicalStr = `${params.transactionId}|${reviewerIdKey}|${revieweeIdKey}|${overall}|${now.toISOString()}`;
     let hash = "";
     for (let i = 0; i < 64; i++) {
       hash += Math.floor(Math.random() * 16).toString(16);
@@ -100,10 +107,14 @@ export class TransactionReviewService {
       order_number: params.orderNumber,
       reviewer_actor_id: params.reviewerActorId,
       reviewer_actor_type: params.reviewerActorType,
+      reviewer_party_type: params.reviewerPartyType || (params.reviewerGuestIdentityId ? "GUEST" : "ACTOR"),
+      reviewer_guest_identity_id: params.reviewerGuestIdentityId,
       reviewer_name: params.reviewerName,
       reviewer_avatar: params.reviewerAvatar,
       reviewee_actor_id: params.revieweeActorId,
       reviewee_actor_type: params.revieweeActorType,
+      reviewee_party_type: params.revieweePartyType || (params.revieweeGuestIdentityId ? "GUEST" : "ACTOR"),
+      reviewee_guest_identity_id: params.revieweeGuestIdentityId,
       reviewee_name: params.revieweeName,
       reviewer_role: params.reviewerRole,
       overall_rating: overall,
@@ -121,6 +132,7 @@ export class TransactionReviewService {
       editable_until: editableUntil.toISOString(),
       review_deadline: deadlineDate.toISOString(),
       performed_by_user_id: params.performedByUserId,
+      verification_method: params.verificationMethod || (params.reviewerGuestIdentityId ? "PHONE_OTP" : "AUTH_SESSION"),
       review_hash: `0x${hash}`,
       created_at: now.toISOString(),
       updated_at: now.toISOString(),

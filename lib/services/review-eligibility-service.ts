@@ -1,4 +1,4 @@
-import { Transaction, Order, TransactionReview, ReviewRole } from "@/types";
+import { Transaction, Order, TransactionReview, ReviewRole, ReviewInvitation } from "@/types";
 
 export interface ReviewEligibilityResult {
   eligible: boolean;
@@ -106,6 +106,63 @@ export class ReviewEligibilityService {
       counterpartyName,
       hasReviewed: false,
       reviewDeadline: deadlineDate.toISOString(),
+    };
+  }
+
+  /**
+   * Evaluates whether a Guest Participant with a valid ReviewInvitation is eligible to review.
+   */
+  public static checkGuestEligibility(params: {
+    invitation?: ReviewInvitation | null;
+    transaction?: Transaction | null;
+    order?: Order | null;
+    existingReviews: TransactionReview[];
+  }): ReviewEligibilityResult {
+    const { invitation, transaction, order, existingReviews } = params;
+
+    if (!invitation) {
+      return { eligible: false, reason: "Mã mời đánh giá không tồn tại hoặc không hợp lệ." };
+    }
+
+    if (invitation.status === "USED") {
+      return { eligible: false, hasReviewed: true, reason: "Mã mời đánh giá này đã được sử dụng." };
+    }
+
+    if (invitation.status === "EXPIRED" || new Date() > new Date(invitation.expires_at)) {
+      return { eligible: false, reason: "Thời hạn đánh giá 14 ngày đã kết thúc." };
+    }
+
+    if (invitation.status === "REVOKED") {
+      return { eligible: false, reason: "Mã mời đánh giá đã bị thu hồi." };
+    }
+
+    // Check duplicate review
+    const existing = existingReviews.find(
+      (r) =>
+        (r.transaction_id === invitation.transaction_id || (invitation.order_number && r.order_number === invitation.order_number)) &&
+        r.reviewer_guest_identity_id === invitation.guest_identity_id
+    );
+
+    if (existing) {
+      return {
+        eligible: false,
+        hasReviewed: true,
+        existingReview: existing,
+        reason: "Bạn đã gửi đánh giá cho giao dịch này.",
+        reviewDeadline: invitation.expires_at,
+      };
+    }
+
+    const sellerName = transaction?.seller_name || "Nhà bán hàng";
+    const sellerActorId = transaction?.organization_id || order?.organization_id || "seller_default";
+
+    return {
+      eligible: true,
+      role: "BUYER",
+      counterpartyActorId: sellerActorId,
+      counterpartyName: sellerName,
+      hasReviewed: false,
+      reviewDeadline: invitation.expires_at,
     };
   }
 

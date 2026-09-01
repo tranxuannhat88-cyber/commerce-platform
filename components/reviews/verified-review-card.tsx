@@ -23,11 +23,15 @@ export function VerifiedReviewCard({
   const [isSubmittingResponse, setIsSubmittingResponse] = useState(false);
 
   // Mask personal buyer names if necessary
-  const formatReviewerName = (name?: string, actorType?: string) => {
-    if (!name) return "Khách hàng xác minh";
+  const formatReviewerName = (name?: string, actorType?: string, partyType?: string) => {
+    if (!name) return "Khách hàng đã xác minh";
     if (actorType === "ORGANIZATION") return name;
-    // Mask name like Tran *** Nhat
-    const parts = name.trim().split(" ");
+    if (partyType === "GUEST") {
+      const parts = name.trim().split(/\s+/);
+      if (parts.length === 1) return parts[0];
+      return `${parts[0]} ${parts[parts.length - 1].slice(0, 1).toUpperCase()}.`;
+    }
+    const parts = name.trim().split(/\s+/);
     if (parts.length > 2) {
       return `${parts[0]} *** ${parts[parts.length - 1]}`;
     }
@@ -60,11 +64,11 @@ export function VerifiedReviewCard({
           <div>
             <div className="flex items-center gap-2">
               <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
-                {formatReviewerName(review.reviewer_name, review.reviewer_actor_type)}
+                {formatReviewerName(review.reviewer_name, review.reviewer_actor_type, review.reviewer_party_type)}
               </h4>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200/50 dark:border-emerald-900/50">
                 <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                <span>Đánh giá đã xác minh</span>
+                <span>✓ Giao dịch đã xác minh</span>
               </span>
             </div>
             <p className="text-[10px] text-neutral-400 mt-0.5">

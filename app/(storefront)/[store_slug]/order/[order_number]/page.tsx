@@ -41,7 +41,7 @@ export default function OrderStatusPage() {
   const storeSlug = (params?.store_slug as string) || "auto";
   const orderNumber = params?.order_number as string;
 
-  const { orders, store, confirmPayment, reviews, currentContext, currentUser } = useCommerceStore();
+  const { orders, store, confirmPayment, reviews, reviewInvitations, currentContext, currentUser } = useCommerceStore();
   const [copiedBank, setCopiedBank] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
   const [copiedRef, setCopiedRef] = useState(false);
@@ -402,8 +402,12 @@ export default function OrderStatusPage() {
           const hasReviewed = reviews.some(
             (r) =>
               (r.order_id === order.id || r.order_number === order.order_number) &&
-              (r.reviewer_actor_id === currentActorId || r.reviewer_role === "BUYER")
+              (r.reviewer_actor_id === currentActorId || r.reviewer_role === "BUYER" || r.reviewer_guest_identity_id === order.buyer_guest_identity_id)
           );
+          const orderInvitation = reviewInvitations.find(
+            (inv) => inv.order_number === order.order_number || inv.order_id === order.id
+          );
+          const reviewUrl = orderInvitation ? `/review/${orderInvitation.secure_token_hash}` : undefined;
 
           return (
             <div className="p-5 sm:p-6 rounded-3xl bg-linear-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200/80 dark:border-amber-900/60 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in">
@@ -417,7 +421,7 @@ export default function OrderStatusPage() {
                       {hasReviewed ? "Bạn đã gửi đánh giá cho đơn hàng này" : "Đánh Giá Trải Nghiệm Giao Dịch"}
                     </h3>
                     <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
-                      ✓ Xác thực
+                      ✓ Giao dịch đã xác minh
                     </span>
                   </div>
                   <p className="text-xs text-neutral-600 dark:text-neutral-400">
@@ -425,18 +429,28 @@ export default function OrderStatusPage() {
                       ? "Đánh giá của bạn đang ở chế độ bảo vệ hai chiều Double-Blind và sẽ tự động công bố khi đối tác hoàn tất hoặc sau 14 ngày."
                       : "Giao dịch đã hoàn tất! Hãy đánh giá Người bán về độ chính xác mô tả, giao hàng và chất lượng để xây dựng uy tín thương mại."}
                   </p>
+                  {reviewUrl && !hasReviewed && (
+                    <div className="pt-1 flex items-center gap-2 text-[11px] text-amber-800 dark:text-amber-300">
+                      <span>🔗 Link đánh giá riêng:</span>
+                      <Link href={reviewUrl} className="underline font-bold hover:text-amber-900">
+                        {reviewUrl}
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {!hasReviewed ? (
-                <button
-                  type="button"
-                  onClick={() => setShowReviewModal(true)}
-                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer"
-                >
-                  <Star className="w-4 h-4 fill-white text-white" />
-                  <span>Đánh Giá Ngay</span>
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowReviewModal(true)}
+                    className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Star className="w-4 h-4 fill-white text-white" />
+                    <span>Đánh Giá Ngay</span>
+                  </button>
+                </div>
               ) : (
                 <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 shrink-0">
                   <CheckCircle2 className="w-4 h-4" />

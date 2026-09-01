@@ -678,6 +678,9 @@ export interface Order {
   customer_name: string;
   customer_phone: string;
   customer_email?: string;
+  buyer_participant_type?: ParticipantType;
+  buyer_guest_identity_id?: string;
+  claimed_by_actor_id?: string;
   shipping_address?: {
     province?: string;
     district?: string;
@@ -1033,6 +1036,9 @@ export interface Transaction {
   quotation_number?: string;
   quotation_version: number;
   buyer_party_id?: string;
+  buyer_participant_type?: ParticipantType;
+  buyer_guest_identity_id?: string;
+  claimed_by_actor_id?: string;
   buyer_name?: string;
   seller_party_id?: string;
   seller_name?: string;
@@ -1231,6 +1237,8 @@ export interface StoreCustomizationSettings {
 // VERIFIED TRANSACTION REVIEWS & REPUTATION
 // ==========================================
 
+export type ParticipantType = 'ACTOR' | 'GUEST';
+
 export type ReviewRole = 'BUYER' | 'SELLER';
 
 export type ReviewStatus = 
@@ -1253,19 +1261,70 @@ export type ReviewReportReason =
 
 export type ReviewReportStatus = 'PENDING' | 'INVESTIGATING' | 'RESOLVED_HIDDEN' | 'RESOLVED_KEPT' | 'DISMISSED';
 
+export type ReviewInvitationStatus = 'PENDING' | 'VERIFIED' | 'USED' | 'EXPIRED' | 'REVOKED';
+
+export interface GuestIdentity {
+  id: string; // gst_xxx
+  status: 'ACTIVE' | 'CLAIMED' | 'ARCHIVED';
+  display_name?: string;
+  verified_phone?: string;
+  phone_verified_at?: string;
+  verified_email?: string;
+  email_verified_at?: string;
+  claimed_by_actor_id?: string | null;
+  claimed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReviewInvitation {
+  id: string; // rinv_xxx
+  transaction_id: string;
+  order_id?: string;
+  order_number?: string;
+  participant_type: ParticipantType;
+  guest_identity_id?: string;
+  actor_id?: string;
+  review_direction: 'BUYER_TO_SELLER' | 'SELLER_TO_BUYER';
+  recipient_phone?: string;
+  recipient_name?: string;
+  secure_token_hash: string;
+  status: ReviewInvitationStatus;
+  expires_at: string;
+  created_at: string;
+  verified_at?: string;
+  used_at?: string;
+}
+
+export interface TransactionParty {
+  id: string; // tparty_xxx
+  transaction_id: string;
+  role: 'BUYER' | 'SELLER';
+  participant_type: ParticipantType;
+  actor_id?: string | null;
+  guest_identity_id?: string | null;
+  claimed_by_actor_id?: string | null;
+  display_name?: string;
+  created_at: string;
+}
+
 export interface TransactionReview {
   id: string;
   transaction_id: string;
   order_id?: string;
   order_number?: string;
   
-  reviewer_actor_id: string;
-  reviewer_actor_type: 'PERSONAL' | 'ORGANIZATION';
+  reviewer_actor_id?: string | null;
+  reviewer_actor_type?: 'PERSONAL' | 'ORGANIZATION';
+  reviewer_party_type?: ParticipantType;
+  reviewer_guest_identity_id?: string | null;
   reviewer_name?: string;
   reviewer_avatar?: string;
   
-  reviewee_actor_id: string;
-  reviewee_actor_type: 'PERSONAL' | 'ORGANIZATION';
+  reviewee_actor_id?: string | null;
+  reviewee_actor_type?: 'PERSONAL' | 'ORGANIZATION';
+  reviewee_party_type?: ParticipantType;
+  reviewee_guest_identity_id?: string | null;
   reviewee_name?: string;
   
   reviewer_role: ReviewRole;
@@ -1295,7 +1354,8 @@ export interface TransactionReview {
   review_deadline: string;         // transaction_completed_at + 14 days
   
   // Audit metadata
-  performed_by_user_id: string;
+  performed_by_user_id?: string | null;
+  verification_method?: 'PHONE_OTP' | 'AUTH_SESSION' | 'INVITATION_TOKEN';
   
   // Response from reviewee
   response?: ReviewResponse;
@@ -1305,6 +1365,27 @@ export interface TransactionReview {
   
   created_at: string;
   updated_at: string;
+}
+
+export interface PublicReviewDTO {
+  id: string;
+  transaction_id: string;
+  order_number?: string;
+  overall_rating: number;
+  accuracy_rating?: number;
+  timeliness_rating?: number;
+  communication_rating?: number;
+  quality_rating?: number;
+  payment_rating?: number;
+  clarity_rating?: number;
+  cooperation_rating?: number;
+  comment?: string;
+  published_at?: string;
+  is_verified_transaction: boolean;
+  reviewer_display_type: 'REGISTERED_ACTOR' | 'VERIFIED_GUEST';
+  reviewer_display_name: string;
+  reviewer_actor_id?: string;
+  response?: ReviewResponse;
 }
 
 export interface ReviewResponse {
