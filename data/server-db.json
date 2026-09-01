@@ -18,7 +18,11 @@
       "is_active": true,
       "payment_settings": {
         "enable_cod": true,
-        "enable_bank_transfer": true
+        "enable_bank_transfer": true,
+        "bank_bin": "970422",
+        "bank_name": "MBBank",
+        "bank_account_no": "0987281689",
+        "bank_account_name": "TRAN XUAN NHAT"
       },
       "shipping_settings": {
         "shipping_enabled": true,
@@ -62,6 +66,14 @@
           "is_available": true
         }
       ],
+      "payment_settings": {
+        "bank_bin": "970422",
+        "bank_name": "MBBank",
+        "bank_account_no": "0987281689",
+        "bank_account_name": "TRAN XUAN NHAT",
+        "enable_bank_transfer": true,
+        "enable_cod": true
+      },
       "created_at": "2026-09-01T00:00:00.000Z",
       "updated_at": "2026-09-01T00:00:00.000Z"
     },
@@ -95,12 +107,33 @@
           "is_available": true
         }
       ],
+      "payment_settings": {
+        "bank_bin": "970422",
+        "bank_name": "MBBank",
+        "bank_account_no": "0987281689",
+        "bank_account_name": "TRAN XUAN NHAT",
+        "enable_bank_transfer": true,
+        "enable_cod": true
+      },
       "created_at": "2026-09-01T00:00:00.000Z",
       "updated_at": "2026-09-01T00:00:00.000Z"
     }
   ],
   "products": [],
-  "paymentAccounts": [],
+  "paymentAccounts": [
+    {
+      "id": "acc-mb-nhat",
+      "actor_id": "usr_tran_xuan_nhat",
+      "actor_type": "PERSONAL",
+      "bank_bin": "970422",
+      "bank_name": "Ngân Hàng TMCP Quân Đội (MBBank)",
+      "bank_short_name": "MBBank",
+      "account_number": "0987281689",
+      "account_name": "TRAN XUAN NHAT",
+      "is_default": true,
+      "verification_status": "VERIFIED"
+    }
+  ],
   "orders": [],
   "organizations": [],
   "template_licenses": [],

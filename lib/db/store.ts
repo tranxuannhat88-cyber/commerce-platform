@@ -949,11 +949,12 @@ export function useCommerceStore() {
     customBankSettings?: { bank_bin?: string; bank_account_no?: string; bank_account_name?: string }
   ): string {
     const bankBin = customBankSettings?.bank_bin || store.payment_settings?.bank_bin || "970422";
-    const accountNo = customBankSettings?.bank_account_no || store.payment_settings?.bank_account_no || "098812345688";
+    const accountNo = customBankSettings?.bank_account_no || store.payment_settings?.bank_account_no || "";
     const accountName = encodeURIComponent(
-      customBankSettings?.bank_account_name || store.payment_settings?.bank_account_name || "CONG TY TNHH KY THUAT 2K"
+      customBankSettings?.bank_account_name || store.payment_settings?.bank_account_name || ""
     );
     const cleanRef = orderRef.replace(/[^a-zA-Z0-9]/g, "");
+    if (!accountNo) return "";
     return `https://img.vietqr.io/image/${bankBin}-${accountNo}-compact2.png?amount=${amount}&addInfo=${cleanRef}&accountName=${accountName}`;
   }
 

@@ -698,12 +698,21 @@ export default function StoreSettingsPage() {
                           <span className="text-neutral-400 text-[11px]">Đang sử dụng nhận tiền</span>
                         )}
 
-                        {paymentAccounts.length > 1 && !isStoreDefault && (
+                        {paymentAccounts.length > 1 && (
                           <button
                             type="button"
-                            onClick={() => deletePaymentAccount(acc.id)}
-                            className="text-red-500 hover:text-red-700 text-xs p-1 cursor-pointer"
-                            title="Xóa tài khoản"
+                            onClick={() => {
+                              deletePaymentAccount(acc.id);
+                              const remaining = paymentAccounts.filter((a) => a.id !== acc.id);
+                              if (remaining.length > 0) {
+                                setPaymentSettings((prev) => ({
+                                  ...prev,
+                                  default_payment_account_id: remaining[0].id,
+                                }));
+                              }
+                            }}
+                            className="text-red-500 hover:text-red-700 text-xs p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer transition-colors"
+                            title="Xóa tài khoản này"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -1102,7 +1111,6 @@ export default function StoreSettingsPage() {
                 <input
                   type="text"
                   required
-                  placeholder="098812345688"
                   value={newAccNumber}
                   onChange={(e) => setNewAccNumber(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-mono font-bold text-xs"
@@ -1116,7 +1124,6 @@ export default function StoreSettingsPage() {
                 <input
                   type="text"
                   required
-                  placeholder="CONG TY TNHH KY THUAT 2K"
                   value={newAccName}
                   onChange={(e) => setNewAccName(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 font-bold text-xs uppercase"
