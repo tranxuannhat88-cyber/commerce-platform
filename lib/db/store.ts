@@ -517,24 +517,46 @@ export function useCommerceStore() {
             });
           }
 
-          // 2. Hydrate Offers with Image Preservation
+          // 2. Hydrate Offers with Timestamp-based Conflict Resolution (Never overwrite newer local edits!)
           if (Array.isArray(serverData.offers) && serverData.offers.length > 0) {
             setOffersState((prevOffers) => {
-              const prevMap = new Map(prevOffers.map((p) => [p.id, p]));
-              const merged = serverData.offers.map((so) => {
-                const prev = prevMap.get(so.id) || prevOffers.find((p) => p.slug === so.slug);
-                const finalImg = so.image_url || prev?.image_url || "";
-                const finalItems = so.items?.map((it, idx) => ({
-                  ...it,
-                  image_url: it.image_url || prev?.items?.[idx]?.image_url || "",
-                })) || so.items;
-                return {
-                  ...so,
-                  image_url: finalImg,
-                  items: finalItems,
-                };
+              const serverOfferMap = new Map(serverData.offers.map((so) => [so.id, so]));
+              const localOfferMap = new Map(prevOffers.map((po) => [po.id, po]));
+              
+              const allIds = new Set([...Array.from(localOfferMap.keys()), ...Array.from(serverOfferMap.keys())]);
+              const merged: Offer[] = [];
+              let shouldPushLocalToServer = false;
+
+              allIds.forEach((id) => {
+                const local = localOfferMap.get(id);
+                const server = serverOfferMap.get(id);
+
+                if (local && !server) {
+                  merged.push(local);
+                  shouldPushLocalToServer = true;
+                } else if (!local && server) {
+                  merged.push(server);
+                } else if (local && server) {
+                  const localTime = new Date(local.updated_at || local.created_at || 0).getTime();
+                  const serverTime = new Date(server.updated_at || server.created_at || 0).getTime();
+
+                  if (localTime >= serverTime) {
+                    merged.push(local);
+                    if (localTime > serverTime) {
+                      shouldPushLocalToServer = true;
+                    }
+                  } else {
+                    merged.push(server);
+                  }
+                }
               });
+
               setStored(STORAGE_KEYS.OFFERS, merged);
+
+              if (shouldPushLocalToServer) {
+                SyncBridgeService.syncAllOffersToServer(merged);
+              }
+
               return merged;
             });
           } else if (initialOffers && initialOffers.length > 0) {
