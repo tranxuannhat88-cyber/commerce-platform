@@ -143,6 +143,16 @@
       "actor_type": "PERSONAL",
       "display_name": "Trần Xuân Nhất",
       "full_name": "Trần Xuân Nhất",
+      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80",
+      "phone": "0988123456",
+      "email": "nhat@invamax.com"
+    },
+    "usr_tran_xuan_nhat": {
+      "actor_id": "usr_tran_xuan_nhat",
+      "actor_type": "PERSONAL",
+      "display_name": "Trần Xuân Nhất",
+      "full_name": "Trần Xuân Nhất",
+      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80",
       "phone": "0988123456",
       "email": "nhat@invamax.com"
     }

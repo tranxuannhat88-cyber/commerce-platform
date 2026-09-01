@@ -204,7 +204,7 @@ function DirectOfferContent({ storeSlug: propStoreSlug, offerSlug: propOfferSlug
           compare_at_price: it.compare_at_price,
           unit: it.unit || "cái",
           description: it.description,
-          image_url: it.image_url || masterProd?.image_url,
+          image_url: it.image_url || offer.image_url || masterProd?.image_url || "",
           category: it.category || "Chung",
           availability_status: avail.availability_status,
           available_quantity: avail.available_quantity,
@@ -244,7 +244,7 @@ function DirectOfferContent({ storeSlug: propStoreSlug, offerSlug: propOfferSlug
         compare_at_price: offer.compare_at_price,
         unit: offer.service_unit || "cái",
         description: offer.short_description || offer.description,
-        image_url: offer.image_url || masterProd?.image_url,
+        image_url: offer.image_url || (offer.items && offer.items[0]?.image_url) || masterProd?.image_url || "",
         category: offer.category_id || "Sản phẩm chính",
         availability_status: avail.availability_status,
         available_quantity: avail.available_quantity,
@@ -271,27 +271,8 @@ function DirectOfferContent({ storeSlug: propStoreSlug, offerSlug: propOfferSlug
     return resolvedItems.filter((it) => it.category === activeCategory);
   }, [resolvedItems, activeCategory]);
 
-  // Selected Quantities State: Record<itemKey, quantity>
-  // itemKey is either `itemId` OR `itemId__variantId`
+  // Selected Quantities State: Record<itemKey, quantity> (Starts empty with 0 items selected)
   const [selectedQuantities, setSelectedQuantities] = useState<Record<string, number>>({});
-
-  // Auto-select initial quantity = 1 ONLY ONCE on mount for single-item offers
-  const hasInitializedRef = useRef(false);
-  useEffect(() => {
-    if (hasInitializedRef.current) return;
-    if (resolvedItems.length === 1 && !resolvedItems[0].variants?.length) {
-      const singleId = resolvedItems[0].id;
-      if (singleId) {
-        hasInitializedRef.current = true;
-        setSelectedQuantities((prev) => {
-          if (Object.keys(prev).length === 0) {
-            return { [singleId]: 1 };
-          }
-          return prev;
-        });
-      }
-    }
-  }, [resolvedItems]);
 
   const handleUpdateQty = (key: string, delta: number) => {
     setSelectedQuantities((prev) => {

@@ -185,18 +185,20 @@ export function OfferHeader({
               <img
                 src={resolvedAvatarUrl}
                 alt={resolvedName}
-                className="w-10 h-10 rounded-2xl object-cover border border-neutral-200 dark:border-neutral-700 bg-white"
+                className="w-10 h-10 rounded-2xl object-cover border border-neutral-200 dark:border-neutral-700 bg-white shadow-xs"
               />
             ) : (
               <div
-                className="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-xs border"
+                className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm text-white shadow-xs border border-white/20"
                 style={{
-                  backgroundColor: isLuxury ? "#1e1e1e" : isDarkTech ? "#051e28" : `${brandColor}15`,
-                  borderColor: isLuxury ? "#d97706" : isDarkTech ? "#06b6d4" : `${brandColor}40`,
-                  color: isLuxury ? "#f59e0b" : isDarkTech ? "#22d3ee" : brandColor,
+                  background: isLuxury
+                    ? "linear-gradient(135deg, #d97706, #78350f)"
+                    : isDarkTech
+                    ? "linear-gradient(135deg, #06b6d4, #0e7490)"
+                    : `linear-gradient(135deg, ${brandColor}, #3b82f6)`,
                 }}
               >
-                {isOrg ? <Building2 className="w-5 h-5" /> : <User className="w-5 h-5" />}
+                {resolvedName?.trim() ? resolvedName.trim().charAt(0).toUpperCase() : (isOrg ? "🏢" : "👤")}
               </div>
             )}
 

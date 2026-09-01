@@ -13,6 +13,30 @@ import {
 export function MobileBottomNav() {
   const pathname = usePathname();
 
+  // ONLY show MobileBottomNav on authenticated Seller Dashboard routes!
+  // NEVER show on public storefront, offer pages, checkout, review, RFQ, or verification pages.
+  const isDashboardRoute = (path: string | null): boolean => {
+    if (!path) return false;
+    if (path === "/") return true;
+    const dashboardPrefixes = [
+      "/sell",
+      "/buy",
+      "/inventory",
+      "/finance",
+      "/parties",
+      "/settings",
+      "/transactions",
+      "/store",
+      "/billing",
+      "/onboarding",
+    ];
+    return dashboardPrefixes.some((prefix) => path.startsWith(prefix));
+  };
+
+  if (!isDashboardRoute(pathname)) {
+    return null;
+  }
+
   const navItems = [
     { label: "Tổng quan", href: "/", icon: LayoutDashboard, exact: true },
     { label: "Sản phẩm", href: "/sell/offers", icon: Tag },
