@@ -27,7 +27,10 @@ export function TemplateOffers({
     <section id="offers" className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center text-rose-600">
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs"
+            style={{ backgroundColor: `${brandColor}18`, color: brandColor }}
+          >
             <Tag className="w-4 h-4" />
           </div>
           <div>
@@ -43,18 +46,22 @@ export function TemplateOffers({
         {offers.map((offer) => {
           const isCatalog = offer.offer_structure === "MENU_CATALOG" || (offer.items && offer.items.length > 1);
           const targetUrl = `/${storeSlug}/o/${offer.slug}`;
+          const displayImage = (offer.items && offer.items.length > 0 && offer.items[0].image_url) || offer.image_url;
 
           return (
             <Link
               key={offer.id}
               href={targetUrl}
-              className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-xs hover:shadow-lg hover:border-blue-400 dark:hover:border-blue-600 transition-all flex flex-col justify-between"
+              className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-xs hover:shadow-lg transition-all flex flex-col justify-between"
+              style={{
+                borderColor: undefined,
+              }}
             >
               <div>
-                <div className="relative aspect-16/9 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-                  {offer.image_url ? (
+                <div className="relative aspect-16/9 bg-neutral-100 dark:bg-neutral-800 overflow-hidden flex items-center justify-center">
+                  {displayImage ? (
                     <img
-                      src={offer.image_url}
+                      src={displayImage}
                       alt={offer.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
@@ -64,7 +71,10 @@ export function TemplateOffers({
                     </div>
                   )}
                   <div className="absolute top-2.5 left-2.5">
-                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-neutral-900/80 text-white backdrop-blur-xs flex items-center gap-1">
+                    <span
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-bold text-white backdrop-blur-xs flex items-center gap-1 shadow-xs"
+                      style={{ backgroundColor: brandColor }}
+                    >
                       <Sparkles className="w-3 h-3 text-amber-300" />
                       <span>{isCatalog ? "BẢNG GIÁ" : "ƯU ĐÃI ĐẶC BIỆT"}</span>
                     </span>
@@ -72,11 +82,14 @@ export function TemplateOffers({
                 </div>
 
                 <div className="p-4 space-y-2">
-                  <h3 className="font-bold text-sm text-neutral-900 dark:text-neutral-100 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                  <h3 className="font-bold text-sm text-neutral-900 dark:text-neutral-100 line-clamp-1 transition-colors">
                     {offer.name}
                   </h3>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-base font-black text-rose-600 dark:text-rose-400">
+                    <span
+                      className="text-base font-black"
+                      style={{ color: brandColor }}
+                    >
                       {isCatalog ? `Từ ${formatVND(offer.price)}` : formatVND(offer.price)}
                     </span>
                     {offer.compare_at_price && (
@@ -92,7 +105,10 @@ export function TemplateOffers({
               </div>
 
               <div className="p-4 pt-0">
-                <div className="flex items-center justify-between text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform">
+                <div
+                  className="flex items-center justify-between text-xs font-bold group-hover:translate-x-1 transition-transform"
+                  style={{ color: brandColor }}
+                >
                   <span>Xem chi tiết & Đặt mua</span>
                   <ArrowRight className="w-4 h-4" />
                 </div>

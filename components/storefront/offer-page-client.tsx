@@ -107,6 +107,10 @@ function DirectOfferContent({ storeSlug: propStoreSlug, offerSlug: propOfferSlug
     currentUser,
     paymentAccounts,
     createOrder,
+    reviews,
+    actorReviewStats,
+    transactions,
+    orders,
   } = useCommerceStore();
 
   const [serverOffer, setServerOffer] = useState<Offer | null>(null);
@@ -640,10 +644,13 @@ function DirectOfferContent({ storeSlug: propStoreSlug, offerSlug: propOfferSlug
           user={currentUser}
           sellerType={publicOffer?.seller_mini_card.actor_type}
           sellerDisplayName={publicOffer?.seller_mini_card.seller_display_name}
-          sellerAvatarUrl={publicOffer?.seller_mini_card.logo_url}
-          isVerified={publicOffer?.seller_mini_card.is_verified}
-          publicLocation={publicOffer?.seller_mini_card.location_summary}
+          sellerAvatarUrl={currentStore.logo_url || publicOffer?.seller_mini_card.logo_url}
+          isVerified={publicOffer?.seller_mini_card.is_verified ?? true}
+          publicLocation={publicOffer?.seller_mini_card.location_summary || currentStore.address}
           itemCount={resolvedItems.length}
+          ratingScore={actorReviewStats[currentStore.owner_actor_id || currentStore.id || personalActor.id]?.overall_rating_avg || 5.0}
+          reviewCount={actorReviewStats[currentStore.owner_actor_id || currentStore.id || personalActor.id]?.published_reviews_count || reviews.length}
+          transactionCount={transactions.length || orders.length || 1}
           customization={currentStore.customization}
         />
 

@@ -305,7 +305,7 @@ export function TemplateProductGrid({
                 {product.name}
               </h4>
               <div className="flex items-baseline gap-1.5 flex-wrap">
-                <span className="text-sm font-black text-rose-600 dark:text-rose-400">
+                <span className="text-sm font-black" style={{ color: brandColor }}>
                   {formatVND(product.price)}
                 </span>
                 {product.compare_at_price && (

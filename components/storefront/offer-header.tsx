@@ -17,6 +17,8 @@ import {
   Calendar,
   AlertCircle,
   ExternalLink,
+  Star,
+  CheckCircle2,
 } from "lucide-react";
 import { Offer, Store, Organization, PersonalActor, StoreCustomizationSettings } from "@/types";
 import { UserIdentity } from "@/lib/auth/types";
@@ -35,6 +37,9 @@ interface OfferHeaderProps {
   isVerified?: boolean;
   publicLocation?: string;
   itemCount?: number;
+  ratingScore?: number;
+  reviewCount?: number;
+  transactionCount?: number;
   customization?: StoreCustomizationSettings;
   className?: string;
 }
@@ -51,6 +56,9 @@ export function OfferHeader({
   isVerified = false,
   publicLocation,
   itemCount = 0,
+  ratingScore = 5.0,
+  reviewCount = 0,
+  transactionCount = 0,
   customization,
   className = "",
 }: OfferHeaderProps) {
@@ -82,9 +90,6 @@ export function OfferHeader({
 
   const isOrg = sellerType === "ORGANIZATION" || Boolean(orgName) || store.owner_actor_type === "ORGANIZATION";
 
-  // Build the formatted display name according to rules:
-  // - For Personal: AccountName / StoreName (or 1 name if identical or only 1 exists)
-  // - For Org: OrgName / StoreName (or 1 name if identical or only 1 exists)
   let resolvedName = sellerDisplayName || "";
   if (!resolvedName || resolvedName.toLowerCase() === "cá nhân (cá nhân)" || resolvedName.toLowerCase() === "cá nhân (cá nhân) / cá nhân" || resolvedName.toLowerCase() === "cá nhân") {
     if (isOrg) {
@@ -102,10 +107,10 @@ export function OfferHeader({
     }
   }
 
-  // 3. Resolve Avatar: Store Logo -> Org Logo -> Account Avatar -> Fallback Icon
+  // 3. Resolve Avatar Priority: Store Logo ALWAYS FIRST! -> Seller Avatar -> Org Logo -> Account Avatar
   const resolvedAvatarUrl =
-    sellerAvatarUrl ||
     store.logo_url ||
+    sellerAvatarUrl ||
     (isOrg ? organization?.logo_url : (personalActor?.avatar_url || user?.avatar_url));
 
   // Store Link Target (Always navigates to valid store link)
@@ -178,18 +183,18 @@ export function OfferHeader({
         style={topBarStyle}
         className="p-4 sm:px-6 py-3.5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs backdrop-blur-xs"
       >
-        {/* Left: Avatar, Name, Entity Type, Verified Badge, Public Location */}
+        {/* Left: Avatar, Name, Entity Type, Verified Badge, Rating, Transactions */}
         <div className="flex items-center gap-3 min-w-0">
-          <div className="relative shrink-0">
+          <div className="relative shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-2xl overflow-hidden shadow-xs border border-neutral-200 dark:border-neutral-700 bg-white">
             {resolvedAvatarUrl ? (
               <img
                 src={resolvedAvatarUrl}
                 alt={resolvedName}
-                className="w-10 h-10 rounded-2xl object-cover border border-neutral-200 dark:border-neutral-700 bg-white shadow-xs"
+                className="w-full h-full object-cover aspect-square"
               />
             ) : (
               <div
-                className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm text-white shadow-xs border border-white/20"
+                className="w-full h-full flex items-center justify-center font-black text-sm text-white shadow-xs"
                 style={{
                   background: isLuxury
                     ? "linear-gradient(135deg, #d97706, #78350f)"
@@ -204,7 +209,7 @@ export function OfferHeader({
 
             {isVerified && (
               <div
-                className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs"
+                className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs ring-2 ring-white dark:ring-neutral-900"
                 title="Đã xác minh"
               >
                 <ShieldCheck className="w-2.5 h-2.5 stroke-[3]" />
@@ -240,6 +245,25 @@ export function OfferHeader({
                   <span className="truncate">{publicLocation}</span>
                 </>
               )}
+
+              {/* Rating Score */}
+              <span>•</span>
+              <span className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
+                <Star className="w-3 h-3 fill-amber-400 text-amber-500" />
+                <span>{ratingScore > 0 ? ratingScore.toFixed(1) : "5.0"}</span>
+                {reviewCount > 0 ? (
+                  <span className="opacity-75 font-normal">({reviewCount} đánh giá)</span>
+                ) : (
+                  <span className="opacity-75 font-normal">(Mới)</span>
+                )}
+              </span>
+
+              {/* Transactions Count */}
+              <span>•</span>
+              <span className="inline-flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400">
+                <CheckCircle2 className="w-3 h-3" />
+                <span>{transactionCount > 0 ? `${transactionCount} giao dịch` : "Giao dịch bảo đảm"}</span>
+              </span>
             </div>
           </div>
         </div>
@@ -259,9 +283,9 @@ export function OfferHeader({
       </div>
 
       {/* 2. OFFER HERO CONTENT */}
-      <div className="p-5 sm:p-7 space-y-4">
-        {/* Category / Type & Expiry Notice */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="p-5 sm:p-7 space-y-3">
+        {/* Top Row: Offer Type Badge (Left) + Item Count & Update Date (Right) */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
           <div className="inline-flex items-center gap-2">
             <span
               className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider text-white shadow-xs"
@@ -269,50 +293,37 @@ export function OfferHeader({
             >
               {offerTypeLabel}
             </span>
+
+            {isExpired && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 text-xs font-bold border border-rose-200 dark:border-rose-900">
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span>Offer đã kết thúc</span>
+              </span>
+            )}
           </div>
 
-          {isExpired && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 text-xs font-bold border border-rose-200 dark:border-rose-900">
-              <AlertCircle className="w-3.5 h-3.5" />
-              <span>Offer đã kết thúc</span>
-            </span>
-          )}
-        </div>
+          {/* Top Right: Item count & Update date */}
+          <div className="flex items-center gap-2 text-xs font-semibold">
+            {itemCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-neutral-800/80 border border-neutral-200/80 dark:border-neutral-700/80 shadow-xs text-neutral-800 dark:text-neutral-200 font-bold">
+                <Package className="w-3.5 h-3.5" style={{ color: brandColor }} />
+                <span>{itemCount} sản phẩm/dịch vụ</span>
+              </span>
+            )}
 
-        {/* Offer Title (Primary H1) */}
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight leading-snug">
-          {offer.name}
-        </h1>
-
-        {/* Description (If exists) */}
-        {(offer.short_description || offer.description) && (
-          <p className="text-xs sm:text-sm opacity-85 leading-relaxed max-w-3xl line-clamp-3">
-            {offer.short_description || offer.description}
-          </p>
-        )}
-
-        {/* Metadata Badges Bar */}
-        <div
-          style={{ borderColor: `${brandColor}20` }}
-          className="flex flex-wrap items-center gap-3 text-xs pt-1 border-t"
-        >
-          {itemCount > 0 && (
-            <div className="inline-flex items-center gap-1.5 opacity-85">
-              <Package className="w-3.5 h-3.5" style={{ color: brandColor }} />
-              <span>{itemCount} sản phẩm/dịch vụ</span>
-            </div>
-          )}
-
-          {formattedUpdate && (
-            <>
-              {itemCount > 0 && <span>•</span>}
-              <div className="inline-flex items-center gap-1.5 opacity-85">
+            {formattedUpdate && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-neutral-800/80 border border-neutral-200/80 dark:border-neutral-700/80 shadow-xs text-neutral-500 dark:text-neutral-400">
                 <Calendar className="w-3.5 h-3.5 opacity-70" />
                 <span>Cập nhật {formattedUpdate}</span>
-              </div>
-            </>
-          )}
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* Offer Title (Primary H1) - NO short description below! */}
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight leading-snug pt-1">
+          {offer.name}
+        </h1>
       </div>
     </div>
   );
