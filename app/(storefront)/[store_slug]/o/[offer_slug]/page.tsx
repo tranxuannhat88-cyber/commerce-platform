@@ -690,14 +690,14 @@ function DirectOfferContent() {
                 return (
                   <div
                     key={item.id}
-                    className={`p-4 sm:p-5 rounded-3xl bg-white dark:bg-neutral-900 border transition-all flex flex-col sm:flex-row gap-4 ${
+                    className={`p-3.5 sm:p-5 rounded-3xl bg-white dark:bg-neutral-900 border transition-all flex flex-row items-start sm:items-stretch gap-3 sm:gap-4 ${
                       totalItemVariantsQty > 0
                         ? "border-emerald-600 ring-2 ring-emerald-500/20 shadow-md"
                         : "border-neutral-200/90 dark:border-neutral-800 hover:border-neutral-300"
                     }`}
                   >
-                    {/* Item Image with Neutral Fallback (Aspect 1:1, NEVER disappearing) */}
-                    <div className="w-full sm:w-32 sm:h-32 aspect-square rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 shrink-0 border border-neutral-200 dark:border-neutral-700 relative">
+                    {/* Item Image with Neutral Fallback (Aspect 1:1, Compact & Consistent) */}
+                    <div className="w-20 h-20 sm:w-32 sm:h-32 aspect-square rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 shrink-0 border border-neutral-200 dark:border-neutral-700 relative">
                       {item.image_url ? (
                         <img
                           src={item.image_url}
@@ -705,31 +705,31 @@ function DirectOfferContent() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-neutral-400 p-2 text-center">
-                          <Package className="w-10 h-10 mb-1 opacity-40" />
-                          <span className="text-[10px] font-medium opacity-60">Chưa có hình ảnh</span>
+                        <div className="w-full h-full flex flex-col items-center justify-center text-neutral-400 p-1 text-center">
+                          <Package className="w-7 h-7 sm:w-10 sm:h-10 mb-0.5 opacity-40" />
+                          <span className="text-[9px] sm:text-[10px] font-medium opacity-60">Chưa có ảnh</span>
                         </div>
                       )}
 
                       {/* Out of stock badge on image */}
                       {isOutOfStock && (
-                        <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 text-center">
-                          <span className="px-2.5 py-1 rounded-md text-[10px] font-black bg-rose-600 text-white shadow-xs">
-                            TẠM HẾT HÀNG
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-1 text-center">
+                          <span className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[8px] sm:text-[10px] font-black bg-rose-600 text-white shadow-xs">
+                            HẾT HÀNG
                           </span>
                         </div>
                       )}
                     </div>
 
                     {/* Item Info & Purchasing Stepper */}
-                    <div className="flex-1 flex flex-col justify-between space-y-3">
-                      <div className="space-y-1.5">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-neutral-100">
+                    <div className="flex-1 min-w-0 flex flex-col justify-between space-y-2.5 sm:space-y-3">
+                      <div className="space-y-1">
+                        <div className="flex items-start justify-between gap-1.5">
+                          <h3 className="text-xs sm:text-base font-bold text-neutral-900 dark:text-neutral-100 leading-snug line-clamp-2">
                             {item.name}
                           </h3>
                           {item.category && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-500 shrink-0">
+                            <span className="px-1.5 sm:px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-500 shrink-0">
                               {item.category}
                             </span>
                           )}
@@ -794,23 +794,23 @@ function DirectOfferContent() {
                               return (
                                 <div
                                   key={variant.id}
-                                  className={`p-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                                  className={`p-2.5 sm:p-3 rounded-2xl border transition-all flex flex-row items-center justify-between gap-2 sm:gap-3 ${
                                     vQty > 0
                                       ? "bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-500/80 shadow-2xs"
                                       : "bg-neutral-50/60 dark:bg-neutral-800/40 border-neutral-200 dark:border-neutral-700/80"
                                   }`}
                                 >
                                   <div className="min-w-0 space-y-0.5">
-                                    <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
+                                    <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100 truncate">
                                       {variant.name}
                                     </p>
-                                    <div className="flex items-baseline gap-2">
-                                      <span className="text-sm font-black text-rose-600 dark:text-rose-400">
+                                    <div className="flex items-baseline gap-1.5 sm:gap-2">
+                                      <span className="text-xs sm:text-sm font-black text-rose-600 dark:text-rose-400">
                                         {formatVND(variant.price)}
                                         {item.unit && <span className="text-[10px] font-normal text-neutral-400"> /{item.unit}</span>}
                                       </span>
                                       {variant.compare_at_price && variant.compare_at_price > variant.price && (
-                                        <span className="text-[11px] text-neutral-400 line-through">
+                                        <span className="text-[10px] sm:text-[11px] text-neutral-400 line-through">
                                           {formatVND(variant.compare_at_price)}
                                         </span>
                                       )}
@@ -818,7 +818,7 @@ function DirectOfferContent() {
                                   </div>
 
                                   {/* Variant Quantity Stepper */}
-                                  <div className="flex items-center gap-2 self-end sm:self-center">
+                                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                                     <div className="flex items-center border border-neutral-300 dark:border-neutral-700 rounded-xl bg-white dark:bg-neutral-900 shadow-2xs">
                                       <button
                                         type="button"
@@ -834,7 +834,7 @@ function DirectOfferContent() {
                                         disabled={isOutOfStock}
                                         value={vQty}
                                         onChange={(e) => handleSetQtyDirect(variantKey, parseInt(e.target.value) || 0)}
-                                        className="w-9 text-center text-xs font-black bg-transparent border-0 focus:ring-0 p-0 text-neutral-900 dark:text-neutral-100"
+                                        className="w-8 sm:w-9 text-center text-xs font-black bg-transparent border-0 focus:ring-0 p-0 text-neutral-900 dark:text-neutral-100"
                                       />
                                       <button
                                         type="button"
@@ -850,7 +850,7 @@ function DirectOfferContent() {
                                       <button
                                         type="button"
                                         onClick={() => handleUpdateQty(variantKey, 1)}
-                                        className="px-3 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs cursor-pointer hover:opacity-90 active:scale-95 transition-all"
+                                        className="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs cursor-pointer hover:opacity-90 active:scale-95 transition-all whitespace-nowrap"
                                         style={{ backgroundColor: brandColor }}
                                       >
                                         Chọn Mua
@@ -866,27 +866,27 @@ function DirectOfferContent() {
                         /* ------------------------------------------------------------- */
                         /* CASE B: SINGLE STANDARD ITEM (NO VARIANTS)                    */
                         /* ------------------------------------------------------------- */
-                        <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-base sm:text-lg font-black text-rose-600 dark:text-rose-400">
+                        <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800 gap-2">
+                          <div className="flex items-baseline gap-1.5 sm:gap-2">
+                            <span className="text-sm sm:text-lg font-black text-rose-600 dark:text-rose-400">
                               {formatVND(item.price)}
-                              {item.unit && <span className="text-xs font-normal text-neutral-400"> /{item.unit}</span>}
+                              {item.unit && <span className="text-[10px] sm:text-xs font-normal text-neutral-400"> /{item.unit}</span>}
                             </span>
                             {item.compare_at_price && item.compare_at_price > item.price && (
-                              <span className="text-xs text-neutral-400 line-through">
+                              <span className="text-[10px] sm:text-xs text-neutral-400 line-through">
                                 {formatVND(item.compare_at_price)}
                               </span>
                             )}
                           </div>
 
                           {/* Quantity Stepper */}
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                             <div className="flex items-center border border-neutral-300 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-800 shadow-2xs">
                               <button
                                 type="button"
                                 disabled={singleQty === 0 || isOutOfStock}
                                 onClick={() => handleUpdateQty(item.id, -1)}
-                                className="p-2 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
+                                className="p-1.5 sm:p-2 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
                               >
                                 <Minus className="w-3.5 h-3.5" />
                               </button>
@@ -896,13 +896,13 @@ function DirectOfferContent() {
                                 disabled={isOutOfStock}
                                 value={singleQty}
                                 onChange={(e) => handleSetQtyDirect(item.id, parseInt(e.target.value) || 0)}
-                                className="w-10 text-center text-xs font-black bg-transparent border-0 focus:ring-0 p-0 text-neutral-900 dark:text-neutral-100"
+                                className="w-8 sm:w-10 text-center text-xs font-black bg-transparent border-0 focus:ring-0 p-0 text-neutral-900 dark:text-neutral-100"
                               />
                               <button
                                 type="button"
                                 disabled={isOutOfStock}
                                 onClick={() => handleUpdateQty(item.id, 1)}
-                                className="p-2 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 disabled:opacity-30 cursor-pointer"
+                                className="p-1.5 sm:p-2 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 disabled:opacity-30 cursor-pointer"
                               >
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
@@ -912,7 +912,7 @@ function DirectOfferContent() {
                               <button
                                 type="button"
                                 onClick={() => handleUpdateQty(item.id, 1)}
-                                className="px-3 py-2 rounded-xl text-xs font-bold text-white shadow-xs cursor-pointer hover:opacity-90 active:scale-95 transition-all"
+                                className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold text-white shadow-xs cursor-pointer hover:opacity-90 active:scale-95 transition-all whitespace-nowrap"
                                 style={{ backgroundColor: brandColor }}
                               >
                                 Chọn Mua

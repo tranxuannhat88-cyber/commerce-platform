@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Store,
+  LayoutDashboard,
+  Tag,
   ShoppingBag,
-  FileText,
-  Package,
+  ShieldCheck,
   Settings,
 } from "lucide-react";
 
@@ -14,10 +14,10 @@ export function MobileBottomNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { label: "Cửa hàng", href: "/store", icon: Store },
+    { label: "Tổng quan", href: "/", icon: LayoutDashboard, exact: true },
+    { label: "Sản phẩm", href: "/sell/offers", icon: Tag },
     { label: "Đơn hàng", href: "/sell/orders", icon: ShoppingBag },
-    { label: "Báo giá", href: "/sell/quotations", icon: FileText },
-    { label: "Kho hàng", href: "/inventory", icon: Package },
+    { label: "Giao dịch", href: "/transactions", icon: ShieldCheck },
     { label: "Cài đặt", href: "/settings", icon: Settings },
   ];
 
@@ -25,7 +25,9 @@ export function MobileBottomNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-2 pt-1.5 pb-[calc(env(safe-area-inset-bottom,0px)+6px)] transition-all">
       <div className="flex items-center justify-around">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+          const isActive = item.exact
+            ? pathname === item.href
+            : pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
           const Icon = item.icon;
 
           return (

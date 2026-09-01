@@ -61,10 +61,11 @@ export function DashboardHeader() {
           {/* Quick QR button */}
           <button
             onClick={() => setShowStoreQR(true)}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors"
+            className="p-1.5 sm:px-3 sm:py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+            title="Mã QR Cửa Hàng"
           >
             <QrCode className="w-4 h-4 text-blue-600" />
-            <span>QR Cửa Hàng</span>
+            <span className="hidden sm:inline">QR Cửa Hàng</span>
           </button>
 
           {/* Quick Actions Dropdown */}

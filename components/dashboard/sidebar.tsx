@@ -256,14 +256,19 @@ export function MobileDashboardDrawer({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 cursor-pointer"
           >
             ✕
           </button>
         </div>
 
-        {/* Quick View Public Store */}
+        {/* Context Switcher on Mobile Drawer */}
         <div className="px-3 pt-3">
+          <ContextSwitcher />
+        </div>
+
+        {/* Quick View Public Store */}
+        <div className="px-3 pt-2">
           <Link
             href={store.slug ? `/${store.slug}` : "/store"}
             target={store.slug ? "_blank" : undefined}
