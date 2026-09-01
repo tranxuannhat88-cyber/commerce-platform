@@ -23,6 +23,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://go.invamax.com"),
   title: PWA_CONFIG.APP_NAME,
   description: PWA_CONFIG.APP_DESCRIPTION,
   manifest: "/manifest.webmanifest",
