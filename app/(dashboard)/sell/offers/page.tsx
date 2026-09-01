@@ -1007,7 +1007,7 @@ function OffersContent() {
       ]);
     }
 
-    if (offer.image_url && offer.items && offer.items.length > 1 && offer.image_url !== offer.items[0]?.image_url) {
+    if (offer.image_url) {
       setEnableCustomCover(true);
       setCustomCoverImage(offer.image_url);
     } else {
@@ -1236,8 +1236,8 @@ function OffersContent() {
           slug: slugify(resolvedName),
           store_slug: store.slug || "auto",
           category_id: formCategory.trim() || "Chung",
-          short_description: formShortDesc.trim() || (isMultiple ? `Bảng giá gồm ${validItems.length} sản phẩm/dịch vụ.` : validItems[0]?.description || ""),
-          description: formShortDesc.trim() || (isMultiple ? `Bảng giá gồm ${validItems.length} sản phẩm/dịch vụ.` : validItems[0]?.description || ""),
+          short_description: formShortDesc.trim() || (isMultiple ? `Offer gồm ${validItems.length} sản phẩm/dịch vụ.` : validItems[0]?.description || ""),
+          description: formShortDesc.trim() || (isMultiple ? `Offer gồm ${validItems.length} sản phẩm/dịch vụ.` : validItems[0]?.description || ""),
           price: basePrice,
           compare_at_price: !isMultiple && validItems[0]?.compare_at_price ? validItems[0].compare_at_price : undefined,
           cost_price: basePrice * 0.5,
@@ -1393,7 +1393,7 @@ function OffersContent() {
             >
               {tab === "ALL" && `Tất cả Offers (${offers.length})`}
               {tab === "SINGLE" && `📦 Đơn lẻ (${offers.filter((o) => !o.items || o.items.length <= 1).length})`}
-              {tab === "CATALOG" && `📋 Bảng giá nhiều SP (${offers.filter((o) => o.items && o.items.length > 1).length})`}
+              {tab === "CATALOG" && `📋 Offer nhiều SP (${offers.filter((o) => o.items && o.items.length > 1).length})`}
               {tab === "LIBRARY" && `🗄️ Thư Viện Sản Phẩm Gốc (${products.length})`}
             </button>
           ))}
@@ -1582,9 +1582,9 @@ function OffersContent() {
                 <div>
                   {/* Offer Image & Badges */}
                   <div className="relative aspect-16/9 bg-neutral-100 dark:bg-neutral-800 overflow-hidden flex items-center justify-center">
-                    {((offer.items && offer.items.length > 0 && offer.items[0].image_url) || offer.image_url) ? (
+                    {(offer.image_url || (offer.items && offer.items.length > 0 && offer.items[0].image_url)) ? (
                       <img
-                        src={(offer.items && offer.items.length > 0 && offer.items[0].image_url) || offer.image_url}
+                        src={offer.image_url || (offer.items && offer.items.length > 0 && offer.items[0].image_url) || ""}
                         alt={offer.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
@@ -1598,7 +1598,7 @@ function OffersContent() {
                       {isCatalog ? (
                         <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-700 text-white backdrop-blur-md flex items-center gap-1">
                           <ListOrdered className="w-3 h-3" />
-                          <span>BẢNG GIÁ ({offer.items?.length || 0} MỤC)</span>
+                          <span>OFFER ({offer.items?.length || 0} MỤC)</span>
                         </span>
                       ) : (
                         <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-neutral-900/80 text-white backdrop-blur-md">
@@ -2252,7 +2252,7 @@ function OffersContent() {
                         htmlFor="enableCustomCoverToggle"
                         className={`text-xs cursor-pointer select-none ${enableCustomCover ? "font-bold text-purple-900 dark:text-purple-200" : "font-medium text-neutral-600 dark:text-neutral-400"}`}
                       >
-                        🖼️ Đặt Ảnh bìa / Banner đại diện riêng cho Bảng giá này
+                        🖼️ Đặt Ảnh bìa / Banner đại diện riêng cho Offer này
                         {!enableCustomCover && (
                           <span className="text-[11px] text-neutral-400 font-normal italic ml-1.5">
                             (Mặc định sẽ tự động lấy ảnh của sản phẩm đầu tiên)
@@ -2331,7 +2331,7 @@ function OffersContent() {
                           )}
                         </div>
                         <p className="text-[10px] text-neutral-400">
-                          Ảnh này sẽ hiển thị làm banner trang bảng giá và thumbnail khi chia sẻ link Zalo/Facebook.
+                          Ảnh này sẽ hiển thị làm banner đại diện cho Offer và thumbnail khi chia sẻ link Zalo/Facebook.
                         </p>
                       </div>
                     </div>
