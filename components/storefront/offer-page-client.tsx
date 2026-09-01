@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -275,10 +275,21 @@ function DirectOfferContent({ storeSlug: propStoreSlug, offerSlug: propOfferSlug
   // itemKey is either `itemId` OR `itemId__variantId`
   const [selectedQuantities, setSelectedQuantities] = useState<Record<string, number>>({});
 
-  // Auto-select initial quantity = 1 if single item offer
+  // Auto-select initial quantity = 1 ONLY ONCE on mount for single-item offers
+  const hasInitializedRef = useRef(false);
   useEffect(() => {
+    if (hasInitializedRef.current) return;
     if (resolvedItems.length === 1 && !resolvedItems[0].variants?.length) {
-      setSelectedQuantities({ [resolvedItems[0].id]: 1 });
+      const singleId = resolvedItems[0].id;
+      if (singleId) {
+        hasInitializedRef.current = true;
+        setSelectedQuantities((prev) => {
+          if (Object.keys(prev).length === 0) {
+            return { [singleId]: 1 };
+          }
+          return prev;
+        });
+      }
     }
   }, [resolvedItems]);
 
