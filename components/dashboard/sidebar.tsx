@@ -118,7 +118,7 @@ export function DashboardSidebar() {
       {/* Quick View Public Store */}
       <div className="px-3 pt-2">
         <Link
-          href={store.slug ? `/${store.slug}` : "/store"}
+          href={store.slug ? `/s/${store.slug}` : "/store"}
           target={store.slug ? "_blank" : undefined}
           title={store.slug ? "Xem trang cửa hàng giống như khách hàng nhìn thấy." : "Tạo cửa hàng của bạn"}
           className="flex items-center justify-between px-3 py-2 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/60 rounded-xl transition-colors border border-blue-200 dark:border-blue-900/60"
@@ -270,7 +270,7 @@ export function MobileDashboardDrawer({
         {/* Quick View Public Store */}
         <div className="px-3 pt-2">
           <Link
-            href={store.slug ? `/${store.slug}` : "/store"}
+            href={store.slug ? `/s/${store.slug}` : "/store"}
             target={store.slug ? "_blank" : undefined}
             onClick={onClose}
             title={store.slug ? "Xem trang cửa hàng giống như khách hàng nhìn thấy." : "Tạo cửa hàng của bạn"}

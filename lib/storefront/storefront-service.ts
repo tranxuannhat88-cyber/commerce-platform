@@ -12,22 +12,11 @@ import {
   DEFAULT_STORE_PUBLIC_SETTINGS,
 } from "./seller-profile-service";
 
-export const DEFAULT_STORE_POLICIES: StorePolicySettings = {
-  shipping_policy:
-    "Giao hàng toàn quốc. Miễn phí vận chuyển cho đơn hàng từ 5.000.000đ. Thời gian giao hàng tiêu chuẩn 1-3 ngày làm việc.",
-  return_policy:
-    "Đổi mới trong vòng 7 ngày nếu có lỗi từ nhà sản xuất. Hỗ trợ kiểm tra hàng trước khi thanh toán.",
-  warranty_policy:
-    "Bảo hành chính hãng 12 - 24 tháng theo tiêu chuẩn nhà sản xuất. Hỗ trợ bảo trì trọn đời.",
-  payment_terms:
-    "Chấp nhận thanh toán chuyển khoản tự động VietQR, thanh toán khi nhận hàng (COD) và hóa đơn GTGT điện tử.",
-  processing_time: "Đóng gói và xử lý xuất kho trong vòng 2-4 giờ sau khi xác nhận đơn.",
-  service_area: "Toàn quốc (63 tỉnh thành)",
-};
+export const DEFAULT_STORE_POLICIES: StorePolicySettings = {};
 
 export class StorefrontService {
   /**
-   * Builds the comprehensive public Storefront payload
+   * Builds the comprehensive public Storefront payload using 100% REAL data
    */
   public static getPublicStorefront(params: {
     store: Store;
@@ -39,8 +28,8 @@ export class StorefrontService {
     const { store, organization, offers, categories, products } = params;
 
     const publicSettings = store.public_settings || DEFAULT_STORE_PUBLIC_SETTINGS;
-    const policies = store.policy_settings || DEFAULT_STORE_POLICIES;
-    const reputation = SellerPublicProfileService.getReputationMetrics(organization.id, 326);
+    const policies = store.policy_settings || {};
+    const reputation = SellerPublicProfileService.getReputationMetrics(organization.id, 0);
 
     // Filter Active & Public Offers
     const activeOffers = offers
@@ -90,7 +79,7 @@ export class StorefrontService {
       logo_url: publicSettings.show_logo ? (store.logo_url || organization.logo_url) : undefined,
       cover_image_url: store.cover_image_url,
       description: publicSettings.show_description ? store.description : undefined,
-      region: publicSettings.show_region ? "Hải Phòng, Việt Nam" : undefined,
+      region: publicSettings.show_region ? store.address : undefined,
       full_address: publicSettings.show_full_address ? store.address : undefined,
       public_contact_phone: publicSettings.show_business_phone
         ? (publicSettings.public_contact_phone || store.phone || organization.phone)
@@ -103,7 +92,7 @@ export class StorefrontService {
       active_offers: publicSettings.show_active_offers ? activeOffers : [],
       categories: categoryList,
       products: publicSettings.show_products ? visibleProducts : [],
-      policies: publicSettings.show_policies ? policies : DEFAULT_STORE_POLICIES,
+      policies: policies,
       public_settings: publicSettings,
     };
   }

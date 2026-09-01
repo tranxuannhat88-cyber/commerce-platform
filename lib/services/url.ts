@@ -19,13 +19,13 @@ export class AppUrlService {
   }
 
   /**
-   * Tạo Storefront URL
-   * Ví dụ: https://go.invamax.com/auto
+   * Tạo Storefront URL Chuẩn Canonical
+   * Ví dụ: https://go.invamax.com/s/invamax-workspace
    */
   public static getStoreUrl(storeSlug?: string): string {
     const base = this.getBaseUrl();
     const cleanSlug = (storeSlug && storeSlug.trim()) ? storeSlug.trim().replace(/^\/+|\/+$/g, "") : "auto";
-    return `${base}/${cleanSlug}`;
+    return `${base}/s/${cleanSlug}`;
   }
 
   /**

@@ -15,13 +15,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!data) {
     return {
-      title: "Cửa Hàng Trực Tuyến",
-      description: "Xem các ưu đãi và danh mục sản phẩm chính hãng",
+      title: "Cửa Hàng Không Tồn Tại | Go",
+      description: "Đường dẫn cửa hàng không tồn tại hoặc đã thay đổi.",
     };
   }
 
   const { store, activeProducts } = data;
   const title = store.store_name || "Cửa Hàng Trực Tuyến";
+  const description =
+    store.description?.trim() ||
+    `Ghé thăm gian hàng của ${title} trên nền tảng Go. Xem các sản phẩm, ưu đãi và đặt mua trực tiếp.`;
+
   const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://go.invamax.com").replace(/\/+$/, "");
   const canonicalUrl = `${baseUrl}/s/${store.slug || store_slug}`;
 
@@ -37,10 +41,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? `${baseUrl}${rawImage}`
     : `${baseUrl}/${rawImage}`;
 
-  const description =
-    store.description?.trim() ||
-    `Ghé thăm gian hàng của ${title} trên nền tảng Go. Xem các sản phẩm, ưu đãi và đặt mua trực tiếp.`;
-
   return {
     title: `${title} | Go Store`,
     description,
@@ -51,6 +51,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${title} | Go Store`,
       description,
       url: canonicalUrl,
+      type: "website",
+      siteName: "Go",
       images: [
         {
           url: imageUrl,
@@ -59,8 +61,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           alt: title,
         },
       ],
-      type: "website",
-      siteName: "Go",
     },
     twitter: {
       card: "summary_large_image",
@@ -71,7 +71,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function StorefrontPage({ params }: Props) {
+export default async function PublicStoreCanonicalPage({ params }: Props) {
   const { store_slug } = await params;
   const data = StorefrontDataResolver.resolvePublicStore(store_slug);
 
