@@ -479,6 +479,8 @@ export function useCommerceStore() {
     const initialOffers = getStored<Offer[]>(STORAGE_KEYS.OFFERS, INITIAL_OFFERS);
     const initialStore = getStored<Store>(STORAGE_KEYS.STORE, INITIAL_STORE);
     const initialAccounts = getStored<ActorPaymentAccount[]>(STORAGE_KEYS.PAYMENT_ACCOUNTS, INITIAL_PAYMENT_ACCOUNTS);
+    const initialProducts = getStored<Product[]>(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+    const initialOrders = getStored<Order[]>(STORAGE_KEYS.ORDERS, INITIAL_ORDERS);
     const initialUser = getStored<UserIdentity | null>(STORAGE_KEYS.USER, INITIAL_USER_IDENTITY);
     const initialPersonal = getStored<PersonalActor>(STORAGE_KEYS.PERSONAL_ACTOR, INITIAL_PERSONAL_ACTOR);
     const initialOrg = getStored<Organization>(STORAGE_KEYS.ORGANIZATION, INITIAL_ORGANIZATION);
@@ -495,71 +497,87 @@ export function useCommerceStore() {
       email: initialStore?.email || initialUser?.primary_email,
     };
 
-    if (initialOffers && initialOffers.length > 0) {
-      SyncBridgeService.syncAllOffersToServer(initialOffers);
-    }
-    if (initialStore) {
-      SyncBridgeService.syncStoreToServer(initialStore, initialAccounts, initSellerProfile);
-    }
+    // Full-State Sync & Multi-Device Hydration (Desktop <-> Mobile)
+    const syncFullStateWithServer = async () => {
+      try {
+        const serverData = await SyncBridgeService.pullFullStateFromServer();
+        if (serverData && serverData.success) {
+          // 1. Hydrate Store
+          if (serverData.store && serverData.store.slug && serverData.store.slug !== "auto") {
+            setStoreState(serverData.store);
+            setStored(STORAGE_KEYS.STORE, serverData.store);
+          } else if (initialStore && initialStore.slug && initialStore.slug !== "auto") {
+            SyncBridgeService.pushFullStateToServer({
+              store: initialStore,
+              offers: initialOffers,
+              products: initialProducts,
+              orders: initialOrders,
+              paymentAccounts: initialAccounts,
+              sellerProfile: initSellerProfile,
+            });
+          }
 
-    const checkServerOrders = () => {
-      SyncBridgeService.pullServerOrders(initialStore?.id).then((serverOrders) => {
-        if (serverOrders && serverOrders.length > 0) {
-          setOrdersState((prev) => {
-            const existingIds = new Set(prev.map((o) => o.id));
-            const newOrders = serverOrders.filter((o) => !existingIds.has(o.id));
-            if (newOrders.length > 0) {
-              const merged = [...newOrders, ...prev];
+          // 2. Hydrate Offers
+          if (Array.isArray(serverData.offers) && serverData.offers.length > 0) {
+            setOffersState(serverData.offers);
+            setStored(STORAGE_KEYS.OFFERS, serverData.offers);
+          } else if (initialOffers && initialOffers.length > 0) {
+            SyncBridgeService.syncAllOffersToServer(initialOffers);
+          }
+
+          // 3. Hydrate Products
+          if (Array.isArray(serverData.products) && serverData.products.length > 0) {
+            setProductsState(serverData.products);
+            setStored(STORAGE_KEYS.PRODUCTS, serverData.products);
+          }
+
+          // 4. Hydrate Orders
+          if (Array.isArray(serverData.orders) && serverData.orders.length > 0) {
+            setOrdersState((prev) => {
+              const existingMap = new Map(prev.map((o) => [o.id, o]));
+              serverData.orders.forEach((so) => existingMap.set(so.id, so));
+              const merged = Array.from(existingMap.values());
               setStored(STORAGE_KEYS.ORDERS, merged);
-
-              // Add notification for newly arrived orders
-              newOrders.forEach((no) => {
-                const newNotif: AppNotification = {
-                  id: `notif-order-${Date.now()}-${no.id}`,
-                  organization_id: no.organization_id || "org-2k-tech",
-                  type: "NEW_ORDER",
-                  title: `Đơn hàng mới: ${no.order_number}`,
-                  message: `Khách hàng ${no.customer_name} vừa đặt đơn ${new Intl.NumberFormat("vi-VN").format(no.total_amount)}đ.`,
-                  link: `/sell/orders`,
-                  is_read: false,
-                  created_at: new Date().toISOString(),
-                };
-                setNotificationsState((prevNotifs) => {
-                  const updatedNotifs = [newNotif, ...prevNotifs.filter((n) => n.id !== newNotif.id)];
-                  setStored(STORAGE_KEYS.NOTIFICATIONS, updatedNotifs);
-                  return updatedNotifs;
-                });
-              });
-
               return merged;
-            }
-            return prev;
-          });
+            });
+          }
+
+          // 5. Hydrate Payment Accounts
+          if (Array.isArray(serverData.paymentAccounts) && serverData.paymentAccounts.length > 0) {
+            setPaymentAccountsState(serverData.paymentAccounts);
+            setStored(STORAGE_KEYS.PAYMENT_ACCOUNTS, serverData.paymentAccounts);
+          }
+
+          // 6. Hydrate Reviews
+          if (Array.isArray(serverData.reviews) && serverData.reviews.length > 0) {
+            setReviewsState(serverData.reviews);
+            setStored(STORAGE_KEYS.REVIEWS, serverData.reviews);
+          }
+        } else {
+          // If server is not yet initialized but local client has data (e.g. desktop on fresh start)
+          if (initialStore && initialStore.slug && initialStore.slug !== "auto") {
+            SyncBridgeService.pushFullStateToServer({
+              store: initialStore,
+              offers: initialOffers,
+              products: initialProducts,
+              orders: initialOrders,
+              paymentAccounts: initialAccounts,
+              sellerProfile: initSellerProfile,
+            });
+          }
         }
-      });
+      } catch (err) {
+        console.warn("syncFullStateWithServer warning:", err);
+      }
     };
 
-    const checkServerReviews = () => {
-      SyncBridgeService.pullReviewsFromServer({}).then((res) => {
-        if (res.reviews && res.reviews.length > 0) {
-          setReviewsState((prev) => {
-            const merged = [...res.reviews];
-            setStored(STORAGE_KEYS.REVIEWS, merged);
-            return merged;
-          });
-        }
-      });
-    };
+    // Initial Full-State Pull
+    syncFullStateWithServer();
 
-    // Initial Pull
-    checkServerOrders();
-    checkServerReviews();
-
-    // Periodic interval pull every 4 seconds for realtime sync across tabs/devices
+    // Continuous Realtime Multi-Device Polling every 3 seconds
     const pollTimer = setInterval(() => {
-      checkServerOrders();
-      checkServerReviews();
-    }, 4000);
+      syncFullStateWithServer();
+    }, 3000);
 
     return () => {
       window.removeEventListener("commerce_storage_update", handleStorageUpdate);
@@ -806,6 +824,14 @@ export function useCommerceStore() {
     setStoreState(updated);
     setStored(STORAGE_KEYS.STORE, updated);
     SyncBridgeService.syncStoreToServer(updated, paymentAccounts, getActiveSellerProfile());
+    SyncBridgeService.pushFullStateToServer({
+      store: updated,
+      offers,
+      products,
+      orders,
+      paymentAccounts,
+      sellerProfile: getActiveSellerProfile(),
+    });
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key: STORAGE_KEYS.STORE } }));
     }
@@ -973,6 +999,14 @@ export function useCommerceStore() {
 
     SyncBridgeService.syncOfferToServer(offer);
     SyncBridgeService.syncAllOffersToServer(updated);
+    SyncBridgeService.pushFullStateToServer({
+      store,
+      offers: updated,
+      products,
+      orders,
+      paymentAccounts,
+      sellerProfile: getActiveSellerProfile(),
+    });
     return offer;
   };
 
@@ -987,6 +1021,14 @@ export function useCommerceStore() {
     if (target) {
       SyncBridgeService.syncOfferToServer(target);
       SyncBridgeService.syncAllOffersToServer(updated);
+      SyncBridgeService.pushFullStateToServer({
+        store,
+        offers: updated,
+        products,
+        orders,
+        paymentAccounts,
+        sellerProfile: getActiveSellerProfile(),
+      });
     }
   };
 
@@ -995,6 +1037,14 @@ export function useCommerceStore() {
     setOffersState(updated);
     setStored(STORAGE_KEYS.OFFERS, updated);
     SyncBridgeService.deleteOfferFromServer(id);
+    SyncBridgeService.pushFullStateToServer({
+      store,
+      offers: updated,
+      products,
+      orders,
+      paymentAccounts,
+      sellerProfile: getActiveSellerProfile(),
+    });
   };
 
   // PRODUCT LIBRARY ACTIONS

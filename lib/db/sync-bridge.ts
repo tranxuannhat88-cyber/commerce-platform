@@ -1,6 +1,58 @@
-import { Offer, Store, ActorPaymentAccount, Order } from "@/types";
+import { Offer, Store, ActorPaymentAccount, Order, Product, Organization, PersonalActor } from "@/types";
+
+export interface ServerFullState {
+  success: boolean;
+  store: Store | null;
+  offers: Offer[];
+  products: Product[];
+  orders: Order[];
+  paymentAccounts: ActorPaymentAccount[];
+  organizations?: Organization[];
+  sellerProfile?: any;
+  reviews?: any[];
+  last_updated_at?: string;
+}
 
 export class SyncBridgeService {
+  /**
+   * Kéo toàn bộ trạng thái đồng bộ đa thiết bị từ máy chủ (Desktop <-> Mobile)
+   */
+  public static async pullFullStateFromServer(): Promise<ServerFullState | null> {
+    try {
+      const res = await fetch("/api/sync/full-state");
+      if (!res.ok) return null;
+      return (await res.json()) as ServerFullState;
+    } catch (err) {
+      console.warn("pullFullStateFromServer warning:", err);
+      return null;
+    }
+  }
+
+  /**
+   * Đẩy toàn bộ trạng thái đồng bộ đa thiết bị lên máy chủ
+   */
+  public static async pushFullStateToServer(payload: {
+    store?: Store;
+    offers?: Offer[];
+    products?: Product[];
+    orders?: Order[];
+    paymentAccounts?: ActorPaymentAccount[];
+    organization?: Organization;
+    personalActor?: PersonalActor;
+    sellerProfile?: any;
+  }): Promise<boolean> {
+    try {
+      const res = await fetch("/api/sync/full-state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      return res.ok;
+    } catch (err) {
+      console.warn("pushFullStateToServer warning:", err);
+      return false;
+    }
+  }
   /**
    * Đồng bộ một Offer lên máy chủ
    */
