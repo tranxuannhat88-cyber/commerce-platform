@@ -277,10 +277,11 @@ export class ServerDbManager {
     return offer;
   }
 
-  public static deleteOffer(offerId: string): boolean {
+  public static deleteOffer(offerIdOrSlug: string): boolean {
     const db = this.getDb();
     const initialLen = db.offers.length;
-    db.offers = db.offers.filter((o) => o.id !== offerId);
+    const clean = offerIdOrSlug.trim().toLowerCase();
+    db.offers = db.offers.filter((o) => o.id !== offerIdOrSlug && o.slug?.toLowerCase() !== clean);
     if (db.offers.length !== initialLen) {
       this.saveDb(db);
       return true;

@@ -3809,6 +3809,44 @@ function OffersContent() {
           bankInfo={selectedQR.bankInfo}
         />
       )}
+
+      {/* CONFIRM DELETE OFFER MODAL */}
+      {deletingOffer && (
+        <ConfirmModal
+          isOpen={true}
+          onClose={() => setDeletingOffer(null)}
+          onConfirm={() => {
+            if (deletingOffer) {
+              deleteOffer(deletingOffer.id);
+              setDeletingOffer(null);
+            }
+          }}
+          title="Xác nhận xóa Offer"
+          message={`Bạn có chắc chắn muốn xóa Offer "${deletingOffer.name}"? Hành động này sẽ gỡ bỏ liên kết và bảng giá này khỏi Cửa hàng.`}
+          confirmText="Xác nhận xóa"
+          cancelText="Hủy bỏ"
+          variant="danger"
+        />
+      )}
+
+      {/* CONFIRM DELETE PRODUCT FROM LIBRARY MODAL */}
+      {deletingProduct && (
+        <ConfirmModal
+          isOpen={true}
+          onClose={() => setDeletingProduct(null)}
+          onConfirm={() => {
+            if (deletingProduct) {
+              deleteProduct(deletingProduct.id);
+              setDeletingProduct(null);
+            }
+          }}
+          title="Xác nhận xóa sản phẩm khỏi thư viện"
+          message={`Bạn có chắc chắn muốn xóa sản phẩm "${deletingProduct.name}" khỏi thư viện gốc?`}
+          confirmText="Xóa sản phẩm"
+          cancelText="Hủy bỏ"
+          variant="danger"
+        />
+      )}
     </div>
   );
 }

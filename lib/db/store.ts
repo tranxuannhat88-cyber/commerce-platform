@@ -171,6 +171,7 @@ const STORAGE_KEYS = {
   ACTOR_REVIEW_STATS: "commerce_actor_review_stats",
   GUEST_IDENTITIES: "commerce_guest_identities",
   REVIEW_INVITATIONS: "commerce_review_invitations",
+  DELETED_OFFERS: "commerce_deleted_offers",
 };
 
 function getStored<T>(key: string, fallback: T): T {
@@ -528,8 +529,17 @@ export function useCommerceStore() {
           // 2. Hydrate Offers with Timestamp-based Conflict Resolution (Never overwrite newer local edits!)
           if (Array.isArray(serverData.offers) && serverData.offers.length > 0) {
             setOffersState((prevOffers) => {
-              const serverOfferMap = new Map(serverData.offers.map((so) => [so.id, so]));
-              const localOfferMap = new Map(prevOffers.map((po) => [po.id, po]));
+              const deletedList = getStored<string[]>(STORAGE_KEYS.DELETED_OFFERS, []) || [];
+              const serverOfferMap = new Map(
+                serverData.offers
+                  .filter((so) => !deletedList.includes(so.id) && !deletedList.includes(so.slug))
+                  .map((so) => [so.id, so])
+              );
+              const localOfferMap = new Map(
+                prevOffers
+                  .filter((po) => !deletedList.includes(po.id) && !deletedList.includes(po.slug))
+                  .map((po) => [po.id, po])
+              );
               
               const allIds = new Set([...Array.from(localOfferMap.keys()), ...Array.from(serverOfferMap.keys())]);
               const merged: Offer[] = [];
@@ -1080,10 +1090,20 @@ export function useCommerceStore() {
   };
 
   const deleteOffer = (id: string) => {
-    const updated = offers.filter((o) => o.id !== id);
+    const target = offers.find((o) => o.id === id || o.slug === id);
+    const updated = offers.filter((o) => o.id !== id && o.slug !== id);
     setOffersState(updated);
     setStored(STORAGE_KEYS.OFFERS, updated);
+
+    // Record deleted ID / slug so background sync never restores it
+    const deletedList = getStored<string[]>(STORAGE_KEYS.DELETED_OFFERS, []) || [];
+    const newDeleted = Array.from(new Set([...deletedList, id, target?.id || "", target?.slug || ""])).filter(Boolean);
+    setStored(STORAGE_KEYS.DELETED_OFFERS, newDeleted);
+
     SyncBridgeService.deleteOfferFromServer(id);
+    if (target?.slug && target.slug !== id) {
+      SyncBridgeService.deleteOfferFromServer(target.slug);
+    }
     SyncBridgeService.pushFullStateToServer({
       store,
       offers: updated,
@@ -1092,6 +1112,10 @@ export function useCommerceStore() {
       paymentAccounts,
       sellerProfile: getActiveSellerProfile(),
     });
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("commerce_storage_update", { detail: { key: STORAGE_KEYS.OFFERS } }));
+    }
   };
 
   // PRODUCT LIBRARY ACTIONS

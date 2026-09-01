@@ -50,13 +50,10 @@ export async function POST(req: NextRequest) {
       ServerDbManager.upsertStore(store as Store, sellerProfile);
     }
 
-    // 2. Sync Offers (Merge & deduplicate by id/slug)
-    if (Array.isArray(offers) && offers.length > 0) {
-      offers.forEach((o: Offer) => {
-        if (o && o.name) {
-          ServerDbManager.upsertOffer(o);
-        }
-      });
+    // 2. Sync Offers (Update active offers state in server db)
+    if (Array.isArray(offers)) {
+      db.offers = offers;
+      ServerDbManager.saveDb(db);
     }
 
     // 3. Sync Products

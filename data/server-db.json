@@ -1,35 +1,6 @@
 {
   "stores": [],
-  "offers": [
-    {
-      "id": "offer-danh-muc-t9",
-      "name": "Danh mục hàng tháng 9",
-      "slug": "danh-muc-hang-thang-9",
-      "store_slug": "invamax-workspace",
-      "price": 5500000,
-      "offer_structure": "MENU_CATALOG",
-      "items": [
-        {
-          "id": "item-1",
-          "name": "Tủ trang trí",
-          "price": 1500000
-        },
-        {
-          "id": "item-2",
-          "name": "Bàn làm việc gỗ sồi",
-          "price": 2500000
-        },
-        {
-          "id": "item-3",
-          "name": "Kệ trang trí",
-          "price": 1500000
-        }
-      ],
-      "status": "PUBLISHED",
-      "created_at": "2026-09-01T03:16:43.767Z",
-      "updated_at": "2026-09-01T03:16:43.767Z"
-    }
-  ],
+  "offers": [],
   "products": [],
   "paymentAccounts": [],
   "orders": [],
