@@ -27,8 +27,9 @@ export class ReviewEligibilityService {
     order?: Order | null;
     currentActorId: string;
     existingReviews: TransactionReview[];
+    forcedRole?: ReviewRole;
   }): ReviewEligibilityResult {
-    const { transaction, order, currentActorId, existingReviews } = params;
+    const { transaction, order, currentActorId, existingReviews, forcedRole } = params;
 
     if (!transaction && !order) {
       return { eligible: false, reason: "Không tìm thấy giao dịch hợp lệ." };
@@ -52,21 +53,15 @@ export class ReviewEligibilityService {
       };
     }
 
-    // 2. Derive Buyer & Seller Actor IDs
+    // 2. Derive Role and Counterparty
+    const role: ReviewRole = forcedRole || "SELLER";
     const buyerActorId = transaction?.organization_id || "personal_buyer";
     const sellerActorId = transaction?.organization_id || order?.organization_id || "personal_seller";
-    
-    // Determine actor's role
-    const isBuyer = currentActorId === buyerActorId || currentActorId.startsWith("usr_") || currentActorId.startsWith("personal_buyer");
-    const isSeller = currentActorId === sellerActorId || currentActorId.startsWith("store_") || currentActorId.startsWith("org_");
-
-    // Default to Buyer role if transacting as buyer, otherwise Seller
-    const role: ReviewRole = isSeller && !isBuyer ? "SELLER" : "BUYER";
     const counterpartyActorId = role === "BUYER" ? sellerActorId : buyerActorId;
-    const counterpartyName = role === "BUYER" ? (transaction?.seller_name || "Nhà bán hàng") : (transaction?.buyer_name || "Người mua hàng");
+    const counterpartyName = role === "BUYER" ? (transaction?.seller_name || "Nhà bán hàng") : (transaction?.buyer_name || order?.customer_name || "Người mua hàng");
 
-    // 3. Prevent Self-Review
-    if (buyerActorId === sellerActorId && buyerActorId === currentActorId) {
+    // 3. Prevent Self-Review (only if exact same user/actor ID and distinct parties aren't present)
+    if (buyerActorId === sellerActorId && buyerActorId === currentActorId && transaction?.buyer_name === transaction?.seller_name) {
       return {
         eligible: false,
         reason: "Không thể tự đánh giá chính mình.",

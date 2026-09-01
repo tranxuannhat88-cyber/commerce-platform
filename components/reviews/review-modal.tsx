@@ -27,20 +27,23 @@ export function ReviewModal({
 }: ReviewModalProps) {
   const { currentContext, currentUser, reviews, submitReview } = useCommerceStore();
   const [isSuccess, setIsSuccess] = useState(false);
+  const [activeRole, setActiveRole] = useState<"BUYER" | "SELLER">(forcedRole || "SELLER");
 
   if (!isOpen) return null;
 
-  const currentActorId = currentContext.actor_id || currentUser?.id || "guest_buyer";
+  const currentActorId = currentContext.actor_id || currentUser?.id || "merchant_seller";
   const eligibility = ReviewEligibilityService.checkEligibility({
     transaction,
     order,
     currentActorId,
     existingReviews: reviews,
+    forcedRole: activeRole,
   });
 
-  const activeRole = forcedRole || eligibility.role || "BUYER";
   const targetTxId = transaction?.id || `tx-${order?.order_number || Date.now()}`;
   const targetOrderNumber = order?.order_number || transaction?.order_number;
+  const buyerDisplayName = transaction?.buyer_name || order?.customer_name || "Người mua hàng";
+  const sellerDisplayName = transaction?.seller_name || "Nhà bán hàng";
 
   const handleBuyerSubmit = async (data: {
     overall_rating: number;
@@ -51,7 +54,6 @@ export function ReviewModal({
     comment?: string;
   }) => {
     const sellerActorId = transaction?.organization_id || order?.organization_id || "seller_default";
-    const sellerName = transaction?.seller_name || "Nhà bán hàng";
 
     await submitReview({
       transaction_id: targetTxId,
@@ -61,7 +63,7 @@ export function ReviewModal({
       reviewer_actor_type: currentContext.context_type,
       reviewer_name: currentContext.display_name || currentUser?.full_name || order?.customer_name,
       reviewee_actor_id: sellerActorId,
-      reviewee_name: sellerName,
+      reviewee_name: sellerDisplayName,
       reviewer_role: "BUYER",
       overall_rating: data.overall_rating,
       accuracy_rating: data.accuracy_rating,
@@ -84,7 +86,6 @@ export function ReviewModal({
     comment?: string;
   }) => {
     const buyerActorId = transaction?.organization_id || order?.id || "buyer_default";
-    const buyerName = transaction?.buyer_name || order?.customer_name || "Người mua hàng";
 
     await submitReview({
       transaction_id: targetTxId,
@@ -94,7 +95,7 @@ export function ReviewModal({
       reviewer_actor_type: currentContext.context_type,
       reviewer_name: currentContext.display_name || "Nhà bán hàng",
       reviewee_actor_id: buyerActorId,
-      reviewee_name: buyerName,
+      reviewee_name: buyerDisplayName,
       reviewer_role: "SELLER",
       overall_rating: data.overall_rating,
       payment_rating: data.payment_rating,
@@ -114,15 +115,15 @@ export function ReviewModal({
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white font-bold text-xs">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-xs ${activeRole === "SELLER" ? "bg-blue-600" : "bg-emerald-600"}`}>
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
-                {activeRole === "BUYER" ? "Đánh Giá Người Bán" : "Đánh Giá Người Mua"}
+                {activeRole === "SELLER" ? `Đánh Giá Người Mua: ${buyerDisplayName}` : `Đánh Giá Người Bán: ${sellerDisplayName}`}
               </h3>
               <p className="text-[11px] text-neutral-500">
-                Đánh giá xác thực giao dịch thương mại
+                {activeRole === "SELLER" ? "Đánh giá uy tín & độ tin cậy thanh toán của khách hàng" : "Đánh giá xác thực giao dịch thương mại"}
               </p>
             </div>
           </div>

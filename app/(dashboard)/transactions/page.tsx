@@ -343,6 +343,7 @@ export default function TransactionsTrustPage() {
           isOpen={true}
           onClose={() => setSelectedTxForReview(null)}
           transaction={selectedTxForReview}
+          forcedRole="SELLER"
         />
       )}
     </div>
