@@ -255,7 +255,20 @@ export class ServerDbManager {
     const existingIndex = db.offers.findIndex((o) => o.id === offer.id || o.slug === offer.slug);
 
     if (existingIndex >= 0) {
-      db.offers[existingIndex] = { ...db.offers[existingIndex], ...offer, updated_at: new Date().toISOString() };
+      const existing = db.offers[existingIndex];
+      const mergedImage = offer.image_url || existing.image_url || "";
+      const mergedItems = offer.items?.map((it, idx) => ({
+        ...it,
+        image_url: it.image_url || existing.items?.[idx]?.image_url || "",
+      })) || offer.items;
+
+      db.offers[existingIndex] = {
+        ...existing,
+        ...offer,
+        image_url: mergedImage,
+        items: mergedItems,
+        updated_at: new Date().toISOString(),
+      };
     } else {
       db.offers.push({ ...offer, created_at: offer.created_at || new Date().toISOString() });
     }

@@ -517,10 +517,26 @@ export function useCommerceStore() {
             });
           }
 
-          // 2. Hydrate Offers
+          // 2. Hydrate Offers with Image Preservation
           if (Array.isArray(serverData.offers) && serverData.offers.length > 0) {
-            setOffersState(serverData.offers);
-            setStored(STORAGE_KEYS.OFFERS, serverData.offers);
+            setOffersState((prevOffers) => {
+              const prevMap = new Map(prevOffers.map((p) => [p.id, p]));
+              const merged = serverData.offers.map((so) => {
+                const prev = prevMap.get(so.id) || prevOffers.find((p) => p.slug === so.slug);
+                const finalImg = so.image_url || prev?.image_url || "";
+                const finalItems = so.items?.map((it, idx) => ({
+                  ...it,
+                  image_url: it.image_url || prev?.items?.[idx]?.image_url || "",
+                })) || so.items;
+                return {
+                  ...so,
+                  image_url: finalImg,
+                  items: finalItems,
+                };
+              });
+              setStored(STORAGE_KEYS.OFFERS, merged);
+              return merged;
+            });
           } else if (initialOffers && initialOffers.length > 0) {
             SyncBridgeService.syncAllOffersToServer(initialOffers);
           }
