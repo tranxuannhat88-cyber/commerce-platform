@@ -502,10 +502,18 @@ export function useCommerceStore() {
       try {
         const serverData = await SyncBridgeService.pullFullStateFromServer();
         if (serverData && serverData.success) {
-          // 1. Hydrate Store
+          // 1. Hydrate Store with Timestamp-based Conflict Resolution (Never overwrite newer local store!)
           if (serverData.store && serverData.store.slug && serverData.store.slug !== "auto") {
-            setStoreState(serverData.store);
-            setStored(STORAGE_KEYS.STORE, serverData.store);
+            const localStore = getStored<Store>(STORAGE_KEYS.STORE, initialStore);
+            const localTime = new Date(localStore?.updated_at || localStore?.created_at || 0).getTime();
+            const serverTime = new Date(serverData.store.updated_at || serverData.store.created_at || 0).getTime();
+
+            if (localTime > serverTime && localStore && localStore.slug && localStore.slug !== "auto") {
+              SyncBridgeService.syncStoreToServer(localStore, initialAccounts, initSellerProfile);
+            } else {
+              setStoreState(serverData.store);
+              setStored(STORAGE_KEYS.STORE, serverData.store);
+            }
           } else if (initialStore && initialStore.slug && initialStore.slug !== "auto") {
             SyncBridgeService.pushFullStateToServer({
               store: initialStore,

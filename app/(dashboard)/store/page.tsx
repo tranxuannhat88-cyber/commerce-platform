@@ -1042,15 +1042,26 @@ export default function StoreSettingsPage() {
           </div>
         )}
 
-        {/* Submit Bar */}
-        <div className="pt-2">
+        {/* Submit Bar with Instant Feedback */}
+        <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <button
             type="submit"
-            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+            className={`w-full sm:w-auto px-8 py-3.5 rounded-2xl text-white font-black text-xs shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              savedSuccess
+                ? "bg-emerald-600 shadow-emerald-600/30 scale-[1.02]"
+                : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/30 active:scale-95"
+            }`}
           >
-            <Save className="w-4 h-4" />
-            <span>LƯU TOÀN BỘ CẤU HÌNH CỬA HÀNG</span>
+            {savedSuccess ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+            <span>{savedSuccess ? "✓ ĐÃ LƯU THÀNH CÔNG CẤU HÌNH!" : "LƯU TOÀN BỘ CẤU HÌNH CỬA HÀNG"}</span>
           </button>
+
+          {savedSuccess && (
+            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Thiết lập đã được lưu và đồng bộ lên toàn hệ thống.</span>
+            </span>
+          )}
         </div>
       </form>
 
