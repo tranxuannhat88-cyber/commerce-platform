@@ -224,7 +224,6 @@ export default function LoginPage() {
                     type="tel"
                     autoFocus
                     required
-                    placeholder="0988 123 456"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className="w-full pl-20 pr-4 py-3 text-base sm:text-sm font-semibold rounded-2xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-hidden transition-all"

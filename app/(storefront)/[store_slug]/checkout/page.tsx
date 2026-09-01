@@ -254,7 +254,6 @@ function CheckoutContent() {
                     <textarea
                       rows={2}
                       required={hasPhysical}
-                      placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành..."
                       value={shippingAddress}
                       onChange={(e) => setShippingAddress(e.target.value)}
                       className="w-full px-3.5 py-2.5 text-base sm:text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
