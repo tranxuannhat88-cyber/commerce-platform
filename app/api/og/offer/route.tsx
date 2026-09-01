@@ -35,9 +35,23 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 2. If it's an external HTTP URL, redirect to it
+    // 2. If it's an external HTTP URL, proxy it directly so crawlers (Zalo, FB) receive binary bytes (not 307 redirect)
     if (rawImage && rawImage.startsWith("http")) {
-      return NextResponse.redirect(rawImage);
+      try {
+        const fetched = await fetch(rawImage);
+        if (fetched.ok) {
+          const contentType = fetched.headers.get("content-type") || "image/jpeg";
+          const arrayBuffer = await fetched.arrayBuffer();
+          return new Response(arrayBuffer, {
+            headers: {
+              "Content-Type": contentType,
+              "Cache-Control": "public, max-age=86400, s-maxage=86400",
+            },
+          });
+        }
+      } catch (e) {
+        console.warn("Proxy fetch image error:", e);
+      }
     }
 
     // 3. Dynamic Visual Card (1200 x 630 px) for Social Previews

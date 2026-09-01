@@ -65,6 +65,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: [
         {
           url: ogImageUrl,
+          secureUrl: ogImageUrl,
           width: 1200,
           height: 630,
           type: "image/png",
@@ -79,6 +80,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       images: [ogImageUrl],
+    },
+    other: {
+      "og:image:secure_url": ogImageUrl,
+      "image_src": ogImageUrl,
     },
   };
 }
