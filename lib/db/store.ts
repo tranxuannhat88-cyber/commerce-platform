@@ -972,6 +972,7 @@ export function useCommerceStore() {
     });
 
     SyncBridgeService.syncOfferToServer(offer);
+    SyncBridgeService.syncAllOffersToServer(updated);
     return offer;
   };
 
@@ -985,6 +986,7 @@ export function useCommerceStore() {
     const target = updated.find((o) => o.id === id);
     if (target) {
       SyncBridgeService.syncOfferToServer(target);
+      SyncBridgeService.syncAllOffersToServer(updated);
     }
   };
 

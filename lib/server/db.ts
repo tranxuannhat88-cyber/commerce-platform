@@ -18,7 +18,7 @@ import {
 import { ReviewRevealService } from "@/lib/services/review-reveal-service";
 import { TransactionReviewService } from "@/lib/services/transaction-review-service";
 import { GuestClaimService } from "@/lib/services/guest-claim-service";
-import { cleanPhoneNumber } from "@/lib/utils";
+import { cleanPhoneNumber, slugify } from "@/lib/utils";
 
 export interface ServerSellerProfile {
   actor_id?: string;
@@ -147,8 +147,18 @@ export class ServerDbManager {
   // =========================================================================
   public static getStoreBySlug(slug: string): Store | null {
     const db = this.getDb();
+    if (!slug) return db.stores[0] || null;
     const cleanSlug = slug.trim().toLowerCase();
-    return db.stores.find((s) => s.slug?.toLowerCase() === cleanSlug || s.id === slug) || db.stores[0] || null;
+    const slugified = slugify(slug);
+
+    const found = db.stores.find((s) =>
+      s.slug?.toLowerCase() === cleanSlug ||
+      s.id === slug ||
+      (s.store_name && slugify(s.store_name) === slugified) ||
+      (s.slug && slugify(s.slug) === slugified)
+    );
+
+    return found || db.stores[0] || null;
   }
 
   public static getSellerProfile(storeIdOrActorId?: string): ServerSellerProfile | undefined {
@@ -197,21 +207,35 @@ export class ServerDbManager {
   // =========================================================================
   public static getOfferBySlug(storeSlug: string, offerSlug: string): Offer | null {
     const db = this.getDb();
+    if (!offerSlug) return null;
     const cleanOfferSlug = offerSlug.trim().toLowerCase();
-    const cleanStoreSlug = storeSlug.trim().toLowerCase();
+    const slugifiedOffer = slugify(offerSlug);
 
-    // 1. Try finding by offer slug and store slug
-    const offer = db.offers.find((o) => {
-      const matchSlug = o.slug?.toLowerCase() === cleanOfferSlug || o.id === offerSlug;
-      if (!matchSlug) return false;
+    // 1. Direct search by slug, ID, or slugified name
+    const matched = db.offers.find((o) => {
+      if (!o) return false;
+      const oSlug = (o.slug || "").trim().toLowerCase();
+      const oNameSlug = slugify(o.name || "");
+      const oId = o.id || "";
 
-      if (o.store_slug && o.store_slug.toLowerCase() === cleanStoreSlug) return true;
-      const targetStore = db.stores.find((s) => s.id === o.store_id);
-      if (targetStore && targetStore.slug?.toLowerCase() === cleanStoreSlug) return true;
-      return true;
+      return (
+        oSlug === cleanOfferSlug ||
+        oId === offerSlug ||
+        oNameSlug === slugifiedOffer ||
+        slugify(oSlug) === slugifiedOffer ||
+        o.name.trim().toLowerCase() === cleanOfferSlug
+      );
     });
 
-    return offer || null;
+    if (matched) return matched;
+
+    // 2. Fuzzy search (if partial match)
+    const fuzzy = db.offers.find((o) => {
+      const oNameSlug = slugify(o.name || "");
+      return oNameSlug.includes(slugifiedOffer) || slugifiedOffer.includes(oNameSlug);
+    });
+
+    return fuzzy || null;
   }
 
   public static getActiveOffersByStore(storeIdOrSlug: string): Offer[] {
