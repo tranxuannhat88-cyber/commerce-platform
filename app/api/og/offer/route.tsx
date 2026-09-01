@@ -16,8 +16,8 @@ export async function GET(req: NextRequest) {
     const offer = offerSlug ? ServerDbManager.getOfferBySlug(storeSlug, offerSlug) : null;
     const store = storeSlug ? ServerDbManager.getStoreBySlug(storeSlug) : null;
 
-    // 1. Check if offer has a base64 image
-    const rawImage = offer?.image_url || offer?.items?.[0]?.image_url || store?.logo_url;
+    // 1. Check if offer has an image (Prioritize product item image, then custom banner, then store logo)
+    const rawImage = offer?.items?.[0]?.image_url || offer?.image_url || store?.logo_url;
 
     if (rawImage && rawImage.startsWith("data:image/")) {
       const match = rawImage.match(/^data:(image\/[a-zA-Z0-9+-]+);base64,(.+)$/);
@@ -35,7 +35,29 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 2. If it's an external HTTP URL, proxy it directly so crawlers (Zalo, FB) receive binary bytes (not 307 redirect)
+    // 2. If it's a local public file path (/uploads/...)
+    if (rawImage && rawImage.startsWith("/")) {
+      try {
+        const fs = await import("fs");
+        const path = await import("path");
+        const filePath = path.join(process.cwd(), "public", rawImage);
+        if (fs.existsSync(filePath)) {
+          const buffer = fs.readFileSync(filePath);
+          const ext = path.extname(filePath).toLowerCase();
+          const contentType = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg";
+          return new Response(buffer, {
+            headers: {
+              "Content-Type": contentType,
+              "Cache-Control": "public, max-age=86400, s-maxage=86400",
+            },
+          });
+        }
+      } catch (e) {
+        console.warn("Local image read error in OG route:", e);
+      }
+    }
+
+    // 3. If it's an external HTTP URL, proxy it directly so crawlers (Zalo, FB) receive binary bytes (not 307 redirect)
     if (rawImage && rawImage.startsWith("http")) {
       try {
         const fetched = await fetch(rawImage);

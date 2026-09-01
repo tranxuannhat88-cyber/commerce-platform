@@ -1541,9 +1541,9 @@ function OffersContent() {
                 <div>
                   {/* Offer Image & Badges */}
                   <div className="relative aspect-16/9 bg-neutral-100 dark:bg-neutral-800 overflow-hidden flex items-center justify-center">
-                    {offer.image_url ? (
+                    {((offer.items && offer.items.length > 0 && offer.items[0].image_url) || offer.image_url) ? (
                       <img
-                        src={offer.image_url}
+                        src={(offer.items && offer.items.length > 0 && offer.items[0].image_url) || offer.image_url}
                         alt={offer.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
