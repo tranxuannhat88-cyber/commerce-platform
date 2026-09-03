@@ -74,17 +74,17 @@ export default function StoreSettingsPage() {
 
   const [isLoadedOnce, setIsLoadedOnce] = useState(false);
 
-  // Synchronize with initial store load without overwriting active edits
+  // Synchronize with initial store load and external updates
   useEffect(() => {
-    if (store && !isLoadedOnce) {
-      setStoreName(store.store_name || "");
-      setSlug(store.slug || "");
-      setLogoUrl(store.logo_url || "");
-      setLogoAssetId(store.logo_asset_id || "");
-      setDescription(store.description || "");
-      setPhone(store.phone || "");
-      setEmail(store.email || "");
-      setAddress(store.address || "");
+    if (store) {
+      if (store.store_name) setStoreName(store.store_name);
+      if (store.slug) setSlug(store.slug);
+      if (store.logo_url) setLogoUrl(store.logo_url);
+      if (store.logo_asset_id) setLogoAssetId(store.logo_asset_id);
+      if (store.description) setDescription(store.description);
+      if (store.phone) setPhone(store.phone);
+      if (store.email) setEmail(store.email);
+      if (store.address) setAddress(store.address);
       if (store.advanced_payment_settings) {
         setPaymentSettings(store.advanced_payment_settings);
       }
@@ -93,7 +93,7 @@ export default function StoreSettingsPage() {
       }
       setIsLoadedOnce(true);
     }
-  }, [store, isLoadedOnce]);
+  }, [store]);
 
   const handleStoreNameChange = (val: string) => {
     setStoreName(val);
@@ -359,6 +359,10 @@ export default function StoreSettingsPage() {
                 onChange={({ logoUrl: newLogoUrl, logoAssetId: newLogoAssetId }) => {
                   setLogoUrl(newLogoUrl);
                   setLogoAssetId(newLogoAssetId);
+                  updateStore({
+                    logo_url: newLogoUrl,
+                    logo_asset_id: newLogoAssetId,
+                  });
                 }}
                 brandColor={store.customization?.brand_color || "#2563eb"}
               />

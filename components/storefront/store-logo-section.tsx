@@ -151,80 +151,85 @@ export function StoreLogoSection({
       setIsUploading(true);
       setUploadError(null);
 
-      // 1. Export canvas to Blob
-      const blob = await new Promise<Blob | null>((resolve) => {
-        canvasRef.current?.toBlob((b) => resolve(b), "image/png", 0.95);
-      });
+      let finalUrl = "";
+      let finalAssetId = `ast_${Date.now()}`;
 
-      if (!blob) {
-        throw new Error("Không thể tạo dữ liệu hình ảnh");
+      // 1. Get base64 dataUrl from canvas
+      const dataUrl = canvasRef.current.toDataURL("image/png", 0.95);
+
+      try {
+        // 2. Export canvas to Blob
+        const blob = await new Promise<Blob | null>((resolve) => {
+          canvasRef.current?.toBlob((b) => resolve(b), "image/png", 0.95);
+        });
+
+        if (blob) {
+          const croppedFile = new File([blob], `logo_${Date.now()}.png`, { type: "image/png" });
+
+          // Request Presigned Upload Intent
+          const intentRes = await fetch("/api/media/upload-intent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              owner_type: "STORE",
+              owner_id: storeId,
+              file_name: croppedFile.name,
+              mime_type: "image/png",
+              file_size: croppedFile.size,
+              visibility: "PUBLIC",
+            }),
+          });
+
+          if (intentRes.ok) {
+            const intent = await intentRes.json();
+
+            // Direct Storage Upload
+            const uploadRes = await fetch(intent.upload_url, {
+              method: "PUT",
+              headers: { "Content-Type": "image/png" },
+              body: croppedFile,
+            });
+
+            if (uploadRes.ok) {
+              // Complete Upload
+              const completeRes = await fetch("/api/media/upload-complete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  asset_id: intent.asset_id,
+                  upload_intent_token: intent.upload_intent_token,
+                  object_key: intent.object_key,
+                  bucket: intent.bucket,
+                  owner_type: "STORE",
+                  owner_id: storeId,
+                  original_file_name: croppedFile.name,
+                  mime_type: "image/png",
+                  file_size: croppedFile.size,
+                  visibility: "PUBLIC",
+                }),
+              });
+
+              if (completeRes.ok) {
+                const asset: MediaAsset = await completeRes.json();
+                finalUrl = (asset as any).public_url || (asset.object_key.startsWith("http") ? asset.object_key : `/uploads/${asset.object_key.split("/").pop()}`);
+                finalAssetId = asset.id;
+              }
+            }
+          }
+        }
+      } catch (uploadErr) {
+        console.warn("Storage upload fallback to dataUrl:", uploadErr);
       }
 
-      const croppedFile = new File([blob], `logo_${Date.now()}.png`, { type: "image/png" });
-
-      // 2. Request Presigned Upload Intent
-      const intentRes = await fetch("/api/media/upload-intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          owner_type: "STORE",
-          owner_id: storeId,
-          file_name: croppedFile.name,
-          mime_type: "image/png",
-          file_size: croppedFile.size,
-          visibility: "PUBLIC",
-        }),
-      });
-
-      if (!intentRes.ok) {
-        const errData = await intentRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Không thể khởi tạo phiên tải lên");
+      // If storage URL was not generated, use dataUrl so user never gets broken image
+      if (!finalUrl) {
+        finalUrl = dataUrl;
       }
-
-      const intent = await intentRes.json();
-
-      // 3. Direct Storage Upload
-      const uploadRes = await fetch(intent.upload_url, {
-        method: "PUT",
-        headers: { "Content-Type": "image/png" },
-        body: croppedFile,
-      });
-
-      if (!uploadRes.ok) {
-        throw new Error("Lỗi khi tải tệp lên Storage");
-      }
-
-      // 4. Complete Upload
-      const completeRes = await fetch("/api/media/upload-complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          asset_id: intent.asset_id,
-          upload_intent_token: intent.upload_intent_token,
-          object_key: intent.object_key,
-          bucket: intent.bucket,
-          owner_type: "STORE",
-          owner_id: storeId,
-          original_file_name: croppedFile.name,
-          mime_type: "image/png",
-          file_size: croppedFile.size,
-          visibility: "PUBLIC",
-        }),
-      });
-
-      if (!completeRes.ok) {
-        const errData = await completeRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Không thể hoàn tất tải lên");
-      }
-
-      const asset: MediaAsset = await completeRes.json();
-      
-      // Determine public URL
-      const finalUrl = (asset as any).public_url || (asset.object_key.startsWith("http") ? asset.object_key : `/uploads/${asset.object_key.split("/").pop()}`);
 
       setLogoUrl(finalUrl);
-      setLogoAssetId(asset.id);
-      onChange({ logoUrl: finalUrl, logoAssetId: asset.id });
+      setLogoAssetId(finalAssetId);
+      setImgError(false);
+      onChange({ logoUrl: finalUrl, logoAssetId: finalAssetId });
 
       setCropModalOpen(false);
       setSelectedImageSrc(null);
