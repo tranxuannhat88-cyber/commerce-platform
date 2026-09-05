@@ -1,13 +1,15 @@
-﻿const CACHE_NAME = 'commerce-pwa-v1.2.0';
+const CACHE_NAME = 'commerce-pwa-v2.1.0';
 const OFFLINE_URL = '/offline';
 
 const PRECACHE_ASSETS = [
   '/',
   '/offline',
   '/manifest.webmanifest',
+  '/icons/hinex-mark.png',
   '/icons/icon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
+  '/hinex-logo.png',
 ];
 
 // Install: Precache offline page and essential assets

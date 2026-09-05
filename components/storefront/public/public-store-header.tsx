@@ -50,10 +50,17 @@ export function PublicStoreHeader({
         <div className="flex items-center gap-2.5 min-w-0">
           <Link
             href="/"
-            className="w-8 h-8 rounded-xl overflow-hidden shadow-xs shrink-0 hover:scale-105 transition-transform"
+            className="w-8 h-8 rounded-xl overflow-hidden bg-white dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700/80 flex items-center justify-center p-1 shrink-0 hover:scale-105 transition-transform shadow-xs"
             title="Hinex - Nền tảng giao dịch số"
           >
-            <img src="/icons/icon-192.png" alt="Hinex" className="w-full h-full object-cover" />
+            <img
+              src="/icons/hinex-mark.png?v=2.1.0"
+              alt="Hinex"
+              className="w-full h-full object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/icons/icon-192.png";
+              }}
+            />
           </Link>
           <span className="text-neutral-300 dark:text-neutral-700 select-none">/</span>
           <span className="text-xs sm:text-sm font-bold text-neutral-800 dark:text-neutral-200 truncate">

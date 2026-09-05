@@ -44,9 +44,12 @@ export function SplashScreen() {
         <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl p-1 bg-linear-to-br from-[#00D1C2] via-[#00A88F] to-[#0D1B2A] shadow-2xl shadow-teal-900/50">
           <div className="w-full h-full rounded-[22px] overflow-hidden bg-[#0D1B2A] flex items-center justify-center p-2">
             <img
-              src="/icons/icon-192.png"
+              src="/icons/icon-192.png?v=2.1.0"
               alt="Hinex Logo"
               className="w-full h-full object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/icons/hinex-mark.png";
+              }}
             />
           </div>
         </div>

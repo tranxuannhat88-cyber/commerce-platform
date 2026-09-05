@@ -96,8 +96,15 @@ export function DashboardSidebar() {
       {/* Brand Header */}
       <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl overflow-hidden shadow-md shadow-blue-900/20 shrink-0">
-            <img src="/icons/icon-192.png" alt="Hinex" className="w-full h-full object-cover" />
+          <div className="w-9 h-9 rounded-xl overflow-hidden bg-white dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700/80 flex items-center justify-center p-1 shrink-0 shadow-xs">
+            <img
+              src="/icons/hinex-mark.png?v=2.1.0"
+              alt="Hinex"
+              className="w-full h-full object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/icons/icon-192.png";
+              }}
+            />
           </div>
           <div>
             <h1 className="font-black text-sm text-neutral-900 dark:text-neutral-100 tracking-tight leading-none">
@@ -241,8 +248,15 @@ export function MobileDashboardDrawer({
         {/* Brand Header */}
         <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
           <Link href="/" onClick={onClose} className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl overflow-hidden shadow-md shadow-blue-900/20 shrink-0">
-              <img src="/icons/icon-192.png" alt="Hinex" className="w-full h-full object-cover" />
+            <div className="w-8 h-8 rounded-xl overflow-hidden bg-white dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700/80 flex items-center justify-center p-1 shrink-0 shadow-xs">
+              <img
+                src="/icons/hinex-mark.png?v=2.1.0"
+                alt="Hinex"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = "/icons/icon-192.png";
+                }}
+              />
             </div>
             <div>
               <h1 className="font-black text-xs text-neutral-900 dark:text-neutral-100 tracking-tight leading-none">

@@ -191,8 +191,15 @@ export default function LoginPage() {
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 font-sans flex items-center justify-center p-4 text-neutral-900 dark:text-neutral-100">
       <div className="max-w-md w-full bg-white dark:bg-neutral-900 rounded-3xl p-6 sm:p-8 border border-neutral-200 dark:border-neutral-800 shadow-xl space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg shadow-blue-900/20 mx-auto">
-            <img src="/icons/icon-192.png" alt="Hinex" className="w-full h-full object-cover" />
+          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700/80 flex items-center justify-center p-2 mx-auto shadow-sm">
+            <img
+              src="/icons/hinex-mark.png?v=2.1.0"
+              alt="Hinex"
+              className="w-full h-full object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/icons/icon-192.png";
+              }}
+            />
           </div>
           <h2 className="text-xl font-black tracking-tight">Đăng Nhập / Tiếp Tục</h2>
           <p className="text-xs text-neutral-500">
