@@ -545,10 +545,10 @@ export default function SecuritySettingsPage() {
         </div>
 
         {/* Domain note */}
-        <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
-          <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+        <div className="p-3.5 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 text-[11px] text-blue-800 dark:text-blue-300 flex items-start gap-2.5">
+          <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-600" />
           <p className="leading-relaxed">
-            <strong>Lưu ý về tên miền:</strong> Hệ thống đang trong giai đoạn Public Test tại <code>go.invamax.com</code>. Khi chuyển sang tên miền chính thức, bạn chỉ cần đăng nhập bằng Số điện thoại một lần để thiết lập lại Passkey trên tên miền mới mà không làm mất bất kỳ dữ liệu nào.
+            <strong>Tên miền hoạt động:</strong> Nền tảng hoạt động chính thức tại <code>app.hinex.vn</code>. Passkey gắn liền với tên miền để bảo mật tối đa cho tài khoản của bạn.
           </p>
         </div>
       </div>

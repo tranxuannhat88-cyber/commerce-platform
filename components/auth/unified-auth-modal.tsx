@@ -240,8 +240,8 @@ export function UnifiedAuthModal({
 
         {/* Modal Header */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-bold mx-auto shadow-md shadow-blue-500/20">
-            {mode === "passkey" ? <Fingerprint className="w-6 h-6" /> : <ShieldCheck className="w-6 h-6" />}
+          <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg shadow-blue-900/20 mx-auto">
+            <img src="/icons/icon-192.png" alt="Hinex" className="w-full h-full object-cover" />
           </div>
           <h2 className="text-xl font-black text-neutral-900 dark:text-neutral-100 tracking-tight">
             {title}

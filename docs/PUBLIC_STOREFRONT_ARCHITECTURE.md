@@ -2,7 +2,7 @@
 
 ## 1. Core Principles
 * **Mini Commerce Website, Not Admin Dashboard**: Trang Store công khai là kênh bán hàng trực quan dành cho người mua (Buyer-centric), tối ưu chuyển đổi và đặt hàng tức thì.
-* **Canonical Public Route**: `/s/[store-slug]` (Ví dụ: `https://go.invamax.com/s/invamax-workspace`).
+* **Canonical Public Route**: `/s/[store-slug]` (Ví dụ: `https://app.hinex.vn/s/invamax-workspace`).
 * **Old Route Compatibility**: Các đường dẫn cũ `/[store-slug]` được tự động chuyển tiếp sang route chuẩn `/s/[store-slug]`.
 * **Zero Business Fiction (100% Real Data)**: Mọi thông tin hiển thị (Tên, ảnh bìa, mô tả, sản phẩm, giá, offer, đánh giá, chính sách, liên hệ) đều bắt buộc phải xuất phát từ cơ sở dữ liệu thật của Seller. Không chèn dữ liệu mẫu, không tự tạo rating/giao dịch ảo, không tự viết chính sách giả định. Nếu chưa thiết lập -> Ẩn hoặc hiển thị trạng thái rỗng trung thực.
 * **Server-Side Rendered (SSR)**: Trả về mã HTML hoàn chỉnh ngay lượt request đầu tiên để tối ưu SEO, tốc độ tải trên Mobile và hỗ trợ Open Graph Preview khi chia sẻ qua Zalo/Facebook.

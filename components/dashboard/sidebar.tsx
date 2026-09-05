@@ -95,19 +95,19 @@ export function DashboardSidebar() {
     <aside className="hidden lg:flex w-64 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex-col shrink-0 h-screen sticky top-0">
       {/* Brand Header */}
       <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-md shadow-blue-500/20">
-            <Sparkles className="w-5 h-5" />
+        <Link href="/" className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl overflow-hidden shadow-md shadow-blue-900/20 shrink-0">
+            <img src="/icons/icon-192.png" alt="Hinex" className="w-full h-full object-cover" />
           </div>
           <div>
-            <h1 className="font-bold text-sm text-neutral-900 dark:text-neutral-100 tracking-tight">
-              COMMERCE PLATFORM
+            <h1 className="font-black text-sm text-neutral-900 dark:text-neutral-100 tracking-tight leading-none">
+              HINEX
             </h1>
-            <p className="text-[11px] text-neutral-400 font-medium">
-              V2 Multi-Context
+            <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider mt-1">
+              Nền tảng giao dịch số
             </p>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Context Switcher on Sidebar */}
@@ -240,19 +240,19 @@ export function MobileDashboardDrawer({
       <div className="relative w-[280px] max-w-[80vw] bg-white dark:bg-neutral-900 h-full flex flex-col shadow-2xl z-10 animate-in slide-in-from-left">
         {/* Brand Header */}
         <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold">
-              <Sparkles className="w-4 h-4" />
+          <Link href="/" onClick={onClose} className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl overflow-hidden shadow-md shadow-blue-900/20 shrink-0">
+              <img src="/icons/icon-192.png" alt="Hinex" className="w-full h-full object-cover" />
             </div>
             <div>
-              <h1 className="font-bold text-xs text-neutral-900 dark:text-neutral-100">
-                COMMERCE PLATFORM
+              <h1 className="font-black text-xs text-neutral-900 dark:text-neutral-100 tracking-tight leading-none">
+                HINEX
               </h1>
-              <p className="text-[11px] text-neutral-500 truncate max-w-[130px]">
+              <p className="text-[10px] text-neutral-500 truncate max-w-[130px] mt-1">
                 {isPersonal ? (currentUser?.full_name || "Tài khoản cá nhân") : (organization.name && organization.name !== "Chưa có tổ chức" ? organization.name : "Tổ chức")}
               </p>
             </div>
-          </div>
+          </Link>
 
           <button
             onClick={onClose}

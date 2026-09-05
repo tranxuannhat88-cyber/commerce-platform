@@ -34,7 +34,7 @@ import { Subscription, BillingOrder, BillingInvoice } from "@/lib/billing/types"
 
 // =========================================================================
 // CLEAN INTERNAL TEST STATE — PURGE ALL MOCK / DEMO DATA
-// Target: go.invamax.com
+// Target: app.hinex.vn
 // All business records start empty ([] or clean baseline).
 // System definitions remain intact.
 // =========================================================================

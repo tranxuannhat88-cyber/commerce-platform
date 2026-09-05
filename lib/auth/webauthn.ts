@@ -11,7 +11,7 @@ export class WebAuthnHelper {
         return hostname;
       }
     }
-    return DOMAIN_CONFIG.CURRENT_PUBLIC_DOMAIN || "go.invamax.com";
+    return DOMAIN_CONFIG.CURRENT_PUBLIC_DOMAIN || "app.hinex.vn";
   }
 
   /**

@@ -4,7 +4,7 @@ import { Offer, Store } from "@/types";
 export class OfferSocialMetadataService {
   public static readonly PLATFORM_SHARE_TITLE = "Nền tảng giao dịch trực tuyến Go";
   public static readonly PLATFORM_SITE_NAME = "Go";
-  public static readonly DEFAULT_BASE_URL = "https://go.invamax.com";
+  public static readonly DEFAULT_BASE_URL = "https://app.hinex.vn";
 
   /**
    * Generates description according to strict rule:

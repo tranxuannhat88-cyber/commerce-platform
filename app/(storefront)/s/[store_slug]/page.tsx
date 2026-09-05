@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     store.description?.trim() ||
     `Ghé thăm gian hàng của ${title} trên nền tảng Go. Xem các sản phẩm, ưu đãi và đặt mua trực tiếp.`;
 
-  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://go.invamax.com").replace(/\/+$/, "");
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://app.hinex.vn").replace(/\/+$/, "");
   const canonicalUrl = `${baseUrl}/s/${store.slug || store_slug}`;
 
   const rawImage =

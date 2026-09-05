@@ -50,10 +50,10 @@ export function PublicStoreHeader({
         <div className="flex items-center gap-2.5 min-w-0">
           <Link
             href="/"
-            className="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center justify-center shadow-xs shrink-0 hover:scale-105 transition-transform"
-            title="Nền tảng Go"
+            className="w-8 h-8 rounded-xl overflow-hidden shadow-xs shrink-0 hover:scale-105 transition-transform"
+            title="Hinex - Nền tảng giao dịch số"
           >
-            GO
+            <img src="/icons/icon-192.png" alt="Hinex" className="w-full h-full object-cover" />
           </Link>
           <span className="text-neutral-300 dark:text-neutral-700 select-none">/</span>
           <span className="text-xs sm:text-sm font-bold text-neutral-800 dark:text-neutral-200 truncate">

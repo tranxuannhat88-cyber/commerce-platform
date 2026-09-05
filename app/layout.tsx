@@ -23,7 +23,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://go.invamax.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://app.hinex.vn"),
   title: PWA_CONFIG.APP_NAME,
   description: PWA_CONFIG.APP_DESCRIPTION,
   manifest: "/manifest.webmanifest",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icons/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
