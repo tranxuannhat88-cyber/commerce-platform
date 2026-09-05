@@ -70,13 +70,13 @@ export function OfferHeader({
     customization?.brand_color ||
     store.customization?.brand_color ||
     activeTemplate?.design_tokens.color_palette_default.primary ||
-    "#10b981";
+    "#00A88F";
 
   const accentColor =
     customization?.accent_color ||
     store.customization?.accent_color ||
     activeTemplate?.design_tokens.color_palette_default.accent ||
-    "#059669";
+    "#007C73";
 
   const templateCode = activeTemplate?.code || "FREE_MODERN";
   const isLuxury = templateCode === "PREMIUM_FLAGSHIP_LUXURY";

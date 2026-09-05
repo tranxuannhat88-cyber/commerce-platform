@@ -146,8 +146,8 @@ function PublicStoreInnerView({ initialData, storeSlug }: PublicStoreViewProps) 
   }
 
   const { store, activeOffers, activeProducts, categories, trust, contact, policies, paymentMethods, fulfillmentMethods } = effectiveData;
-  const brandColor = store.customization?.brand_color || "#2563eb";
-  const accentColor = store.customization?.accent_color || "#3b82f6";
+  const brandColor = store.customization?.brand_color || "#00A88F";
+  const accentColor = store.customization?.accent_color || "#00D1C2";
 
   // Filter products by category and search
   const filteredProducts = activeProducts.filter((product) => {

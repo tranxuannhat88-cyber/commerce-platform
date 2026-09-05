@@ -564,14 +564,14 @@ function DirectOfferContent({ storeSlug: propStoreSlug, offerSlug: propOfferSlug
   };
 
   const offerUrl = typeof window !== "undefined" ? window.location.href : `/${storeSlug}/o/${offerSlug}`;
-  const brandColor = currentStore.customization?.brand_color || "#10b981";
+  const brandColor = currentStore.customization?.brand_color || "#00A88F";
 
   // 1. Loading State
   if (isLoadingServer && !offer) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 dark:bg-neutral-950 p-6 text-center space-y-4">
-        <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 flex items-center justify-center text-blue-600 animate-pulse">
-          <Loader2 className="w-7 h-7 animate-spin text-blue-600" />
+        <div className="w-14 h-14 rounded-2xl bg-[#E6F7F4] dark:bg-teal-950/60 border border-teal-200 dark:border-teal-900/60 flex items-center justify-center text-[#00A88F] animate-pulse">
+          <Loader2 className="w-7 h-7 animate-spin text-[#00A88F]" />
         </div>
         <div className="space-y-1">
           <p className="font-bold text-sm text-neutral-800 dark:text-neutral-200">Đang tải thông tin ưu đãi...</p>
@@ -597,7 +597,7 @@ function DirectOfferContent({ storeSlug: propStoreSlug, offerSlug: propOfferSlug
           </p>
           <Link
             href={`/${storeSlug}`}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#00A88F] hover:bg-[#007C73] text-white font-bold text-xs shadow-xs"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Về trang cửa hàng</span>

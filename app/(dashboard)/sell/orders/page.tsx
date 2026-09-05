@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   ShoppingBag,
   Search,
@@ -19,6 +20,8 @@ import {
   FileText,
   CreditCard,
   Star,
+  ShieldCheck,
+  ExternalLink,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { formatVND, formatDateTime } from "@/lib/utils";
@@ -201,10 +204,10 @@ export default function SalesOrdersPage() {
                   <tr
                     key={order.id}
                     onClick={() => setSelectedOrder(order)}
-                    className="hover:bg-blue-50/60 dark:hover:bg-blue-950/30 cursor-pointer transition-all group"
+                    className="hover:bg-[#E6F7F4]/50 dark:hover:bg-teal-950/20 cursor-pointer transition-all group"
                   >
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 transition-colors">
+                      <div className="font-bold text-neutral-900 dark:text-neutral-100 group-hover:text-[#007C73] dark:group-hover:text-[#00D1C2] transition-colors">
                         {order.order_number}
                       </div>
                       <div className="text-[10px] text-neutral-400 mt-0.5">
@@ -271,11 +274,21 @@ export default function SalesOrdersPage() {
           <div className="relative w-full max-w-2xl bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl border border-neutral-200 dark:border-neutral-800 max-h-[90vh] overflow-y-auto p-6 space-y-6">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">
                     Đơn hàng {selectedOrder.order_number}
                   </h3>
                   {getStatusBadge(selectedOrder.order_status)}
+                  <Link
+                    href={`/transaction/${selectedOrder.id}/verify`}
+                    target="_blank"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-[#007C73] dark:text-[#00D1C2] bg-[#E6F7F4] dark:bg-teal-950/60 hover:bg-teal-100 transition-colors"
+                    title="Xem Hộ Chiếu Giao Dịch"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Hộ chiếu</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </Link>
                 </div>
                 <p className="text-xs text-neutral-500 mt-0.5">
                   Ngày tạo: {formatDateTime(selectedOrder.created_at)}

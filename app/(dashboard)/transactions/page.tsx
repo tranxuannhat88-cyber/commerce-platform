@@ -77,12 +77,12 @@ export default function TransactionsTrustPage() {
   return (
     <div className="space-y-8">
       {/* Header Banner */}
-      <div className="p-6 md:p-8 rounded-3xl bg-linear-to-r from-neutral-900 via-neutral-800 to-indigo-950 text-white shadow-xl space-y-4">
+      <div className="p-6 md:p-8 rounded-3xl bg-linear-to-r from-[#0D1B2A] via-[#0D1B2A] to-[#007C73]/40 text-white shadow-xl space-y-4 border border-teal-500/20">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold backdrop-blur-md">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Trust & Verification Engine • Blockchain-Anchored</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00A88F]/20 text-[#00D1C2] text-xs font-semibold backdrop-blur-md border border-[#00A88F]/30">
+              <ShieldCheck className="w-4 h-4 text-[#00D1C2]" />
+              <span>HINEX Trust & Verification Engine • Cryptographically Secured</span>
             </div>
             <h2 className="text-2xl md:text-3xl font-black tracking-tight">
               Quản Trị Bằng Chứng & Xác Thực Giao Dịch
@@ -97,14 +97,14 @@ export default function TransactionsTrustPage() {
               href="/verify/document"
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold backdrop-blur-md transition-all border border-white/10"
             >
-              <FileCheck className="w-4 h-4 text-emerald-400" />
+              <FileCheck className="w-4 h-4 text-[#00D1C2]" />
               <span>Đối Soát File PDF / CAD</span>
             </Link>
 
             <button
               onClick={handleManualAnchor}
               disabled={isAnchoring || pendingRecords.length === 0}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black shadow-lg shadow-emerald-600/30 transition-all cursor-pointer whitespace-nowrap"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#00A88F] hover:bg-[#007C73] disabled:opacity-50 text-white text-xs font-black shadow-lg shadow-teal-900/30 transition-all cursor-pointer whitespace-nowrap"
             >
               <Zap className="w-4 h-4" />
               <span>{isAnchoring ? "Đang tạo Merkle..." : `Neo Merkle Batch (${pendingRecords.length})`}</span>
@@ -265,7 +265,7 @@ export default function TransactionsTrustPage() {
                 <Link
                   href={`/transaction/${tx.id}/verify`}
                   target="_blank"
-                  className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center gap-2 transition-all cursor-pointer"
+                  className="px-5 py-3 rounded-2xl bg-[#00A88F] hover:bg-[#007C73] text-white font-bold text-xs shadow-md shadow-teal-900/20 flex items-center gap-2 transition-all cursor-pointer"
                 >
                   <ShieldCheck className="w-4 h-4" />
                   <span>Xem Transaction Passport</span>

@@ -50,7 +50,7 @@ export function DashboardHeader() {
               {headerDisplayName}
             </span>
             <span className="hidden sm:inline text-neutral-300 dark:text-neutral-700">•</span>
-            <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hidden sm:inline">
+            <span className="text-[11px] font-semibold text-[#007C73] dark:text-[#00D1C2] hidden sm:inline">
               {currentContext.context_type === "PERSONAL" ? "👤 Cá nhân" : `🏢 Tổ chức (${currentContext.role || "Owner"})`}
             </span>
           </div>
@@ -61,18 +61,18 @@ export function DashboardHeader() {
           {/* Quick QR button */}
           <button
             onClick={() => setShowStoreQR(true)}
-            className="p-1.5 sm:px-3 sm:py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+            className="p-1.5 sm:px-3 sm:py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-[#E6F7F4] hover:text-[#007C73] dark:hover:bg-teal-950/40 rounded-xl transition-colors inline-flex items-center gap-1.5 cursor-pointer"
             title="Mã QR Cửa Hàng"
           >
-            <QrCode className="w-4 h-4 text-blue-600" />
+            <QrCode className="w-4 h-4 text-[#00A88F]" />
             <span className="hidden sm:inline">QR Cửa Hàng</span>
           </button>
 
-          {/* Quick Actions Dropdown */}
+          {/* Quick Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             <Link
               href="/sell/offers?create=true"
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-white bg-[#00A88F] hover:bg-[#007C73] rounded-xl shadow-xs transition-colors"
             >
               <Tag className="w-3.5 h-3.5" />
               <span>+ Offer</span>
@@ -80,9 +80,9 @@ export function DashboardHeader() {
 
             <Link
               href="/buy/requests?create=true"
-              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-neutral-800 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors border border-neutral-200 dark:border-neutral-700"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-neutral-800 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl transition-colors border border-neutral-200 dark:border-neutral-700"
             >
-              <FileQuestion className="w-3.5 h-3.5 text-emerald-600" />
+              <FileQuestion className="w-3.5 h-3.5 text-[#00A88F]" />
               <span>+ RFQ</span>
             </Link>
           </div>

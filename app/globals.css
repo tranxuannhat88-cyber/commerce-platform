@@ -1,8 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #F8FAFC;
+  --foreground: #172033;
+
+  /* HINEX BRAND DESIGN SYSTEM TOKENS */
+  --hinex-navy: #0D1B2A;
+  --hinex-navy-dark: #070E17;
+  --hinex-navy-surface: #132438;
+  --hinex-teal-deep: #007C73;
+  --hinex-teal: #00A88F;
+  --hinex-teal-hover: #008f7a;
+  --hinex-cyan: #00D1C2;
+  --hinex-teal-light: #E6F7F4;
+  --hinex-surface: #FFFFFF;
+  --hinex-bg-soft: #F8FAFC;
+  --hinex-text-dark: #172033;
+  --hinex-text-muted: #64748B;
+  --hinex-border: #E5E7EB;
 }
 
 @theme inline {
@@ -10,17 +25,41 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-hinex-navy: #0D1B2A;
+  --color-hinex-navy-dark: #070E17;
+  --color-hinex-navy-surface: #132438;
+  --color-hinex-teal-deep: #007C73;
+  --color-hinex-teal: #00A88F;
+  --color-hinex-teal-hover: #008f7a;
+  --color-hinex-cyan: #00D1C2;
+  --color-hinex-teal-light: #E6F7F4;
+  --color-hinex-surface: #FFFFFF;
+  --color-hinex-bg-soft: #F8FAFC;
+  --color-hinex-text-dark: #172033;
+  --color-hinex-text-muted: #64748B;
+  --color-hinex-border: #E5E7EB;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--hinex-bg-soft);
+  color: var(--hinex-text-dark);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar for desktop */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

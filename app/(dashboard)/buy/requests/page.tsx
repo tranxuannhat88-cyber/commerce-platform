@@ -168,7 +168,7 @@ export default function BuyerRequestsPage() {
 
         <button
           onClick={() => setIsCreateOpen(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#00A88F] hover:bg-[#007C73] text-white text-xs font-bold shadow-md shadow-teal-900/20 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>+ Đăng Yêu Cầu Mới (RFQ)</span>
@@ -214,11 +214,11 @@ export default function BuyerRequestsPage() {
           return (
             <div
               key={req.id}
-              className="p-5 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-xs hover:border-emerald-500/50 transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
+              className="p-5 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-xs hover:border-[#00A88F]/50 transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
             >
               <div className="space-y-2 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-mono text-xs font-bold">
+                  <span className="px-2.5 py-0.5 rounded-md bg-[#E6F7F4] dark:bg-teal-950 text-[#007C73] dark:text-[#00D1C2] font-mono text-xs font-bold">
                     {req.request_number}
                   </span>
                   {getStatusBadge(req.status)}
@@ -256,7 +256,7 @@ export default function BuyerRequestsPage() {
               <div className="flex flex-col sm:flex-row md:flex-col items-start sm:items-center md:items-end justify-between gap-3 shrink-0 pt-3 md:pt-0 border-t md:border-t-0 border-neutral-100 dark:border-neutral-800">
                 <Link
                   href={`/buy/quotations?requestId=${req.id}`}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900 font-semibold text-xs border border-emerald-200 dark:border-emerald-800 cursor-pointer"
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#E6F7F4] dark:bg-teal-950 text-[#007C73] dark:text-[#00D1C2] hover:bg-teal-100 dark:hover:bg-teal-900 font-semibold text-xs border border-teal-200 dark:border-teal-800 cursor-pointer"
                 >
                   <Inbox className="w-4 h-4" />
                   <span>{quotesForReq.length} Báo giá nhận được</span>

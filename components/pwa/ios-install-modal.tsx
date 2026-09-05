@@ -16,7 +16,7 @@ export function IOSInstallModal({ isOpen, onClose }: IOSInstallModalProps) {
       <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-5 animate-in slide-in-from-bottom-6">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-blue-600/10 text-blue-600 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-2xl bg-[#00A88F]/10 text-[#00A88F] flex items-center justify-center font-bold">
               <Smartphone className="w-5 h-5" />
             </div>
             <div>
@@ -42,13 +42,13 @@ export function IOSInstallModal({ isOpen, onClose }: IOSInstallModalProps) {
 
           <div className="space-y-3">
             <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
-              <div className="w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+              <div className="w-7 h-7 rounded-xl bg-[#00A88F] text-white flex items-center justify-center font-bold text-xs shrink-0">
                 1
               </div>
               <div className="space-y-0.5">
                 <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                   <span>Bấm nút Chia sẻ</span>
-                  <Share2 className="w-4 h-4 text-blue-600" />
+                  <Share2 className="w-4 h-4 text-[#00A88F]" />
                 </p>
                 <p className="text-[11px] text-slate-500">
                   Nằm ở thanh công cụ dưới đáy trình duyệt Safari trên iPhone.
@@ -57,7 +57,7 @@ export function IOSInstallModal({ isOpen, onClose }: IOSInstallModalProps) {
             </div>
 
             <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
-              <div className="w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+              <div className="w-7 h-7 rounded-xl bg-[#00A88F] text-white flex items-center justify-center font-bold text-xs shrink-0">
                 2
               </div>
               <div className="space-y-0.5">
@@ -72,7 +72,7 @@ export function IOSInstallModal({ isOpen, onClose }: IOSInstallModalProps) {
             </div>
 
             <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
-              <div className="w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+              <div className="w-7 h-7 rounded-xl bg-[#00A88F] text-white flex items-center justify-center font-bold text-xs shrink-0">
                 3
               </div>
               <div className="space-y-0.5">
@@ -90,7 +90,7 @@ export function IOSInstallModal({ isOpen, onClose }: IOSInstallModalProps) {
 
         <button
           onClick={onClose}
-          className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer"
+          className="w-full py-3 rounded-2xl bg-[#00A88F] hover:bg-[#007C73] text-white font-bold text-xs shadow-md shadow-teal-900/20 transition-all cursor-pointer"
         >
           Tôi đã hiểu
         </button>

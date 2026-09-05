@@ -382,15 +382,15 @@ export default function OrderStatusPage() {
             </p>
           </div>
         ) : (
-          <div className="p-6 md:p-8 rounded-3xl bg-linear-to-b from-blue-600 to-indigo-700 text-white text-center space-y-3 shadow-xl">
+          <div className="p-6 md:p-8 rounded-3xl bg-linear-to-b from-[#0D1B2A] to-[#007C73] text-white text-center space-y-3 shadow-xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-xs font-semibold backdrop-blur-md">
-              <Clock className="w-3.5 h-3.5 animate-pulse" />
+              <Clock className="w-3.5 h-3.5 animate-pulse text-[#00D1C2]" />
               <span>Đang Chờ Chuyển Khoản / Quét QR</span>
             </div>
             <h2 className="text-2xl font-black tracking-tight">
               {formatVND(order.total_amount)}
             </h2>
-            <p className="text-xs text-blue-100 max-w-md mx-auto">
+            <p className="text-xs text-neutral-200 max-w-md mx-auto">
               Vui lòng mở ứng dụng Ngân hàng (App Bank) để quét mã QR bên dưới. Hệ thống sẽ tự động xác nhận ngay khi bạn chuyển tiền!
             </p>
           </div>
@@ -615,11 +615,36 @@ export default function OrderStatusPage() {
 
             <div className="pt-2 border-t border-neutral-200 dark:border-neutral-700 flex justify-between font-black text-sm text-neutral-900 dark:text-neutral-100">
               <span>Tổng thanh toán:</span>
-              <span className="text-blue-600 dark:text-blue-400">
+              <span className="text-[#007C73] dark:text-[#00D1C2]">
                 {isQuoting ? `${formatVND(order.subtotal)} + Cước xe tải` : formatVND(order.total_amount)}
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Transaction Passport Verification Card */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#E6F7F4] dark:bg-teal-950 text-[#007C73] flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
+                Hộ Chiếu Giao Dịch Số (Transaction Passport)
+              </p>
+              <p className="text-[11px] text-neutral-500">
+                Mã xác thực mã hóa ghi nhận trên mạng lưới HINEX. Tra cứu tính toàn vẹn bất cứ lúc nào.
+              </p>
+            </div>
+          </div>
+          <Link
+            href={`/transaction/${order.id}/verify`}
+            target="_blank"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#00A88F] hover:bg-[#007C73] text-white text-xs font-bold shadow-xs transition-colors shrink-0"
+          >
+            <span>Xem Hộ Chiếu</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
         {/* ========================================================================= */}

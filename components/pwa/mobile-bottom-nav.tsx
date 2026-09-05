@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
+  Home,
   Tag,
-  ShoppingBag,
+  ArrowLeftRight,
   ShieldCheck,
-  Settings,
+  User,
 } from "lucide-react";
 
 export function MobileBottomNav() {
@@ -38,16 +38,16 @@ export function MobileBottomNav() {
   }
 
   const navItems = [
-    { label: "Tổng quan", href: "/", icon: LayoutDashboard, exact: true },
-    { label: "Sản phẩm", href: "/sell/offers", icon: Tag },
-    { label: "Đơn hàng", href: "/sell/orders", icon: ShoppingBag },
-    { label: "Giao dịch", href: "/transactions", icon: ShieldCheck },
-    { label: "Cài đặt", href: "/settings", icon: Settings },
+    { label: "Trang chủ", href: "/", icon: Home, exact: true },
+    { label: "Offer", href: "/sell/offers", icon: Tag },
+    { label: "Giao dịch", href: "/transactions", icon: ArrowLeftRight },
+    { label: "Danh tiếng", href: "/transaction/tx-current/verify", icon: ShieldCheck },
+    { label: "Tài khoản", href: "/settings/security", icon: User },
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-2 pt-1.5 pb-[calc(env(safe-area-inset-bottom,0px)+6px)] transition-all">
-      <div className="flex items-center justify-around">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0D1B2A] border-t border-[#1E293B] px-3 pt-2 pb-[calc(env(safe-area-inset-bottom,0px)+8px)] shadow-2xl shadow-black/80 transition-all">
+      <div className="flex items-center justify-around max-w-md mx-auto">
         {navItems.map((item) => {
           const isActive = item.exact
             ? pathname === item.href
@@ -58,14 +58,18 @@ export function MobileBottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all ${
+              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-200 ${
                 isActive
-                  ? "text-blue-600 dark:text-blue-400 font-bold scale-105"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium"
+                  ? "text-[#00D1C2] scale-105"
+                  : "text-[#94A3B8] hover:text-white"
               }`}
             >
-              <Icon className={`w-5 h-5 mb-0.5 ${isActive ? "stroke-[2.5]" : "stroke-[1.75]"}`} />
-              <span className="text-[10px] tracking-tight">{item.label}</span>
+              <div className={`relative ${isActive ? "drop-shadow-[0_0_8px_rgba(0,209,194,0.4)]" : ""}`}>
+                <Icon className={`w-5 h-5 mb-1 ${isActive ? "stroke-[2.2]" : "stroke-[1.6]"}`} />
+              </div>
+              <span className={`text-[10px] tracking-tight ${isActive ? "font-bold text-[#00D1C2]" : "font-medium"}`}>
+                {item.label}
+              </span>
             </Link>
           );
         })}

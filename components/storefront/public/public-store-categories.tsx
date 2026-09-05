@@ -14,7 +14,7 @@ export function PublicStoreCategories({
   categories,
   selectedCategory,
   onSelectCategory,
-  brandColor = "#2563eb",
+  brandColor = "#00A88F",
 }: PublicStoreCategoriesProps) {
   if (!categories || categories.length <= 1) {
     return null;

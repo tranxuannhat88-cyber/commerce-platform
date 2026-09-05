@@ -28,8 +28,8 @@ export function PublicStoreHero({
   location,
   isVerified = false,
   phone,
-  brandColor = "#2563eb",
-  accentColor = "#3b82f6",
+  brandColor = "#00A88F",
+  accentColor = "#00D1C2",
 }: PublicStoreHeroProps) {
   const [copied, setCopied] = React.useState(false);
   const [logoLoadError, setLogoLoadError] = React.useState(false);
@@ -40,7 +40,7 @@ export function PublicStoreHero({
       try {
         await navigator.share({
           title: storeName,
-          text: `Ghé thăm cửa hàng trực tuyến của ${storeName} trên nền tảng Go`,
+          text: `Ghé thăm cửa hàng trực tuyến của ${storeName} trên nền tảng HINEX`,
           url: storeUrl,
         });
         return;

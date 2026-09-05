@@ -17,8 +17,8 @@ interface PublicStoreActiveOffersProps {
 export function PublicStoreActiveOffers({
   offers,
   storeSlug,
-  brandColor = "#2563eb",
-  accentColor = "#3b82f6",
+  brandColor = "#00A88F",
+  accentColor = "#00D1C2",
 }: PublicStoreActiveOffersProps) {
   if (!offers || offers.length === 0) {
     return null;
@@ -47,7 +47,7 @@ export function PublicStoreActiveOffers({
             <Link
               key={offer.id}
               href={offerHref}
-              className="group bg-white dark:bg-neutral-900 rounded-2xl sm:rounded-3xl border border-neutral-200/90 dark:border-neutral-800 hover:border-blue-500/80 dark:hover:border-blue-500/80 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
+              className="group bg-white dark:bg-neutral-900 rounded-2xl sm:rounded-3xl border border-neutral-200/90 dark:border-neutral-800 hover:border-[#00A88F]/80 dark:hover:border-[#00A88F]/80 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
             >
               <div>
                 {/* Offer Image */}
@@ -68,12 +68,12 @@ export function PublicStoreActiveOffers({
                   {/* Badges */}
                   <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5">
                     {isCatalog ? (
-                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-700 text-white backdrop-blur-md flex items-center gap-1 shadow-xs">
+                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-[#007C73] text-white backdrop-blur-md flex items-center gap-1 shadow-xs">
                         <ListOrdered className="w-3 h-3" />
                         <span>OFFER ({itemCount} MỤC)</span>
                       </span>
                     ) : (
-                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-neutral-900/85 text-white backdrop-blur-md flex items-center gap-1 shadow-xs">
+                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-[#0D1B2A]/90 text-white backdrop-blur-md flex items-center gap-1 shadow-xs">
                         <span>{offer.offer_type === "PRODUCT" ? "📦 SẢN PHẨM" : "🛠️ DỊCH VỤ"}</span>
                       </span>
                     )}
@@ -82,7 +82,7 @@ export function PublicStoreActiveOffers({
 
                 {/* Body Details */}
                 <div className="p-4 space-y-2">
-                  <h3 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-neutral-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  <h3 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-neutral-100 line-clamp-1 group-hover:text-[#007C73] dark:group-hover:text-[#00D1C2] transition-colors">
                     {offer.name}
                   </h3>
 

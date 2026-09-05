@@ -121,7 +121,7 @@ export function DashboardSidebar() {
           href={store.slug ? `/s/${store.slug}` : "/store"}
           target={store.slug ? "_blank" : undefined}
           title={store.slug ? "Xem trang cửa hàng giống như khách hàng nhìn thấy." : "Tạo cửa hàng của bạn"}
-          className="flex items-center justify-between px-3 py-2 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/60 rounded-xl transition-colors border border-blue-200 dark:border-blue-900/60"
+          className="flex items-center justify-between px-3 py-2 text-xs font-semibold text-[#007C73] dark:text-[#00D1C2] bg-[#E6F7F4] dark:bg-teal-950/40 hover:bg-teal-100 dark:hover:bg-teal-900/60 rounded-xl transition-colors border border-teal-200/80 dark:border-teal-900/60"
         >
           <span className="truncate">{store.slug ? "🏬 Xem cửa hàng" : "🏬 + Tạo cửa hàng"}</span>
           <ExternalLink className="w-3.5 h-3.5 shrink-0" />
@@ -144,11 +144,11 @@ export function DashboardSidebar() {
                   href={item.href}
                   className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                     active
-                      ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-xs"
+                      ? "bg-[#0D1B2A] text-[#00D1C2] dark:bg-neutral-800 dark:text-[#00D1C2] shadow-xs font-semibold"
                       : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-100 dark:hover:bg-neutral-800"
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${active ? "text-white dark:text-neutral-900" : "text-neutral-500"}`} />
+                  <Icon className={`w-4 h-4 ${active ? "text-[#00D1C2]" : "text-neutral-500"}`} />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -274,7 +274,7 @@ export function MobileDashboardDrawer({
             target={store.slug ? "_blank" : undefined}
             onClick={onClose}
             title={store.slug ? "Xem trang cửa hàng giống như khách hàng nhìn thấy." : "Tạo cửa hàng của bạn"}
-            className="flex items-center justify-between px-3 py-2 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 rounded-xl border border-blue-200 dark:border-blue-900/60"
+            className="flex items-center justify-between px-3 py-2 text-xs font-semibold text-[#007C73] dark:text-[#00D1C2] bg-[#E6F7F4] dark:bg-teal-950/40 hover:bg-teal-100 rounded-xl border border-teal-200/80 dark:border-teal-900/60"
           >
             <span>{store.slug ? "🏬 Xem cửa hàng" : "🏬 + Tạo cửa hàng"}</span>
             <ExternalLink className="w-3.5 h-3.5 shrink-0" />
@@ -298,11 +298,11 @@ export function MobileDashboardDrawer({
                     onClick={onClose}
                     className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                       active
-                        ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
+                        ? "bg-[#0D1B2A] text-[#00D1C2] dark:bg-neutral-800 dark:text-[#00D1C2] font-semibold"
                         : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${active ? "text-white dark:text-neutral-900" : "text-neutral-500"}`} />
+                    <Icon className={`w-4 h-4 ${active ? "text-[#00D1C2]" : "text-neutral-500"}`} />
                     <span>{item.label}</span>
                   </Link>
                 );

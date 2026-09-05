@@ -18,7 +18,7 @@ export function PublicStoreProductGrid({
   products,
   offers,
   storeSlug,
-  brandColor = "#2563eb",
+  brandColor = "#00A88F",
   onAddToCart,
 }: PublicStoreProductGridProps) {
   if (!products || products.length === 0) {
@@ -74,7 +74,7 @@ export function PublicStoreProductGrid({
           return (
             <div
               key={product.id}
-              className="group bg-white dark:bg-neutral-900 rounded-2xl sm:rounded-3xl border border-neutral-200/90 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden"
+              className="group bg-white dark:bg-neutral-900 rounded-2xl sm:rounded-3xl border border-neutral-200/90 dark:border-neutral-800 hover:border-[#00A88F]/40 dark:hover:border-[#00A88F]/40 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden"
             >
               <div>
                 {/* Product Image */}
@@ -95,7 +95,7 @@ export function PublicStoreProductGrid({
                   {/* Badges */}
                   {matchingOffer && (
                     <div className="absolute top-2 left-2">
-                      <span className="px-2 py-0.5 rounded-md text-[9px] font-black bg-blue-600 text-white shadow-xs">
+                      <span className="px-2 py-0.5 rounded-md text-[9px] font-black bg-[#00A88F] text-white shadow-xs">
                         Có Offer
                       </span>
                     </div>
@@ -113,7 +113,7 @@ export function PublicStoreProductGrid({
                 {/* Body */}
                 <div className="p-3 sm:p-4 space-y-1.5">
                   <h3
-                    className="font-bold text-xs sm:text-sm text-neutral-900 dark:text-neutral-100 line-clamp-2 leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"
+                    className="font-bold text-xs sm:text-sm text-neutral-900 dark:text-neutral-100 line-clamp-2 leading-snug group-hover:text-[#007C73] dark:group-hover:text-[#00D1C2] transition-colors"
                     title={product.name}
                   >
                     {product.name}
@@ -155,14 +155,14 @@ export function PublicStoreProductGrid({
                 {matchingOffer ? (
                   <Link
                     href={`/${storeSlug}/o/${matchingOffer.slug}`}
-                    className="w-full py-2 px-3 rounded-xl bg-neutral-100 hover:bg-blue-50 dark:bg-neutral-800 dark:hover:bg-blue-950/40 text-neutral-800 dark:text-neutral-200 hover:text-blue-600 font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all text-center"
+                    className="w-full py-2 px-3 rounded-xl bg-neutral-100 hover:bg-[#E6F7F4] dark:bg-neutral-800 dark:hover:bg-teal-950/40 text-neutral-800 dark:text-neutral-200 hover:text-[#007C73] dark:hover:text-[#00D1C2] font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all text-center"
                   >
                     <span>Xem trong Offer</span>
                   </Link>
                 ) : onAddToCart && !isOutOfStock && product.price > 0 ? (
                   <button
                     onClick={() => onAddToCart(product)}
-                    className="w-full py-2 px-3 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 active:scale-95 text-neutral-800 dark:text-neutral-200 font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    className="w-full py-2 px-3 rounded-xl bg-[#00A88F] hover:bg-[#007C73] active:scale-95 text-white font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Đặt mua</span>
