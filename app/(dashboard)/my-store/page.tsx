@@ -10,7 +10,12 @@ import { StoreEditorHeader } from "@/components/store-editor/store-editor-header
 import { StoreCustomizationPanel } from "@/components/store-editor/store-customization-panel";
 import { EditableStoreLogoModal } from "@/components/store-editor/editable-store-logo-modal";
 import { EditableStoreBannerModal } from "@/components/store-editor/editable-store-banner-modal";
-import { StoreEditorCustomization, PreviewDevice } from "@/components/store-editor/types";
+import {
+  StoreEditorCustomization,
+  PreviewDevice,
+  CoverPositionSettings,
+  DEFAULT_COVER_POSITION,
+} from "@/components/store-editor/types";
 import { TemplateSelectorModal } from "@/components/templates/template-selector-modal";
 import { STORE_TEMPLATES } from "@/lib/templates/definitions";
 import { StoreTemplate } from "@/types";
@@ -48,6 +53,7 @@ export default function MyStoreLiveEditorPage() {
   const [customization, setCustomization] = useState<StoreEditorCustomization>({
     logo_url: store.logo_url || "",
     cover_image_url: store.cover_image_url || store.customization?.hero_banner_url || "",
+    cover_position: store.cover_position || store.customization?.cover_position || DEFAULT_COVER_POSITION,
     brand_color: store.customization?.brand_color || "#00BB94",
     accent_color: store.customization?.accent_color || "#0F172A",
     primary_cta_text: "Xem sản phẩm",
@@ -73,10 +79,11 @@ export default function MyStoreLiveEditorPage() {
       logo_url: store.logo_url || prev.logo_url,
       cover_image_url:
         store.cover_image_url || store.customization?.hero_banner_url || prev.cover_image_url,
+      cover_position: store.cover_position || store.customization?.cover_position || prev.cover_position,
       brand_color: store.customization?.brand_color || prev.brand_color,
       accent_color: store.customization?.accent_color || prev.accent_color,
     }));
-  }, [store.logo_url, store.cover_image_url, store.customization]);
+  }, [store.logo_url, store.cover_image_url, store.cover_position, store.customization]);
 
   const handleUpdate = (
     updater: (prev: StoreEditorCustomization) => StoreEditorCustomization
@@ -92,11 +99,13 @@ export default function MyStoreLiveEditorPage() {
         ...store,
         logo_url: customization.logo_url,
         cover_image_url: customization.cover_image_url,
+        cover_position: customization.cover_position,
         customization: {
           ...(store.customization || {}),
           brand_color: customization.brand_color,
           accent_color: customization.accent_color,
           hero_banner_url: customization.cover_image_url,
+          cover_position: customization.cover_position,
           visible_sections: {
             categories: customization.visible_sections.categories,
             products: customization.visible_sections.featured_products,
@@ -126,6 +135,7 @@ export default function MyStoreLiveEditorPage() {
       ...prev,
       logo_url: store.logo_url || "",
       cover_image_url: store.cover_image_url || "",
+      cover_position: DEFAULT_COVER_POSITION,
       brand_color: defaultTpl.design_tokens.color_palette_default.primary || "#00BB94",
       accent_color: defaultTpl.design_tokens.color_palette_default.accent || "#0F172A",
       visible_sections: {
@@ -165,8 +175,12 @@ export default function MyStoreLiveEditorPage() {
     setHasUnsavedChanges(true);
   };
 
-  const handleSelectBanner = (url: string) => {
-    setCustomization((prev) => ({ ...prev, cover_image_url: url }));
+  const handleSelectBanner = (url: string, position?: CoverPositionSettings) => {
+    setCustomization((prev) => ({
+      ...prev,
+      cover_image_url: url,
+      cover_position: position || prev.cover_position,
+    }));
     setHasUnsavedChanges(true);
   };
 
@@ -197,6 +211,8 @@ export default function MyStoreLiveEditorPage() {
                 customizationOverrides={{
                   logoUrl: customization.logo_url,
                   coverImageUrl: customization.cover_image_url,
+                  coverPosition: customization.cover_position,
+                  previewDevice: "DESKTOP",
                   brandColor: customization.brand_color,
                   accentColor: customization.accent_color,
                   primaryCtaText: customization.primary_cta_text,
@@ -219,6 +235,8 @@ export default function MyStoreLiveEditorPage() {
                   customizationOverrides={{
                     logoUrl: customization.logo_url,
                     coverImageUrl: customization.cover_image_url,
+                    coverPosition: customization.cover_position,
+                    previewDevice: "TABLET",
                     brandColor: customization.brand_color,
                     accentColor: customization.accent_color,
                     primaryCtaText: customization.primary_cta_text,
@@ -247,6 +265,8 @@ export default function MyStoreLiveEditorPage() {
                     customizationOverrides={{
                       logoUrl: customization.logo_url,
                       coverImageUrl: customization.cover_image_url,
+                      coverPosition: customization.cover_position,
+                      previewDevice: "MOBILE",
                       brandColor: customization.brand_color,
                       accentColor: customization.accent_color,
                       primaryCtaText: customization.primary_cta_text,
@@ -296,6 +316,7 @@ export default function MyStoreLiveEditorPage() {
         isOpen={showBannerModal}
         onClose={() => setShowBannerModal(false)}
         currentBannerUrl={customization.cover_image_url}
+        currentCoverPosition={customization.cover_position}
         storeName={storeName}
         brandColor={customization.brand_color}
         accentColor={customization.accent_color}

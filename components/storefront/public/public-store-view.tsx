@@ -15,12 +15,14 @@ import { PublicStoreContactPolicies } from "./public-store-contact-policies";
 import { PublicStoreFooter } from "./public-store-footer";
 import { CartProvider, CartDrawer, useCart } from "@/components/storefront/cart-drawer";
 import { useCommerceStore } from "@/lib/db/store";
-import { Product, Offer, Store } from "@/types";
+import { Product, Offer, Store, CoverPositionSettings } from "@/types";
 import { formatVND } from "@/lib/utils";
 
 export interface PublicStoreCustomizationOverrides {
   logoUrl?: string;
   coverImageUrl?: string;
+  coverPosition?: CoverPositionSettings;
+  previewDevice?: "DESKTOP" | "TABLET" | "MOBILE";
   brandColor?: string;
   accentColor?: string;
   primaryCtaText?: string;
@@ -237,6 +239,8 @@ function PublicStoreInnerView({ initialData, storeSlug, customizationOverrides }
         storeSlug={store.slug || storeSlug || "auto"}
         logoUrl={effectiveLogoUrl}
         coverImageUrl={effectiveCoverUrl}
+        coverPosition={customizationOverrides?.coverPosition || store.cover_position || store.customization?.cover_position}
+        previewDevice={customizationOverrides?.previewDevice}
         description={store.description}
         actorType={effectiveData.actorType}
         location={effectiveData.contact.address || store.address}

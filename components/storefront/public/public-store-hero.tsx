@@ -3,12 +3,15 @@
 import React from "react";
 import { MapPin, ShieldCheck, Phone, Share2, Store as StoreIcon, Building2, User, Camera, Pencil } from "lucide-react";
 import { AppUrlService } from "@/lib/services/url";
+import { CoverPositionSettings, DEFAULT_COVER_POSITION } from "@/types";
 
 interface PublicStoreHeroProps {
   storeName: string;
   storeSlug: string;
   logoUrl?: string;
   coverImageUrl?: string;
+  coverPosition?: CoverPositionSettings;
+  previewDevice?: "DESKTOP" | "TABLET" | "MOBILE";
   description?: string;
   actorType: "PERSONAL" | "ORGANIZATION";
   location?: string;
@@ -29,6 +32,8 @@ export function PublicStoreHero({
   storeSlug,
   logoUrl,
   coverImageUrl,
+  coverPosition,
+  previewDevice,
   description,
   actorType,
   location,
@@ -74,21 +79,107 @@ export function PublicStoreHero({
     return (words[0][0] + words[words.length - 1][0]).toUpperCase();
   };
 
+  const desktopPos = coverPosition?.desktop || DEFAULT_COVER_POSITION.desktop;
+  const tabletPos = coverPosition?.tablet || DEFAULT_COVER_POSITION.tablet;
+  const mobilePos = coverPosition?.mobile || DEFAULT_COVER_POSITION.mobile;
+
   return (
     <section className="relative w-full bg-white dark:bg-neutral-900 border-b border-neutral-200/80 dark:border-neutral-800 overflow-hidden">
       {/* 1. COVER PHOTO OR CLEAN NEUTRAL BRANDED BACKGROUND */}
       <div
-        className={`relative w-full h-32 sm:h-44 md:h-52 bg-neutral-100 dark:bg-neutral-800 overflow-hidden ${
+        className={`relative w-full h-32 sm:h-44 md:h-52 bg-neutral-900 overflow-hidden ${
           isEditable ? "group/banner cursor-pointer select-none" : ""
         }`}
         onClick={isEditable ? onEditBanner : undefined}
       >
         {coverImageUrl ? (
-          <img
-            src={coverImageUrl}
-            alt={storeName}
-            className="w-full h-full object-cover"
-          />
+          <>
+            {/* When previewDevice is explicitly passed (e.g. in My Store preview viewport) */}
+            {previewDevice ? (
+              <div className="w-full h-full relative overflow-hidden bg-neutral-900 flex items-center justify-center">
+                <img
+                  src={coverImageUrl}
+                  alt={storeName}
+                  className="w-full h-full pointer-events-none select-none"
+                  style={{
+                    objectFit:
+                      (previewDevice === "MOBILE"
+                        ? mobilePos.fit_mode
+                        : previewDevice === "TABLET"
+                        ? tabletPos.fit_mode
+                        : desktopPos.fit_mode) === "CONTAIN"
+                        ? "contain"
+                        : "cover",
+                    transform: `translate(${
+                      previewDevice === "MOBILE"
+                        ? mobilePos.x
+                        : previewDevice === "TABLET"
+                        ? tabletPos.x
+                        : desktopPos.x
+                    }%, ${
+                      previewDevice === "MOBILE"
+                        ? mobilePos.y
+                        : previewDevice === "TABLET"
+                        ? tabletPos.y
+                        : desktopPos.y
+                    }%) scale(${
+                      previewDevice === "MOBILE"
+                        ? mobilePos.scale
+                        : previewDevice === "TABLET"
+                        ? tabletPos.scale
+                        : desktopPos.scale
+                    })`,
+                    transformOrigin: "center center",
+                  }}
+                />
+              </div>
+            ) : (
+              <>
+                {/* Public Store: Responsive multi-breakpoint rendering */}
+                {/* Desktop (>= 1024px) */}
+                <div className="hidden lg:flex w-full h-full relative overflow-hidden bg-neutral-900 items-center justify-center">
+                  <img
+                    src={coverImageUrl}
+                    alt={storeName}
+                    className="w-full h-full pointer-events-none select-none"
+                    style={{
+                      objectFit: desktopPos.fit_mode === "CONTAIN" ? "contain" : "cover",
+                      transform: `translate(${desktopPos.x}%, ${desktopPos.y}%) scale(${desktopPos.scale})`,
+                      transformOrigin: "center center",
+                    }}
+                  />
+                </div>
+
+                {/* Tablet (640px - 1023px) */}
+                <div className="hidden sm:flex lg:hidden w-full h-full relative overflow-hidden bg-neutral-900 items-center justify-center">
+                  <img
+                    src={coverImageUrl}
+                    alt={storeName}
+                    className="w-full h-full pointer-events-none select-none"
+                    style={{
+                      objectFit: tabletPos.fit_mode === "CONTAIN" ? "contain" : "cover",
+                      transform: `translate(${tabletPos.x}%, ${tabletPos.y}%) scale(${tabletPos.scale})`,
+                      transformOrigin: "center center",
+                    }}
+                  />
+                </div>
+
+                {/* Mobile (< 640px) */}
+                <div className="flex sm:hidden w-full h-full relative overflow-hidden bg-neutral-900 items-center justify-center">
+                  <img
+                    src={coverImageUrl}
+                    alt={storeName}
+                    className="w-full h-full pointer-events-none select-none"
+                    style={{
+                      objectFit: mobilePos.fit_mode === "CONTAIN" ? "contain" : "cover",
+                      transform: `translate(${mobilePos.x}%, ${mobilePos.y}%) scale(${mobilePos.scale})`,
+                      transformOrigin: "center center",
+                    }}
+                  />
+                </div>
+              </>
+            )}
+          </>
         ) : (
           <div
             className="w-full h-full opacity-90 transition-all flex items-center justify-center relative"
@@ -121,7 +212,7 @@ export function PublicStoreHero({
           <div className="absolute inset-0 bg-black/35 opacity-0 group-hover/banner:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
             <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/95 dark:bg-neutral-900/95 text-neutral-900 dark:text-neutral-100 text-xs font-bold shadow-lg border border-neutral-200/50 backdrop-blur-xs">
               <Camera className="w-4 h-4 text-[#00B894]" />
-              <span>📷 Thay ảnh bìa</span>
+              <span>📷 Điều chỉnh ảnh bìa</span>
             </span>
           </div>
         )}

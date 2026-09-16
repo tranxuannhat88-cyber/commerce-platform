@@ -68,6 +68,7 @@ export interface Store {
   logo_url?: string;
   logo_asset_id?: string;
   cover_image_url?: string;
+  cover_position?: CoverPositionSettings;
   description?: string;
   phone?: string;
   email?: string;
@@ -1215,12 +1216,41 @@ export interface TemplateLicense {
   currency_snapshot: 'VND';
 }
 
+export type CoverFitMode = 'COVER' | 'CONTAIN';
+
+export interface DeviceCoverSettings {
+  scale: number;
+  x: number;
+  y: number;
+  fit_mode: CoverFitMode;
+}
+
+export interface CoverPositionSettings {
+  desktop: DeviceCoverSettings;
+  tablet: DeviceCoverSettings;
+  mobile: DeviceCoverSettings;
+}
+
+export const DEFAULT_DEVICE_COVER_SETTINGS: DeviceCoverSettings = {
+  scale: 1,
+  x: 0,
+  y: 0,
+  fit_mode: 'COVER',
+};
+
+export const DEFAULT_COVER_POSITION: CoverPositionSettings = {
+  desktop: { scale: 1, x: 0, y: 0, fit_mode: 'COVER' },
+  tablet: { scale: 1, x: 0, y: 0, fit_mode: 'COVER' },
+  mobile: { scale: 1, x: 0, y: 0, fit_mode: 'COVER' },
+};
+
 export interface StoreCustomizationSettings {
   brand_color?: string;
   accent_color?: string;
   hero_title?: string;
   hero_subtitle?: string;
   hero_banner_url?: string;
+  cover_position?: CoverPositionSettings;
   visible_sections?: {
     hero?: boolean;
     trust_bar?: boolean;
