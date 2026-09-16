@@ -19,6 +19,11 @@ import {
   Landmark,
   ArrowRight,
   Layout,
+  Eye,
+  Share2,
+  Monitor,
+  Smartphone,
+  Sliders,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { CopyButton } from "@/components/shared/copy-button";
@@ -29,13 +34,20 @@ import {
   FulfillmentMethodType,
   StorePaymentSettings,
   StoreFulfillmentSettings,
+  StoreTemplate,
 } from "@/types";
 import { PaymentSettingsService } from "@/lib/services/payment-settings-service";
 import { FulfillmentService } from "@/lib/services/fulfillment-service";
 import { StoreCustomizer } from "@/components/templates/store-customizer";
 import { StoreLogoSection } from "@/components/storefront/store-logo-section";
+import { PublicStoreView } from "@/components/storefront/public/public-store-view";
+import { TemplateGallery } from "@/components/templates/template-gallery";
+import { TemplatePreviewModal } from "@/components/templates/template-preview-modal";
+import { TemplatePurchaseModal } from "@/components/templates/template-purchase-modal";
+import { TemplateEntitlementService } from "@/lib/templates/entitlement";
 
-type ActiveTab = "INFO" | "TEMPLATES" | "PAYMENT_METHODS" | "PAYMENT_ACCOUNTS" | "FULFILLMENT" | "POLICIES";
+type ActiveTab = "PREVIEW" | "TEMPLATES" | "CUSTOMIZATION" | "INFO" | "PAYMENTS_FULFILLMENT";
+type PreviewDevice = "DESKTOP" | "MOBILE";
 
 export default function StoreSettingsPage() {
   const {
@@ -55,7 +67,10 @@ export default function StoreSettingsPage() {
     updateStoreCustomization,
   } = useCommerceStore();
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>("INFO");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("PREVIEW");
+  const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("DESKTOP");
+  const [previewingTemplate, setPreviewingTemplate] = useState<StoreTemplate | null>(null);
+  const [purchasingTemplate, setPurchasingTemplate] = useState<StoreTemplate | null>(null);
 
   // Tab 1: Info State
   const [storeName, setStoreName] = useState(store.store_name || "");
@@ -203,35 +218,61 @@ export default function StoreSettingsPage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Title & Quick Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-2.5">
-            <StoreIcon className="w-6 h-6 text-blue-600" />
-            <span>Thiết Lập Cửa Hàng & Kênh Bán</span>
-          </h1>
-          <p className="text-xs text-neutral-500 mt-0.5">
-            Cấu hình phương thức thanh toán, tài khoản nhận tiền, vận chuyển và chính sách bán hàng.
-          </p>
+      {/* Internal Store Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
+        <div className="flex items-center gap-3.5">
+          {/* Logo / Avatar */}
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/50 border border-blue-100 dark:border-blue-900 flex items-center justify-center overflow-hidden shrink-0">
+            {logoUrl ? (
+              <img src={logoUrl} alt={storeName || "Store"} className="w-full h-full object-cover" />
+            ) : (
+              <StoreIcon className="w-6 h-6 text-blue-600" />
+            )}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                CỬA HÀNG
+              </span>
+              <h1 className="text-base sm:text-lg font-black text-neutral-900 dark:text-neutral-100">
+                {storeName || store.store_name || "INVAMAX workspace"}
+              </h1>
+            </div>
+            <p className="text-xs text-neutral-500 font-mono mt-0.5">
+              Đường dẫn: hinex.vn/s/{slug || store.slug || "invamax-workspace"}
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setShowQR(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 text-neutral-800 dark:text-neutral-200 transition-colors cursor-pointer"
+            type="button"
+            onClick={() => setActiveTab("PREVIEW")}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
+              activeTab === "PREVIEW"
+                ? "bg-blue-50 dark:bg-blue-950 text-blue-600 border border-blue-200 dark:border-blue-900"
+                : "bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200"
+            }`}
           >
-            <QrCode className="w-4 h-4 text-blue-600" />
-            <span>Mã QR</span>
+            <Eye className="w-4 h-4 text-blue-600" />
+            <span>Xem trước</span>
           </button>
-          <CopyButton text={storeUrl} label="Copy Link Cửa Hàng" className="py-2 text-xs" />
+          <button
+            type="button"
+            onClick={() => setShowQR(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 transition-colors cursor-pointer"
+          >
+            <Share2 className="w-4 h-4 text-blue-600" />
+            <span>Chia sẻ</span>
+          </button>
           <Link
-            href={`/s/${slug || "invamax-workspace"}`}
+            href={`/s/${slug || store.slug || "invamax-workspace"}`}
             target="_blank"
-            title="Xem trang cửa hàng giống như khách hàng nhìn thấy."
+            title="Mở trang cửa hàng công khai trong tab mới"
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors"
           >
+            <span>Mở trang công khai</span>
             <ExternalLink className="w-4 h-4" />
-            <span>Xem cửa hàng</span>
           </Link>
         </div>
       </div>
@@ -239,7 +280,7 @@ export default function StoreSettingsPage() {
       {savedSuccess && (
         <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center gap-2 animate-in fade-in">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>Đã lưu thành công toàn bộ thiết lập Cửa hàng, Thanh toán & Vận chuyển!</span>
+          <span>Đã lưu thành công toàn bộ thiết lập Cửa hàng!</span>
         </div>
       )}
 
@@ -247,15 +288,15 @@ export default function StoreSettingsPage() {
       <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800 overflow-x-auto">
         <button
           type="button"
-          onClick={() => setActiveTab("INFO")}
+          onClick={() => setActiveTab("PREVIEW")}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
-            activeTab === "INFO"
+            activeTab === "PREVIEW"
               ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
               : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
           }`}
         >
-          <Building className="w-4 h-4" />
-          <span>1. Thông Tin Cửa Hàng</span>
+          <Eye className="w-4 h-4" />
+          <span>1. Trang Cửa Hàng</span>
         </button>
 
         <button
@@ -268,87 +309,158 @@ export default function StoreSettingsPage() {
           }`}
         >
           <Layout className="w-4 h-4" />
-          <span>2. Mẫu Giao Diện & Tùy Biến</span>
+          <span>2. Mẫu Giao Diện</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setActiveTab("PAYMENT_METHODS")}
+          onClick={() => setActiveTab("CUSTOMIZATION")}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
-            activeTab === "PAYMENT_METHODS"
+            activeTab === "CUSTOMIZATION"
+              ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
+              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
+          }`}
+        >
+          <Sliders className="w-4 h-4" />
+          <span>3. Tùy Biến</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("INFO")}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === "INFO"
+              ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
+              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
+          }`}
+        >
+          <Building className="w-4 h-4" />
+          <span>4. Thông Tin Cửa Hàng</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("PAYMENTS_FULFILLMENT")}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === "PAYMENTS_FULFILLMENT"
               ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
               : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
           }`}
         >
           <CreditCard className="w-4 h-4" />
-          <span>3. Phương Thức Thanh Toán</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("PAYMENT_ACCOUNTS")}
-          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
-            activeTab === "PAYMENT_ACCOUNTS"
-              ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
-              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
-          }`}
-        >
-          <Landmark className="w-4 h-4" />
-          <span>4. Tài Khoản Nhận Tiền</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("FULFILLMENT")}
-          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
-            activeTab === "FULFILLMENT"
-              ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
-              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
-          }`}
-        >
-          <Truck className="w-4 h-4" />
-          <span>5. Vận Chuyển & Giao Hàng</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("POLICIES")}
-          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
-            activeTab === "POLICIES"
-              ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
-              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          <span>6. Chính Sách & Hiển Thị</span>
+          <span>5. Thanh Toán & Vận Chuyển</span>
         </button>
       </div>
 
-      {activeTab === "TEMPLATES" && (
-        <StoreCustomizer
-          store={store}
-          currentContext={currentContext}
-          licenses={templateLicenses}
-          onUpdateCustomization={updateStoreCustomization}
-          onApplyTemplate={applyStoreTemplate}
-          onPurchaseTemplate={(tplId, price) => purchaseTemplateLicense({ templateId: tplId, price })}
-        />
+      {/* TAB 1: LIVE STORE PREVIEW */}
+      {activeTab === "PREVIEW" && (
+        <div className="space-y-4 animate-in fade-in">
+          {/* Device toggle toolbar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400">
+                Chế độ xem trước:
+              </span>
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice("DESKTOP")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    previewDevice === "DESKTOP"
+                      ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
+                  }`}
+                >
+                  <Monitor className="w-3.5 h-3.5" />
+                  <span>Máy tính (Desktop)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice("MOBILE")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    previewDevice === "MOBILE"
+                      ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-xs"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
+                  }`}
+                >
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span>Di động (Mobile 390px)</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-neutral-500">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Dữ liệu thực tế từ hệ thống của bạn</span>
+            </div>
+          </div>
+
+          {/* Preview canvas */}
+          {previewDevice === "DESKTOP" ? (
+            <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-xs bg-white dark:bg-neutral-950">
+              <PublicStoreView storeSlug={slug || store.slug || "invamax-workspace"} />
+            </div>
+          ) : (
+            <div className="flex justify-center py-6 bg-neutral-100/70 dark:bg-neutral-900/40 rounded-3xl border border-neutral-200/80 dark:border-neutral-800">
+              <div className="w-[390px] max-w-full rounded-[40px] border-8 border-neutral-800 dark:border-neutral-700 shadow-2xl overflow-hidden bg-white dark:bg-neutral-950">
+                {/* Simulated mobile notch */}
+                <div className="h-6 bg-neutral-800 dark:bg-neutral-700 flex items-center justify-center">
+                  <div className="w-16 h-1 bg-neutral-600 rounded-full" />
+                </div>
+                <div className="max-h-[750px] overflow-y-auto">
+                  <PublicStoreView storeSlug={slug || store.slug || "invamax-workspace"} />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
-      <form onSubmit={handleSaveAll} className="space-y-6">
-        {/* TAB 1: STORE BASIC INFO */}
-        {activeTab === "INFO" && (
-          <div className="space-y-6 animate-in fade-in">
-            <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4">
-              <div>
-                <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-                  <StoreIcon className="w-4 h-4 text-blue-600" />
-                  <span>Thông tin cửa hàng công khai</span>
-                </h3>
-                <p className="text-xs text-neutral-500 mt-1">
-                  Đây là những thông tin khách hàng sẽ nhìn thấy khi truy cập trang cửa hàng của bạn.
-                </p>
-              </div>
+      {/* TAB 2: TEMPLATES GALLERY */}
+      {activeTab === "TEMPLATES" && (
+        <div className="space-y-6 animate-in fade-in">
+          <TemplateGallery
+            currentTemplateId={store.active_template_id || "tpl_modern_store"}
+            currentContext={currentContext}
+            licenses={templateLicenses}
+            onSelectTemplate={(tpl) => {
+              applyStoreTemplate(tpl.id);
+            }}
+            onOpenPreview={(tpl) => setPreviewingTemplate(tpl)}
+            onOpenPurchase={(tpl) => setPurchasingTemplate(tpl)}
+          />
+        </div>
+      )}
+
+      {/* TAB 3: CUSTOMIZER */}
+      {activeTab === "CUSTOMIZATION" && (
+        <div className="space-y-6 animate-in fade-in">
+          <StoreCustomizer
+            store={store}
+            currentContext={currentContext}
+            licenses={templateLicenses}
+            onUpdateCustomization={updateStoreCustomization}
+            onApplyTemplate={applyStoreTemplate}
+            onPurchaseTemplate={(tplId, price) => purchaseTemplateLicense({ templateId: tplId, price })}
+          />
+        </div>
+      )}
+
+      {(activeTab === "INFO" || activeTab === "PAYMENTS_FULFILLMENT") && (
+        <form onSubmit={handleSaveAll} className="space-y-6">
+          {/* TAB 4: STORE BASIC INFO */}
+          {activeTab === "INFO" && (
+            <div className="space-y-6 animate-in fade-in">
+              <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4">
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                    <StoreIcon className="w-4 h-4 text-blue-600" />
+                    <span>Thông tin cửa hàng công khai</span>
+                  </h3>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Đây là những thông tin khách hàng sẽ nhìn thấy khi truy cập trang cửa hàng của bạn.
+                  </p>
+                </div>
 
               {/* STORE LOGO SECTION */}
               <StoreLogoSection
@@ -460,8 +572,8 @@ export default function StoreSettingsPage() {
           </div>
         )}
 
-        {/* TAB 2: STORE PAYMENT METHODS */}
-        {activeTab === "PAYMENT_METHODS" && (
+        {/* TAB 5: PAYMENTS & FULFILLMENT */}
+        {activeTab === "PAYMENTS_FULFILLMENT" && (
           <div className="space-y-6 animate-in fade-in">
             <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-5">
               <div>
@@ -628,12 +740,8 @@ export default function StoreSettingsPage() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* TAB 3: ACTOR PAYMENT ACCOUNTS */}
-        {activeTab === "PAYMENT_ACCOUNTS" && (
-          <div className="space-y-6 animate-in fade-in">
+            {/* SECTION 2: ACTOR PAYMENT ACCOUNTS */}
             <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
@@ -742,12 +850,8 @@ export default function StoreSettingsPage() {
                 })}
               </div>
             </div>
-          </div>
-        )}
 
-        {/* TAB 4: STORE FULFILLMENT & SHIPPING */}
-        {activeTab === "FULFILLMENT" && (
-          <div className="space-y-6 animate-in fade-in">
+            {/* SECTION 3: STORE FULFILLMENT & SHIPPING */}
             <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-5">
               <div>
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
@@ -1028,12 +1132,8 @@ export default function StoreSettingsPage() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* TAB 5: POLICIES & PUBLIC DISPLAY */}
-        {activeTab === "POLICIES" && (
-          <div className="space-y-6 animate-in fade-in">
+            {/* SECTION 4: POLICIES & PUBLIC DISPLAY */}
             <div className="p-6 rounded-3xl bg-linear-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/40 dark:to-indigo-950/30 border border-blue-200/80 dark:border-blue-900/50 space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-md">
@@ -1071,7 +1171,13 @@ export default function StoreSettingsPage() {
             }`}
           >
             {savedSuccess ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-            <span>{savedSuccess ? "✓ ĐÃ LƯU THÀNH CÔNG CẤU HÌNH!" : "LƯU TOÀN BỘ CẤU HÌNH CỬA HÀNG"}</span>
+            <span>
+              {savedSuccess
+                ? "✓ ĐÃ LƯU THÀNH CÔNG!"
+                : activeTab === "INFO"
+                ? "LƯU THÔNG TIN CỬA HÀNG"
+                : "LƯU CẤU HÌNH THANH TOÁN & VẬN CHUYỂN"}
+            </span>
           </button>
 
           {savedSuccess && (
@@ -1082,6 +1188,7 @@ export default function StoreSettingsPage() {
           )}
         </div>
       </form>
+    )}
 
       {/* Modal: Add Payment Account */}
       {showAddAccountModal && (
@@ -1193,6 +1300,43 @@ export default function StoreSettingsPage() {
 
       {/* QR Modal */}
       <QRModal isOpen={showQR} onClose={() => setShowQR(false)} url={storeUrl} title={store.store_name} />
+
+      {/* Template Preview Modal */}
+      <TemplatePreviewModal
+        isOpen={Boolean(previewingTemplate)}
+        onClose={() => setPreviewingTemplate(null)}
+        template={previewingTemplate}
+        isOwned={
+          previewingTemplate
+            ? TemplateEntitlementService.isTemplateOwnedByActor({
+                template: previewingTemplate,
+                actorId: currentContext.actor_id,
+                licenses: templateLicenses,
+              })
+            : false
+        }
+        onApply={(tpl) => {
+          applyStoreTemplate(tpl.id);
+          setPreviewingTemplate(null);
+        }}
+        onPurchase={(tpl) => {
+          setPreviewingTemplate(null);
+          setPurchasingTemplate(tpl);
+        }}
+      />
+
+      {/* Template Purchase Modal */}
+      <TemplatePurchaseModal
+        isOpen={Boolean(purchasingTemplate)}
+        onClose={() => setPurchasingTemplate(null)}
+        template={purchasingTemplate}
+        currentContext={currentContext}
+        onConfirmPayment={async (tpl) => {
+          await purchaseTemplateLicense({ templateId: tpl.id, price: tpl.price });
+          await applyStoreTemplate(tpl.id);
+          setPurchasingTemplate(null);
+        }}
+      />
     </div>
   );
 }
