@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import {
@@ -9,6 +9,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Sparkles,
+  LayoutTemplate,
 } from "lucide-react";
 import { StoreEditorCustomization } from "./types";
 
@@ -21,6 +22,10 @@ interface StoreCustomizationPanelProps {
   onUpdate: (updater: (prev: StoreEditorCustomization) => StoreEditorCustomization) => void;
   onSave: () => void;
   onReset: () => void;
+  activeTemplateName?: string;
+  isPremiumTemplate?: boolean;
+  templatePrice?: number | string;
+  onChangeTemplate?: () => void;
 }
 
 export function StoreCustomizationPanel({
@@ -32,6 +37,10 @@ export function StoreCustomizationPanel({
   onUpdate,
   onSave,
   onReset,
+  activeTemplateName,
+  isPremiumTemplate,
+  templatePrice,
+  onChangeTemplate,
 }: StoreCustomizationPanelProps) {
   if (!isOpen) {
     return (
@@ -71,6 +80,50 @@ export function StoreCustomizationPanel({
           >
             <ChevronRight className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* 0. MẪU GIAO DIỆN HIỆN TẠI */}
+        <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/70 dark:border-neutral-700/60 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">
+              Mẫu giao diện hiện tại
+            </span>
+            <span
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                (isPremiumTemplate ?? customization.is_premium_template)
+                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+              }`}
+            >
+              {(isPremiumTemplate ?? customization.is_premium_template) ? "Cao cấp" : "Miễn phí"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 pt-0.5">
+            <div>
+              <div className="text-sm font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+                <LayoutTemplate className="w-4 h-4 text-[#00B894]" />
+                <span>{activeTemplateName || customization.active_template_name || "Modern"}</span>
+              </div>
+              {(isPremiumTemplate ?? customization.is_premium_template) && templatePrice ? (
+                <div className="text-[11px] text-neutral-500 font-medium mt-0.5">
+                  {typeof templatePrice === "number"
+                    ? templatePrice.toLocaleString("vi-VN") + "đ"
+                    : templatePrice}
+                </div>
+              ) : null}
+            </div>
+
+            {onChangeTemplate && (
+              <button
+                type="button"
+                onClick={onChangeTemplate}
+                className="px-3 py-1.5 text-xs font-bold rounded-xl bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-[#00B894] dark:text-[#00D1A7] border border-[#00B894]/30 hover:border-[#00B894] transition-all shadow-2xs cursor-pointer shrink-0"
+              >
+                Đổi mẫu
+              </button>
+            )}
+          </div>
         </div>
 
         {/* 1. MÀU THƯƠNG HIỆU */}

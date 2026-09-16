@@ -1,4 +1,4 @@
-﻿export interface StoreEditorCustomization {
+export interface StoreEditorCustomization {
   logo_url: string;
   cover_image_url: string;
   brand_color: string;
@@ -19,4 +19,4 @@
   is_premium_template: boolean;
 }
 
-export type PreviewDevice = "DESKTOP" | "MOBILE";
+export type PreviewDevice = "DESKTOP" | "TABLET" | "MOBILE";

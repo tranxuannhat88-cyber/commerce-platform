@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -7,7 +7,6 @@ import { AppUrlService } from "@/lib/services/url";
 import { QRModal } from "@/components/shared/qr-modal";
 import { PublicStoreView } from "@/components/storefront/public/public-store-view";
 import { StoreEditorHeader } from "@/components/store-editor/store-editor-header";
-import { StoreBrowserBar } from "@/components/store-editor/store-browser-bar";
 import { StoreCustomizationPanel } from "@/components/store-editor/store-customization-panel";
 import { EditableStoreLogoModal } from "@/components/store-editor/editable-store-logo-modal";
 import { EditableStoreBannerModal } from "@/components/store-editor/editable-store-banner-modal";
@@ -189,17 +188,9 @@ export default function MyStoreLiveEditorPage() {
       {/* 2. THREE-ZONE ARCHITECTURE: CENTER PREVIEW + RIGHT CUSTOMIZATION PANEL */}
       <div className="flex flex-col lg:flex-row items-start gap-5">
         {/* CENTER: LIVE STOREFRONT VIEWPORT */}
-        <div className="flex-1 min-w-0 w-full space-y-3">
-          {/* Browser Bar with Integrated Template Selector */}
-          <StoreBrowserBar
-            storeUrl={storeUrl}
-            templateName={customization.active_template_name}
-            isPremium={customization.is_premium_template}
-            onChangeTemplate={() => setShowTemplates(true)}
-          />
-
+        <div className="flex-1 min-w-0 w-full">
           {/* Live Storefront Frame (What You See Is What You Edit) */}
-          {previewDevice === "DESKTOP" ? (
+          {previewDevice === "DESKTOP" && (
             <div className="rounded-3xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden shadow-xs bg-white dark:bg-neutral-950 transition-all">
               <PublicStoreView
                 storeSlug={slug}
@@ -218,7 +209,32 @@ export default function MyStoreLiveEditorPage() {
                 }}
               />
             </div>
-          ) : (
+          )}
+
+          {previewDevice === "TABLET" && (
+            <div className="flex justify-center py-6 bg-neutral-100/70 dark:bg-neutral-900/40 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 transition-all p-2 sm:p-4">
+              <div className="w-[768px] md:w-[820px] max-w-full rounded-2xl border border-neutral-300 dark:border-neutral-700 shadow-xl overflow-hidden bg-white dark:bg-neutral-950">
+                <PublicStoreView
+                  storeSlug={slug}
+                  customizationOverrides={{
+                    logoUrl: customization.logo_url,
+                    coverImageUrl: customization.cover_image_url,
+                    brandColor: customization.brand_color,
+                    accentColor: customization.accent_color,
+                    primaryCtaText: customization.primary_cta_text,
+                    secondaryCtaText: customization.secondary_cta_text,
+                    visibleSections: customization.visible_sections,
+                    isEditable: true,
+                    onEditLogo: () => setShowLogoModal(true),
+                    onEditBanner: () => setShowBannerModal(true),
+                    onEditStoreInfo: () => router.push("/store-settings"),
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {previewDevice === "MOBILE" && (
             <div className="flex justify-center py-6 bg-neutral-100/70 dark:bg-neutral-900/40 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 transition-all">
               <div className="w-[390px] max-w-full rounded-[40px] border-8 border-neutral-800 dark:border-neutral-700 shadow-2xl overflow-hidden bg-white dark:bg-neutral-950">
                 {/* Simulated mobile speaker notch */}
@@ -258,6 +274,10 @@ export default function MyStoreLiveEditorPage() {
           onUpdate={handleUpdate}
           onSave={handleSave}
           onReset={handleReset}
+          activeTemplateName={customization.active_template_name}
+          isPremiumTemplate={customization.is_premium_template}
+          templatePrice={activeTemplate?.price}
+          onChangeTemplate={() => setShowTemplates(true)}
         />
       </div>
 

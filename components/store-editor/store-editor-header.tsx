@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { Monitor, Smartphone, Share2, ExternalLink } from "lucide-react";
+import { Monitor, Tablet, Smartphone, Share2, ExternalLink, Copy, Check } from "lucide-react";
 import { PreviewDevice } from "./types";
 
 interface StoreEditorHeaderProps {
@@ -18,6 +18,16 @@ export function StoreEditorHeader({
   onShare,
   publicStoreUrl,
 }: StoreEditorHeaderProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = () => {
+    if (publicStoreUrl) {
+      navigator.clipboard.writeText(publicStoreUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
       {/* Left Title & Subtitle */}
@@ -35,7 +45,7 @@ export function StoreEditorHeader({
         <button
           type="button"
           onClick={() => onDeviceChange("DESKTOP")}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
             previewDevice === "DESKTOP"
               ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs border border-neutral-200/60 dark:border-neutral-700"
               : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
@@ -44,10 +54,24 @@ export function StoreEditorHeader({
           <Monitor className="w-3.5 h-3.5 text-[#00B894]" />
           <span>Máy tính (Desktop)</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => onDeviceChange("TABLET")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            previewDevice === "TABLET"
+              ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs border border-neutral-200/60 dark:border-neutral-700"
+              : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
+          }`}
+        >
+          <Tablet className="w-3.5 h-3.5 text-[#00B894]" />
+          <span>Máy tính bảng (Tablet)</span>
+        </button>
+
         <button
           type="button"
           onClick={() => onDeviceChange("MOBILE")}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
             previewDevice === "MOBILE"
               ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs border border-neutral-200/60 dark:border-neutral-700"
               : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
@@ -59,15 +83,35 @@ export function StoreEditorHeader({
       </div>
 
       {/* Right Action Buttons */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleCopyLink}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors shadow-2xs cursor-pointer"
+          title="Sao chép liên kết cửa hàng"
+        >
+          {copied ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="text-emerald-600">Đã sao chép</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-3.5 h-3.5 text-neutral-500" />
+              <span>Sao chép link</span>
+            </>
+          )}
+        </button>
+
         <button
           type="button"
           onClick={onShare}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 transition-colors shadow-2xs cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors shadow-2xs cursor-pointer"
         >
-          <Share2 className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400" />
+          <Share2 className="w-3.5 h-3.5 text-neutral-500" />
           <span>Chia sẻ</span>
         </button>
+
         <Link
           href={publicStoreUrl}
           target="_blank"
