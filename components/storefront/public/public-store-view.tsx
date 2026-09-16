@@ -34,6 +34,10 @@ export interface PublicStoreCustomizationOverrides {
     policies?: boolean;
     offers?: boolean;
   };
+  isEditable?: boolean;
+  onEditLogo?: () => void;
+  onEditBanner?: () => void;
+  onEditStoreInfo?: () => void;
 }
 
 export interface PublicStoreViewProps {
@@ -240,6 +244,12 @@ function PublicStoreInnerView({ initialData, storeSlug, customizationOverrides }
         phone={effectiveData.contact.phone}
         brandColor={brandColor}
         accentColor={accentColor}
+        primaryCtaText={customizationOverrides?.primaryCtaText}
+        secondaryCtaText={customizationOverrides?.secondaryCtaText}
+        isEditable={customizationOverrides?.isEditable}
+        onEditLogo={customizationOverrides?.onEditLogo}
+        onEditBanner={customizationOverrides?.onEditBanner}
+        onEditStoreInfo={customizationOverrides?.onEditStoreInfo}
       />
 
       {/* MAIN COMMERCE CONTAINER */}

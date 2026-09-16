@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useCommerceStore } from "@/lib/db/store";
 import { AppUrlService } from "@/lib/services/url";
 import { QRModal } from "@/components/shared/qr-modal";
@@ -8,12 +9,15 @@ import { PublicStoreView } from "@/components/storefront/public/public-store-vie
 import { StoreEditorHeader } from "@/components/store-editor/store-editor-header";
 import { StoreBrowserBar } from "@/components/store-editor/store-browser-bar";
 import { StoreCustomizationPanel } from "@/components/store-editor/store-customization-panel";
+import { EditableStoreLogoModal } from "@/components/store-editor/editable-store-logo-modal";
+import { EditableStoreBannerModal } from "@/components/store-editor/editable-store-banner-modal";
 import { StoreEditorCustomization, PreviewDevice } from "@/components/store-editor/types";
 import { TemplateSelectorModal } from "@/components/templates/template-selector-modal";
 import { STORE_TEMPLATES } from "@/lib/templates/definitions";
 import { StoreTemplate } from "@/types";
 
 export default function MyStoreLiveEditorPage() {
+  const router = useRouter();
   const {
     store,
     updateStore,
@@ -25,6 +29,9 @@ export default function MyStoreLiveEditorPage() {
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("DESKTOP");
   const [showQR, setShowQR] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showLogoModal, setShowLogoModal] = useState(false);
+  const [showBannerModal, setShowBannerModal] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -118,6 +125,8 @@ export default function MyStoreLiveEditorPage() {
     const defaultTpl = STORE_TEMPLATES.find((t) => t.id === customization.active_template_id) || activeTemplate;
     setCustomization((prev) => ({
       ...prev,
+      logo_url: store.logo_url || "",
+      cover_image_url: store.cover_image_url || "",
       brand_color: defaultTpl.design_tokens.color_palette_default.primary || "#00BB94",
       accent_color: defaultTpl.design_tokens.color_palette_default.accent || "#0F172A",
       visible_sections: {
@@ -146,6 +155,27 @@ export default function MyStoreLiveEditorPage() {
     setShowTemplates(false);
   };
 
+  // Direct In-Storefront Handlers
+  const handleSelectLogo = (url: string) => {
+    setCustomization((prev) => ({ ...prev, logo_url: url }));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleDeleteLogo = () => {
+    setCustomization((prev) => ({ ...prev, logo_url: "" }));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSelectBanner = (url: string) => {
+    setCustomization((prev) => ({ ...prev, cover_image_url: url }));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleDeleteBanner = () => {
+    setCustomization((prev) => ({ ...prev, cover_image_url: "" }));
+    setHasUnsavedChanges(true);
+  };
+
   return (
     <div className="space-y-4 max-w-full">
       {/* 1. TOP HEADER & TOOLBAR */}
@@ -160,7 +190,7 @@ export default function MyStoreLiveEditorPage() {
       <div className="flex flex-col lg:flex-row items-start gap-5">
         {/* CENTER: LIVE STOREFRONT VIEWPORT */}
         <div className="flex-1 min-w-0 w-full space-y-3">
-          {/* Browser Bar */}
+          {/* Browser Bar with Integrated Template Selector */}
           <StoreBrowserBar
             storeUrl={storeUrl}
             templateName={customization.active_template_name}
@@ -168,7 +198,7 @@ export default function MyStoreLiveEditorPage() {
             onChangeTemplate={() => setShowTemplates(true)}
           />
 
-          {/* Live Storefront Frame */}
+          {/* Live Storefront Frame (What You See Is What You Edit) */}
           {previewDevice === "DESKTOP" ? (
             <div className="rounded-3xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden shadow-xs bg-white dark:bg-neutral-950 transition-all">
               <PublicStoreView
@@ -181,6 +211,10 @@ export default function MyStoreLiveEditorPage() {
                   primaryCtaText: customization.primary_cta_text,
                   secondaryCtaText: customization.secondary_cta_text,
                   visibleSections: customization.visible_sections,
+                  isEditable: true,
+                  onEditLogo: () => setShowLogoModal(true),
+                  onEditBanner: () => setShowBannerModal(true),
+                  onEditStoreInfo: () => router.push("/store-settings"),
                 }}
               />
             </div>
@@ -202,6 +236,10 @@ export default function MyStoreLiveEditorPage() {
                       primaryCtaText: customization.primary_cta_text,
                       secondaryCtaText: customization.secondary_cta_text,
                       visibleSections: customization.visible_sections,
+                      isEditable: true,
+                      onEditLogo: () => setShowLogoModal(true),
+                      onEditBanner: () => setShowBannerModal(true),
+                      onEditStoreInfo: () => router.push("/store-settings"),
                     }}
                   />
                 </div>
@@ -210,20 +248,42 @@ export default function MyStoreLiveEditorPage() {
           )}
         </div>
 
-        {/* RIGHT: QUICK CUSTOMIZATION PANEL */}
+        {/* RIGHT: STREAMLINED CUSTOMIZATION PANEL (NO LOGO/BANNER, COLLAPSIBLE) */}
         <StoreCustomizationPanel
           customization={customization}
-          storeName={storeName}
           isSaving={isSaving}
           hasUnsavedChanges={hasUnsavedChanges}
+          isOpen={isPanelOpen}
+          onToggleOpen={() => setIsPanelOpen(!isPanelOpen)}
           onUpdate={handleUpdate}
           onSave={handleSave}
           onReset={handleReset}
-          onOpenTemplates={() => setShowTemplates(true)}
         />
       </div>
 
-      {/* 3. QR & SHARE MODAL */}
+      {/* 3. DIRECT EDITING MODALS */}
+      <EditableStoreLogoModal
+        isOpen={showLogoModal}
+        onClose={() => setShowLogoModal(false)}
+        currentLogoUrl={customization.logo_url}
+        storeName={storeName}
+        brandColor={customization.brand_color}
+        onSelectLogo={handleSelectLogo}
+        onDeleteLogo={handleDeleteLogo}
+      />
+
+      <EditableStoreBannerModal
+        isOpen={showBannerModal}
+        onClose={() => setShowBannerModal(false)}
+        currentBannerUrl={customization.cover_image_url}
+        storeName={storeName}
+        brandColor={customization.brand_color}
+        accentColor={customization.accent_color}
+        onSelectBanner={handleSelectBanner}
+        onDeleteBanner={handleDeleteBanner}
+      />
+
+      {/* 4. QR & SHARE MODAL */}
       <QRModal
         isOpen={showQR}
         onClose={() => setShowQR(false)}
@@ -231,7 +291,7 @@ export default function MyStoreLiveEditorPage() {
         title={storeName}
       />
 
-      {/* 4. TEMPLATE SELECTOR MODAL */}
+      {/* 5. TEMPLATE SELECTOR MODAL */}
       <TemplateSelectorModal
         isOpen={showTemplates}
         onClose={() => setShowTemplates(false)}
