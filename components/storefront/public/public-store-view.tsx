@@ -18,12 +18,31 @@ import { useCommerceStore } from "@/lib/db/store";
 import { Product, Offer, Store } from "@/types";
 import { formatVND } from "@/lib/utils";
 
-interface PublicStoreViewProps {
-  initialData?: ResolvedPublicStoreData | null;
-  storeSlug: string;
+export interface PublicStoreCustomizationOverrides {
+  logoUrl?: string;
+  coverImageUrl?: string;
+  brandColor?: string;
+  accentColor?: string;
+  primaryCtaText?: string;
+  secondaryCtaText?: string;
+  visibleSections?: {
+    categories?: boolean;
+    featured_products?: boolean;
+    about?: boolean;
+    contact?: boolean;
+    reviews?: boolean;
+    policies?: boolean;
+    offers?: boolean;
+  };
 }
 
-function PublicStoreInnerView({ initialData, storeSlug }: PublicStoreViewProps) {
+export interface PublicStoreViewProps {
+  initialData?: ResolvedPublicStoreData | null;
+  storeSlug: string;
+  customizationOverrides?: PublicStoreCustomizationOverrides;
+}
+
+function PublicStoreInnerView({ initialData, storeSlug, customizationOverrides }: PublicStoreViewProps) {
   const { store: clientStore, organization: clientOrg, products: clientProducts, offers: clientOffers, reviews: clientReviews, orders: clientOrders } = useCommerceStore();
   const { addToCart, setIsCartOpen, totalItems, subtotal } = useCart();
 
@@ -146,8 +165,11 @@ function PublicStoreInnerView({ initialData, storeSlug }: PublicStoreViewProps) 
   }
 
   const { store, activeOffers, activeProducts, categories, trust, contact, policies, paymentMethods, fulfillmentMethods } = effectiveData;
-  const brandColor = store.customization?.brand_color || "#00A88F";
-  const accentColor = store.customization?.accent_color || "#00D1C2";
+  const brandColor = customizationOverrides?.brandColor || store.customization?.brand_color || "#00A88F";
+  const accentColor = customizationOverrides?.accentColor || store.customization?.accent_color || "#00D1C2";
+  const effectiveLogoUrl = customizationOverrides?.logoUrl !== undefined ? customizationOverrides.logoUrl : store.logo_url;
+  const effectiveCoverUrl = customizationOverrides?.coverImageUrl !== undefined ? customizationOverrides.coverImageUrl : store.cover_image_url;
+  const visibleSections = customizationOverrides?.visibleSections;
 
   // Filter products by category and search
   const filteredProducts = activeProducts.filter((product) => {
@@ -209,8 +231,8 @@ function PublicStoreInnerView({ initialData, storeSlug }: PublicStoreViewProps) 
       <PublicStoreHero
         storeName={store.store_name}
         storeSlug={store.slug || storeSlug || "auto"}
-        logoUrl={store.logo_url}
-        coverImageUrl={store.cover_image_url}
+        logoUrl={effectiveLogoUrl}
+        coverImageUrl={effectiveCoverUrl}
         description={store.description}
         actorType={effectiveData.actorType}
         location={effectiveData.contact.address || store.address}
@@ -223,23 +245,25 @@ function PublicStoreInnerView({ initialData, storeSlug }: PublicStoreViewProps) 
       {/* MAIN COMMERCE CONTAINER */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
         {/* 3. SEARCH & 4. CATEGORIES */}
-        <div ref={searchInputRef} className="space-y-3 pt-1">
-          <PublicStoreSearch
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            totalProductsCount={activeProducts.length}
-          />
+        {visibleSections?.categories !== false && (
+          <div ref={searchInputRef} className="space-y-3 pt-1">
+            <PublicStoreSearch
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              totalProductsCount={activeProducts.length}
+            />
 
-          <PublicStoreCategories
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            brandColor={brandColor}
-          />
-        </div>
+            <PublicStoreCategories
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              brandColor={brandColor}
+            />
+          </div>
+        )}
 
         {/* 5. ACTIVE OFFERS (Only when not searching or no category filter) */}
-        {!searchQuery && selectedCategory === "ALL" && (
+        {visibleSections?.offers !== false && !searchQuery && selectedCategory === "ALL" && (
           <PublicStoreActiveOffers
             offers={activeOffers}
             storeSlug={store.slug || storeSlug || "auto"}
@@ -249,37 +273,45 @@ function PublicStoreInnerView({ initialData, storeSlug }: PublicStoreViewProps) 
         )}
 
         {/* 6. PRODUCTS & SERVICES GRID */}
-        <PublicStoreProductGrid
-          products={filteredProducts}
-          offers={activeOffers}
-          storeSlug={store.slug || storeSlug || "auto"}
-          brandColor={brandColor}
-          onAddToCart={handleAddToCart}
-        />
+        {visibleSections?.featured_products !== false && (
+          <PublicStoreProductGrid
+            products={filteredProducts}
+            offers={activeOffers}
+            storeSlug={store.slug || storeSlug || "auto"}
+            brandColor={brandColor}
+            onAddToCart={handleAddToCart}
+          />
+        )}
 
         {/* 7. TRUST & REPUTATION SUMMARY */}
-        <PublicStoreTrust
-          trust={trust}
-          isVerified={effectiveData.isVerified}
-          brandColor={brandColor}
-        />
+        {visibleSections?.reviews !== false && (
+          <PublicStoreTrust
+            trust={trust}
+            isVerified={effectiveData.isVerified}
+            brandColor={brandColor}
+          />
+        )}
 
         {/* 8. ABOUT STORE */}
-        <PublicStoreAbout
-          storeName={store.store_name}
-          description={store.description}
-          brandColor={brandColor}
-        />
+        {visibleSections?.about !== false && (
+          <PublicStoreAbout
+            storeName={store.store_name}
+            description={store.description}
+            brandColor={brandColor}
+          />
+        )}
 
         {/* 9. CONTACT & POLICIES */}
-        <PublicStoreContactPolicies
-          storeName={store.store_name}
-          contact={contact}
-          policies={policies}
-          paymentMethods={paymentMethods}
-          fulfillmentMethods={fulfillmentMethods}
-          brandColor={brandColor}
-        />
+        {visibleSections?.contact !== false && (
+          <PublicStoreContactPolicies
+            storeName={store.store_name}
+            contact={contact}
+            policies={policies}
+            paymentMethods={paymentMethods}
+            fulfillmentMethods={fulfillmentMethods}
+            brandColor={brandColor}
+          />
+        )}
 
         {/* 10. FOOTER */}
         <PublicStoreFooter storeName={store.store_name} />
@@ -313,10 +345,14 @@ function PublicStoreInnerView({ initialData, storeSlug }: PublicStoreViewProps) 
   );
 }
 
-export function PublicStoreView({ initialData, storeSlug }: PublicStoreViewProps) {
+export function PublicStoreView({ initialData, storeSlug, customizationOverrides }: PublicStoreViewProps) {
   return (
     <CartProvider>
-      <PublicStoreInnerView initialData={initialData} storeSlug={storeSlug} />
+      <PublicStoreInnerView
+        initialData={initialData}
+        storeSlug={storeSlug}
+        customizationOverrides={customizationOverrides}
+      />
     </CartProvider>
   );
 }
