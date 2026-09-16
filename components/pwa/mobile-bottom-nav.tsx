@@ -27,6 +27,8 @@ export function MobileBottomNav() {
       "/settings",
       "/transactions",
       "/store",
+      "/my-store",
+      "/store-settings",
       "/billing",
       "/onboarding",
     ];

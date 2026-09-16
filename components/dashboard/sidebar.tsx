@@ -21,6 +21,7 @@ import {
   KeyRound,
   CreditCard,
   Eye,
+  Sliders,
 } from "lucide-react";
 import { useCommerceStore } from "@/lib/db/store";
 import { ContextSwitcher } from "./context-switcher";
@@ -48,7 +49,8 @@ export function DashboardSidebar() {
       title: "TỔNG QUAN",
       items: [
         { href: "/", label: "Bảng điều khiển", icon: LayoutDashboard, exact: true },
-        { href: "/store", label: "Cửa hàng", icon: StoreIcon },
+        { href: "/my-store", label: "Cửa hàng của tôi", icon: StoreIcon },
+        { href: "/store-settings", label: "Thiết lập cửa hàng", icon: Sliders },
       ],
     },
     {
@@ -88,6 +90,7 @@ export function DashboardSidebar() {
 
   const isActive = (href: string, exact: boolean = false) => {
     if (exact) return pathname === href;
+    if (href === "/store-settings" && (pathname === "/store-settings" || pathname.startsWith("/store"))) return true;
     return pathname.startsWith(href);
   };
 
@@ -182,7 +185,8 @@ export function MobileDashboardDrawer({
       title: "TỔNG QUAN",
       items: [
         { href: "/", label: "Bảng điều khiển", icon: LayoutDashboard, exact: true },
-        { href: "/store", label: "Cửa hàng", icon: StoreIcon },
+        { href: "/my-store", label: "Cửa hàng của tôi", icon: StoreIcon },
+        { href: "/store-settings", label: "Thiết lập cửa hàng", icon: Sliders },
       ],
     },
     {
@@ -220,6 +224,7 @@ export function MobileDashboardDrawer({
 
   const isActive = (href: string, exact: boolean = false) => {
     if (exact) return pathname === href;
+    if (href === "/store-settings" && (pathname === "/store-settings" || pathname.startsWith("/store"))) return true;
     return pathname.startsWith(href);
   };
 
