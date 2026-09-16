@@ -48,6 +48,7 @@ export function DashboardSidebar() {
       title: "TỔNG QUAN",
       items: [
         { href: "/", label: "Bảng điều khiển", icon: LayoutDashboard, exact: true },
+        { href: "/store", label: "Cửa hàng", icon: StoreIcon },
       ],
     },
     {
@@ -77,7 +78,6 @@ export function DashboardSidebar() {
     {
       title: "HỆ THỐNG",
       items: [
-        { href: "/store", label: isPersonal ? "Cửa hàng của tôi" : "Cửa hàng & Kênh bán", icon: StoreIcon },
         { href: "/store/public-settings", label: "Hiển thị công khai", icon: Eye },
         { href: "/settings/billing", label: "Gói Dịch Vụ & Hạn Mức", icon: CreditCard },
         { href: "/settings/security", label: "Tài khoản & Passkey", icon: KeyRound },
@@ -122,18 +122,6 @@ export function DashboardSidebar() {
         <ContextSwitcher />
       </div>
 
-      {/* Quick View Public Store */}
-      <div className="px-3 pt-2">
-        <Link
-          href={store.slug ? `/s/${store.slug}` : "/store"}
-          target={store.slug ? "_blank" : undefined}
-          title={store.slug ? "Xem trang cửa hàng giống như khách hàng nhìn thấy." : "Tạo cửa hàng của bạn"}
-          className="flex items-center justify-between px-3 py-2 text-xs font-semibold text-[#007C73] dark:text-[#00D1C2] bg-[#E6F7F4] dark:bg-teal-950/40 hover:bg-teal-100 dark:hover:bg-teal-900/60 rounded-xl transition-colors border border-teal-200/80 dark:border-teal-900/60"
-        >
-          <span className="truncate">{store.slug ? "🏬 Xem cửa hàng" : "🏬 + Tạo cửa hàng"}</span>
-          <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-        </Link>
-      </div>
 
       {/* Navigation List */}
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
@@ -194,6 +182,7 @@ export function MobileDashboardDrawer({
       title: "TỔNG QUAN",
       items: [
         { href: "/", label: "Bảng điều khiển", icon: LayoutDashboard, exact: true },
+        { href: "/store", label: "Cửa hàng", icon: StoreIcon },
       ],
     },
     {
@@ -223,7 +212,6 @@ export function MobileDashboardDrawer({
     {
       title: "HỆ THỐNG",
       items: [
-        { href: "/store", label: isPersonal ? "Cửa hàng của tôi" : "Cửa hàng & Kênh bán", icon: StoreIcon },
         { href: "/settings/security", label: "Tài khoản & Passkey", icon: KeyRound },
         { href: "/settings", label: isPersonal ? "Cài đặt & Chuyển đổi" : "Thiết lập Doanh nghiệp", icon: Settings },
       ],
@@ -281,19 +269,6 @@ export function MobileDashboardDrawer({
           <ContextSwitcher />
         </div>
 
-        {/* Quick View Public Store */}
-        <div className="px-3 pt-2">
-          <Link
-            href={store.slug ? `/s/${store.slug}` : "/store"}
-            target={store.slug ? "_blank" : undefined}
-            onClick={onClose}
-            title={store.slug ? "Xem trang cửa hàng giống như khách hàng nhìn thấy." : "Tạo cửa hàng của bạn"}
-            className="flex items-center justify-between px-3 py-2 text-xs font-semibold text-[#007C73] dark:text-[#00D1C2] bg-[#E6F7F4] dark:bg-teal-950/40 hover:bg-teal-100 rounded-xl border border-teal-200/80 dark:border-teal-900/60"
-          >
-            <span>{store.slug ? "🏬 Xem cửa hàng" : "🏬 + Tạo cửa hàng"}</span>
-            <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-          </Link>
-        </div>
 
         {/* Navigation List */}
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
