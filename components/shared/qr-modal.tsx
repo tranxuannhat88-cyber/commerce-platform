@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { X, Download, ExternalLink, CreditCard, Globe, Copy, Check } from "lucide-react";
+import { X, Download, ExternalLink, CreditCard, Globe, Copy, Check, Share2 } from "lucide-react";
 import { CopyButton } from "./copy-button";
 
 export interface BankInfo {
@@ -22,9 +22,20 @@ export interface QRModalProps {
   title: string;
   subtitle?: string;
   bankInfo?: BankInfo;
+  type?: "STORE" | "OFFER" | "GENERIC";
+  openButtonLabel?: string;
 }
 
-export function QRModal({ isOpen, onClose, url, title, subtitle, bankInfo }: QRModalProps) {
+export function QRModal({
+  isOpen,
+  onClose,
+  url,
+  title,
+  subtitle,
+  bankInfo,
+  type,
+  openButtonLabel,
+}: QRModalProps) {
   const hasVietQR = Boolean(bankInfo && bankInfo.account_number);
   const [activeTab, setActiveTab] = useState<"LINK" | "VIETQR">(hasVietQR ? "VIETQR" : "LINK");
   const [copiedBank, setCopiedBank] = useState(false);
@@ -152,32 +163,69 @@ export function QRModal({ isOpen, onClose, url, title, subtitle, bankInfo }: QRM
         )}
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-center gap-2 pt-2">
-          {activeTab === "VIETQR" && bankInfo?.vietqr_url ? (
-            <a
-              href={bankInfo.vietqr_url}
-              download={`vietqr-${bankInfo.account_number}.png`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all shadow-xs cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-              <span>Tải Mã VietQR</span>
-            </a>
-          ) : (
-            <CopyButton text={url} label="Copy Link" className="py-2 px-3 text-xs" />
-          )}
+        {(() => {
+          const isStore = type === "STORE" || url.includes("/s/");
+          const isOffer = type === "OFFER" || url.includes("/o/");
+          const resolvedOpenLabel =
+            openButtonLabel ||
+            (isStore ? "Mở trang cửa hàng" : isOffer ? "Mở trang Offer" : "Mở liên kết");
 
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-xs"
-          >
-            <ExternalLink className="w-4 h-4" />
-            <span>Mở trang Offer</span>
-          </a>
-        </div>
+          return (
+            <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
+              {activeTab === "VIETQR" && bankInfo?.vietqr_url ? (
+                <a
+                  href={bankInfo.vietqr_url}
+                  download={`vietqr-${bankInfo.account_number}.png`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all shadow-xs cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Tải Mã VietQR</span>
+                </a>
+              ) : (
+                <>
+                  <CopyButton
+                    text={url}
+                    label="Sao chép liên kết"
+                    copiedLabel="Đã sao chép"
+                    className="py-2 px-3 text-xs font-bold"
+                  />
+
+                  {typeof navigator !== "undefined" && typeof navigator.share === "function" && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await navigator.share({
+                            title,
+                            url,
+                          });
+                        } catch {
+                          // user cancelled
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 transition-colors cursor-pointer"
+                    >
+                      <Share2 className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Chia sẻ</span>
+                    </button>
+                  )}
+                </>
+              )}
+
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-xs"
+              >
+                <span>{resolvedOpenLabel}</span>
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

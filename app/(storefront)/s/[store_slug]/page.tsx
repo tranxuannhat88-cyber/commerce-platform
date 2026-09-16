@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { StorefrontDataResolver } from "@/lib/server/storefront-data-resolver";
 import { PublicStoreView } from "@/components/storefront/public/public-store-view";
+import { AppUrlService } from "@/lib/services/url";
 
 interface Props {
   params: Promise<{
@@ -15,7 +16,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!data) {
     return {
-      title: "Cửa Hàng Không Tồn Tại | Go",
+      title: "Cửa Hàng Không Tồn Tại | HINEX",
       description: "Đường dẫn cửa hàng không tồn tại hoặc đã thay đổi.",
     };
   }
@@ -24,10 +25,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = store.store_name || "Cửa Hàng Trực Tuyến";
   const description =
     store.description?.trim() ||
-    `Ghé thăm gian hàng của ${title} trên nền tảng Go. Xem các sản phẩm, ưu đãi và đặt mua trực tiếp.`;
+    `Ghé thăm gian hàng của ${title} trên nền tảng HINEX. Xem các sản phẩm, ưu đãi và đặt mua trực tiếp.`;
 
-  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://app.hinex.vn").replace(/\/+$/, "");
-  const canonicalUrl = `${baseUrl}/s/${store.slug || store_slug}`;
+  const baseUrl = AppUrlService.getBaseUrl();
+  const canonicalUrl = AppUrlService.getPublicStoreUrl(store.slug || store_slug);
 
   const rawImage =
     store.cover_image_url ||
@@ -42,17 +43,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : `${baseUrl}/${rawImage}`;
 
   return {
-    title: `${title} | Go Store`,
+    title: `${title} | HINEX Store`,
     description,
     alternates: {
       canonical: canonicalUrl,
     },
     openGraph: {
-      title: `${title} | Go Store`,
+      title: `${title} | HINEX Store`,
       description,
       url: canonicalUrl,
       type: "website",
-      siteName: "Go",
+      siteName: "HINEX",
       images: [
         {
           url: imageUrl,
@@ -64,7 +65,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: `${title} | Go Store`,
+      title: `${title} | HINEX Store`,
       description,
       images: [imageUrl],
     },
