@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useRef, useEffect } from "react";
 import {
@@ -125,7 +125,7 @@ export function EditableStoreBannerModal({
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      alert("KÃ­ch thÆ°á»›c áº£nh bÃ¬a tá»‘i Ä‘a lÃ  10MB");
+      alert("Kích thước ảnh bìa tối đa là 10MB");
       return;
     }
 
@@ -244,10 +244,10 @@ export function EditableStoreBannerModal({
             </div>
             <div>
               <h3 className="text-sm font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-tight">
-                Äiá»u chá»‰nh áº£nh bÃ¬a
+                Điều chỉnh ảnh bìa
               </h3>
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                Thu phÃ³ng, kÃ©o chá»n vÃ¹ng hiá»ƒn thá»‹ vÃ  xem trÆ°á»›c theo tá»«ng thiáº¿t bá»‹
+                Thu phóng, kéo chọn vùng hiển thị và xem trước theo từng thiết bị
               </p>
             </div>
           </div>
@@ -275,7 +275,7 @@ export function EditableStoreBannerModal({
                 }`}
               >
                 <Monitor className="w-3.5 h-3.5 text-[#00B894]" />
-                <span>MÃ¡y tÃ­nh</span>
+                <span>Máy tính</span>
               </button>
 
               <button
@@ -288,7 +288,7 @@ export function EditableStoreBannerModal({
                 }`}
               >
                 <Tablet className="w-3.5 h-3.5 text-[#00B894]" />
-                <span>MÃ¡y tÃ­nh báº£ng</span>
+                <span>Máy tính bảng</span>
               </button>
 
               <button
@@ -301,7 +301,7 @@ export function EditableStoreBannerModal({
                 }`}
               >
                 <Smartphone className="w-3.5 h-3.5 text-[#00B894]" />
-                <span>Di Ä‘á»™ng</span>
+                <span>Di động</span>
               </button>
             </div>
 
@@ -311,20 +311,20 @@ export function EditableStoreBannerModal({
                 type="button"
                 onClick={handleCenter}
                 className="px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                title="CÄƒn giá»¯a hÃ¬nh áº£nh"
+                title="Căn giữa hình ảnh"
               >
                 <AlignCenter className="w-3.5 h-3.5 text-neutral-500" />
-                <span>CÄƒn giá»¯a</span>
+                <span>Căn giữa</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleResetCurrent}
                 className="px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                title="Äáº·t láº¡i thiáº¿t bá»‹ nÃ y vá» máº·c Ä‘á»‹nh"
+                title="Đặt lại thiết bị này về mặc định"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-neutral-500" />
-                <span>Äáº·t láº¡i</span>
+                <span>Đặt lại</span>
               </button>
             </div>
           </div>
@@ -366,14 +366,14 @@ export function EditableStoreBannerModal({
                 {/* Safe Area Overlay Guide */}
                 <div className="absolute inset-2.5 sm:inset-4 border border-dashed border-white/50 rounded-xl pointer-events-none flex items-end justify-center pb-1.5">
                   <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold tracking-wide shadow-xs">
-                    Äáº·t ná»™i dung quan trá»ng trong vÃ¹ng an toÃ n
+                    Đặt nội dung quan trọng trong vùng an toàn
                   </span>
                 </div>
 
                 {/* Drag hint badge */}
                 <div className="absolute top-2.5 left-2.5 pointer-events-none px-2 py-0.5 rounded-lg bg-black/50 backdrop-blur-xs text-white/80 text-[10px] font-medium flex items-center gap-1">
                   <Move className="w-3 h-3" />
-                  <span>KÃ©o Ä‘á»ƒ chá»‰nh vá»‹ trÃ­</span>
+                  <span>Kéo để chỉnh vị trí</span>
                 </div>
               </div>
             ) : (
@@ -384,13 +384,13 @@ export function EditableStoreBannerModal({
                 }}
               >
                 <Camera className="w-8 h-8 text-neutral-400" />
-                <span className="text-xs font-bold">ChÆ°a cÃ³ áº£nh bÃ¬a cá»­a hÃ ng</span>
+                <span className="text-xs font-bold">Chưa có ảnh bìa cửa hàng</span>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="px-4 py-2 rounded-xl bg-[#00B894] hover:bg-[#00a884] text-white text-xs font-bold shadow-xs cursor-pointer"
                 >
-                  Táº£i áº£nh lÃªn ngay
+                  Tải ảnh lên ngay
                 </button>
               </div>
             )}
@@ -400,7 +400,7 @@ export function EditableStoreBannerModal({
           {isLowRes && (
             <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
-              <span>áº¢nh cÃ³ Ä‘á»™ phÃ¢n giáº£i tháº¥p, cÃ³ thá»ƒ hiá»ƒn thá»‹ khÃ´ng sáº¯c nÃ©t trÃªn áº£nh bÃ¬a.</span>
+              <span>Ảnh có độ phân giải thấp, có thể hiển thị không sắc nét trên ảnh bìa.</span>
             </div>
           )}
 
@@ -410,7 +410,7 @@ export function EditableStoreBannerModal({
               {/* Fit Mode Toggle */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">
-                  CÃ¡ch hiá»ƒn thá»‹ áº£nh
+                  Cách hiển thị ảnh
                 </label>
                 <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-neutral-200/60 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700">
                   <button
@@ -423,7 +423,7 @@ export function EditableStoreBannerModal({
                     }`}
                   >
                     <Maximize2 className="w-3 h-3 text-[#00B894]" />
-                    <span>Láº¥p Ä‘áº§y khung</span>
+                    <span>Lấp đầy khung</span>
                   </button>
 
                   <button
@@ -436,7 +436,7 @@ export function EditableStoreBannerModal({
                     }`}
                   >
                     <Minimize2 className="w-3 h-3 text-[#00B894]" />
-                    <span>Hiá»ƒn thá»‹ toÃ n áº£nh</span>
+                    <span>Hiển thị toàn ảnh</span>
                   </button>
                 </div>
               </div>
@@ -444,7 +444,7 @@ export function EditableStoreBannerModal({
               {/* Zoom Slider */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-[10px] font-bold text-neutral-500 uppercase tracking-wider">
-                  <span>Thu phÃ³ng</span>
+                  <span>Thu phóng</span>
                   <span className="text-[#00B894] font-mono font-bold text-xs">
                     {Math.round(currentSetting.scale * 100)}%
                   </span>
@@ -497,7 +497,7 @@ export function EditableStoreBannerModal({
                 className="px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Upload className="w-3.5 h-3.5 text-neutral-500" />
-                <span>{imageUrl ? "Táº£i áº£nh khÃ¡c" : "Táº£i áº£nh lÃªn"}</span>
+                <span>{imageUrl ? "Tải ảnh khác" : "Tải ảnh lên"}</span>
               </button>
 
               {imageUrl && (
@@ -511,7 +511,7 @@ export function EditableStoreBannerModal({
                   className="px-3 py-1.5 rounded-xl border border-red-200/70 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>XÃ³a áº£nh bÃ¬a</span>
+                  <span>Xóa ảnh bìa</span>
                 </button>
               )}
             </div>
@@ -521,7 +521,7 @@ export function EditableStoreBannerModal({
               onClick={handleResetAll}
               className="text-[11px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 font-medium underline underline-offset-2 cursor-pointer"
             >
-              Äáº·t láº¡i táº¥t cáº£ thiáº¿t bá»‹
+              Đặt lại tất cả thiết bị
             </button>
           </div>
         </div>
@@ -533,7 +533,7 @@ export function EditableStoreBannerModal({
             onClick={onClose}
             className="px-4 py-2 text-xs font-bold rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer"
           >
-            Há»§y
+            Hủy
           </button>
 
           <button
@@ -543,7 +543,7 @@ export function EditableStoreBannerModal({
             className="px-5 py-2 text-xs font-bold rounded-xl bg-[#00B894] hover:bg-[#00a884] text-white transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
           >
             <Check className="w-4 h-4" />
-            <span>LÆ°u vá»‹ trÃ­ áº£nh</span>
+            <span>Lưu vị trí ảnh</span>
           </button>
         </div>
       </div>
