@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
-import React, { useRef } from "react";
-import { X, Upload, Trash2, Image as ImageIcon } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { X, Upload, Trash2, Image as ImageIcon, Loader2 } from "lucide-react";
+import { uploadMediaFile } from "@/lib/storage/upload-client";
 
 interface EditableStoreLogoModalProps {
   isOpen: boolean;
@@ -9,8 +10,9 @@ interface EditableStoreLogoModalProps {
   currentLogoUrl: string;
   storeName: string;
   brandColor: string;
-  onSelectLogo: (url: string) => void;
-  onDeleteLogo: () => void;
+  storeId?: string;
+  onSelectLogo: (url: string, assetId?: string) => Promise<void> | void;
+  onDeleteLogo: () => Promise<void> | void;
 }
 
 export function EditableStoreLogoModal({
@@ -19,10 +21,14 @@ export function EditableStoreLogoModal({
   currentLogoUrl,
   storeName,
   brandColor,
+  storeId = "store_invamax_workspace",
   onSelectLogo,
   onDeleteLogo,
 }: EditableStoreLogoModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
 
   if (!isOpen) return null;
 
@@ -34,7 +40,7 @@ export function EditableStoreLogoModal({
     .join("")
     .toUpperCase();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -43,15 +49,41 @@ export function EditableStoreLogoModal({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (loadEvt) => {
-      const result = loadEvt.target?.result as string;
-      if (result) {
-        onSelectLogo(result);
-        onClose();
-      }
-    };
-    reader.readAsDataURL(file);
+    const tempUrl = URL.createObjectURL(file);
+    setPreviewUrl(tempUrl);
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      const result = await uploadMediaFile(file, {
+        ownerType: "STORE",
+        ownerId: storeId,
+        visibility: "PUBLIC",
+      });
+
+      await onSelectLogo(result.url, result.assetId);
+      onClose();
+    } catch (err: any) {
+      console.error("Logo upload error:", err);
+      setUploadError(err.message || "Ảnh đã tải lên nhưng chưa thể lưu vào cửa hàng. Vui lòng thử lại.");
+    } finally {
+      setIsUploading(false);
+      URL.revokeObjectURL(tempUrl);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      setIsUploading(true);
+      await onDeleteLogo();
+      onClose();
+    } catch (err: any) {
+      console.error("Delete logo error:", err);
+      setUploadError(err.message || "Không thể xóa logo. Vui lòng thử lại.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -81,9 +113,9 @@ export function EditableStoreLogoModal({
 
         {/* Current Preview */}
         <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800">
-          <div className="w-24 h-24 rounded-2xl bg-white dark:bg-neutral-900 border-2 border-neutral-200 dark:border-neutral-700 shadow-sm flex items-center justify-center overflow-hidden">
-            {currentLogoUrl ? (
-              <img src={currentLogoUrl} alt={storeName} className="w-full h-full object-contain" />
+          <div className="w-24 h-24 rounded-2xl bg-white dark:bg-neutral-900 border-2 border-neutral-200 dark:border-neutral-700 shadow-sm flex items-center justify-center overflow-hidden relative">
+            {previewUrl || currentLogoUrl ? (
+              <img src={previewUrl || currentLogoUrl} alt={storeName} className="w-full h-full object-contain" />
             ) : (
               <div
                 className="w-full h-full flex items-center justify-center text-white font-black text-2xl"
@@ -92,11 +124,22 @@ export function EditableStoreLogoModal({
                 {initials}
               </div>
             )}
+            {isUploading && (
+              <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center text-white">
+                <Loader2 className="w-6 h-6 animate-spin text-[#00B894]" />
+              </div>
+            )}
           </div>
           <p className="text-[10px] text-neutral-400 mt-2 font-medium">
-            {currentLogoUrl ? "Logo đang hiển thị" : "Chưa có logo (đang dùng chữ viết tắt)"}
+            {isUploading ? "Đang tải ảnh và lưu cửa hàng..." : (previewUrl || currentLogoUrl ? "Logo đang hiển thị" : "Chưa có logo (đang dùng chữ viết tắt)")}
           </p>
         </div>
+
+        {uploadError && (
+          <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs">
+            {uploadError}
+          </div>
+        )}
 
         {/* File Input & Actions */}
         <input
@@ -105,26 +148,35 @@ export function EditableStoreLogoModal({
           onChange={handleFileChange}
           accept="image/png,image/jpeg,image/webp"
           className="hidden"
+          disabled={isUploading}
         />
 
         <div className="space-y-2">
           <button
             type="button"
+            disabled={isUploading}
             onClick={() => fileInputRef.current?.click()}
-            className="w-full py-2.5 rounded-xl bg-[#00B894] hover:bg-[#00a884] text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+            className="w-full py-2.5 rounded-xl bg-[#00B894] hover:bg-[#00a884] disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
           >
-            <Upload className="w-4 h-4" />
-            <span>Tải ảnh mới</span>
+            {isUploading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Đang tải lên...</span>
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4" />
+                <span>Tải ảnh mới</span>
+              </>
+            )}
           </button>
 
-          {currentLogoUrl && (
+          {(currentLogoUrl || previewUrl) && (
             <button
               type="button"
-              onClick={() => {
-                onDeleteLogo();
-                onClose();
-              }}
-              className="w-full py-2.5 rounded-xl border border-red-200/70 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              disabled={isUploading}
+              onClick={handleDelete}
+              className="w-full py-2.5 rounded-xl border border-red-200/70 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 disabled:opacity-50 text-red-600 dark:text-red-400 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <Trash2 className="w-4 h-4" />
               <span>Xóa logo</span>

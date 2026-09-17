@@ -18,7 +18,8 @@ import {
 } from "@/components/store-editor/types";
 import { TemplateSelectorModal } from "@/components/templates/template-selector-modal";
 import { STORE_TEMPLATES } from "@/lib/templates/definitions";
-import { StoreTemplate } from "@/types";
+import { Store, StoreTemplate } from "@/types";
+import { SyncBridgeService } from "@/lib/db/sync-bridge";
 
 export default function MyStoreLiveEditorPage() {
   const router = useRouter();
@@ -95,10 +96,12 @@ export default function MyStoreLiveEditorPage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const updatedStore = {
+      const updatedStore: Store = {
         ...store,
         logo_url: customization.logo_url,
+        logo_asset_id: store.logo_asset_id,
         cover_image_url: customization.cover_image_url,
+        cover_asset_id: store.cover_asset_id,
         cover_position: customization.cover_position,
         customization: {
           ...(store.customization || {}),
@@ -121,6 +124,7 @@ export default function MyStoreLiveEditorPage() {
       };
 
       updateStore(updatedStore);
+      await SyncBridgeService.syncStoreToServer(updatedStore);
       setHasUnsavedChanges(false);
     } catch (err) {
       console.error("Failed to save customization:", err);
@@ -164,29 +168,76 @@ export default function MyStoreLiveEditorPage() {
     setShowTemplates(false);
   };
 
-  // Direct In-Storefront Handlers
-  const handleSelectLogo = (url: string) => {
+  // Direct In-Storefront Handlers with Immediate Persistence
+  const handleSelectLogo = async (url: string, assetId?: string) => {
     setCustomization((prev) => ({ ...prev, logo_url: url }));
-    setHasUnsavedChanges(true);
+    const updatedStore: Store = {
+      ...store,
+      logo_url: url,
+      logo_asset_id: assetId || store.logo_asset_id,
+      updated_at: new Date().toISOString(),
+    };
+    updateStore(updatedStore);
+    await SyncBridgeService.syncStoreToServer(updatedStore);
+    setHasUnsavedChanges(false);
   };
 
-  const handleDeleteLogo = () => {
+  const handleDeleteLogo = async () => {
     setCustomization((prev) => ({ ...prev, logo_url: "" }));
-    setHasUnsavedChanges(true);
+    const updatedStore: Store = {
+      ...store,
+      logo_url: "",
+      logo_asset_id: undefined,
+      updated_at: new Date().toISOString(),
+    };
+    updateStore(updatedStore);
+    await SyncBridgeService.syncStoreToServer(updatedStore);
+    setHasUnsavedChanges(false);
   };
 
-  const handleSelectBanner = (url: string, position?: CoverPositionSettings) => {
+  const handleSelectBanner = async (
+    url: string,
+    position?: CoverPositionSettings,
+    assetId?: string
+  ) => {
+    const pos = position || customization.cover_position || store.cover_position;
     setCustomization((prev) => ({
       ...prev,
       cover_image_url: url,
-      cover_position: position || prev.cover_position,
+      cover_position: pos,
     }));
-    setHasUnsavedChanges(true);
+    const updatedStore: Store = {
+      ...store,
+      cover_image_url: url,
+      cover_asset_id: assetId || store.cover_asset_id,
+      cover_position: pos,
+      customization: {
+        ...(store.customization || {}),
+        hero_banner_url: url,
+        cover_position: pos,
+      },
+      updated_at: new Date().toISOString(),
+    };
+    updateStore(updatedStore);
+    await SyncBridgeService.syncStoreToServer(updatedStore);
+    setHasUnsavedChanges(false);
   };
 
-  const handleDeleteBanner = () => {
+  const handleDeleteBanner = async () => {
     setCustomization((prev) => ({ ...prev, cover_image_url: "" }));
-    setHasUnsavedChanges(true);
+    const updatedStore: Store = {
+      ...store,
+      cover_image_url: "",
+      cover_asset_id: undefined,
+      customization: {
+        ...(store.customization || {}),
+        hero_banner_url: "",
+      },
+      updated_at: new Date().toISOString(),
+    };
+    updateStore(updatedStore);
+    await SyncBridgeService.syncStoreToServer(updatedStore);
+    setHasUnsavedChanges(false);
   };
 
   return (
@@ -308,6 +359,7 @@ export default function MyStoreLiveEditorPage() {
         currentLogoUrl={customization.logo_url}
         storeName={storeName}
         brandColor={customization.brand_color}
+        storeId={store.id || "store_invamax_workspace"}
         onSelectLogo={handleSelectLogo}
         onDeleteLogo={handleDeleteLogo}
       />
@@ -320,6 +372,7 @@ export default function MyStoreLiveEditorPage() {
         storeName={storeName}
         brandColor={customization.brand_color}
         accentColor={customization.accent_color}
+        storeId={store.id || "store_invamax_workspace"}
         onSelectBanner={handleSelectBanner}
         onDeleteBanner={handleDeleteBanner}
       />

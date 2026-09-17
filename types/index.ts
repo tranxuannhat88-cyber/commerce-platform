@@ -68,6 +68,7 @@ export interface Store {
   logo_url?: string;
   logo_asset_id?: string;
   cover_image_url?: string;
+  cover_asset_id?: string;
   cover_position?: CoverPositionSettings;
   description?: string;
   phone?: string;

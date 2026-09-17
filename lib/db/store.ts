@@ -503,15 +503,41 @@ export function useCommerceStore() {
       try {
         const serverData = await SyncBridgeService.pullFullStateFromServer();
         if (serverData && serverData.success) {
-          // 1. Hydrate Store (Never overwrite local user edits!)
+          // 1. Hydrate Store with Timestamp & Field-aware resolution
           const localStore = getStored<Store>(STORAGE_KEYS.STORE, initialStore);
           const hasLocalData = Boolean(localStore && (localStore.store_name || localStore.slug));
-          if (!hasLocalData && serverData.store && serverData.store.slug && serverData.store.slug !== "auto") {
-            setStoreState(serverData.store);
-            setStored(STORAGE_KEYS.STORE, serverData.store);
-          } else if (localStore && (localStore.store_name || localStore.slug)) {
-            // Push active local store to server to ensure server matches client exactly
-            SyncBridgeService.syncStoreToServer(localStore, initialAccounts, initSellerProfile);
+          const serverStore = serverData.store;
+
+          if (serverStore && serverStore.slug && serverStore.slug !== "auto") {
+            // Clean up any temporary blob: or huge data: URLs in localStore if they exist
+            if (localStore?.logo_url && (localStore.logo_url.startsWith("blob:") || localStore.logo_url.startsWith("data:"))) {
+              localStore.logo_url = serverStore.logo_url || "";
+            }
+            if (localStore?.cover_image_url && (localStore.cover_image_url.startsWith("blob:") || localStore.cover_image_url.startsWith("data:"))) {
+              localStore.cover_image_url = serverStore.cover_image_url || "";
+            }
+
+            const serverTime = serverStore.updated_at ? new Date(serverStore.updated_at).getTime() : 0;
+            const localTime = localStore?.updated_at ? new Date(localStore.updated_at).getTime() : 0;
+            const serverHasMedia = Boolean(serverStore.logo_url || serverStore.cover_image_url);
+            const localHasMedia = Boolean(localStore?.logo_url || localStore?.cover_image_url);
+
+            const shouldAdoptServer = !hasLocalData || serverTime > localTime || (serverHasMedia && !localHasMedia && serverTime >= localTime);
+
+            if (shouldAdoptServer) {
+              const mergedStore: Store = {
+                ...(localStore || initialStore),
+                ...serverStore,
+                customization: {
+                  ...(localStore?.customization || {}),
+                  ...(serverStore.customization || {}),
+                },
+              };
+              setStoreState(mergedStore);
+              setStored(STORAGE_KEYS.STORE, mergedStore);
+            } else if (localStore && hasLocalData) {
+              SyncBridgeService.syncStoreToServer(localStore, initialAccounts, initSellerProfile);
+            }
           }
 
           // 2. Hydrate Offers with Timestamp-based Conflict Resolution (Never overwrite newer local edits!)
@@ -865,6 +891,15 @@ export function useCommerceStore() {
       organization_id: currentContext.context_type === "ORGANIZATION" ? currentContext.actor_id : newStore.organization_id || current.organization_id,
       updated_at: new Date().toISOString(),
     };
+
+    // Defensive safeguard: never persist temporary blob: URLs into persistent store
+    if (updated.logo_url?.startsWith("blob:")) {
+      updated.logo_url = current.logo_url || "";
+    }
+    if (updated.cover_image_url?.startsWith("blob:")) {
+      updated.cover_image_url = current.cover_image_url || "";
+    }
+
     setStoreState(updated);
     setStored(STORAGE_KEYS.STORE, updated);
     SyncBridgeService.syncStoreToServer(updated, paymentAccounts, getActiveSellerProfile());

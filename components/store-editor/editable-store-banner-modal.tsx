@@ -18,6 +18,7 @@ import {
   Move,
   Maximize2,
   Minimize2,
+  Loader2,
 } from "lucide-react";
 import {
   CoverPositionSettings,
@@ -26,6 +27,7 @@ import {
   DEFAULT_COVER_POSITION,
   DEFAULT_DEVICE_COVER_SETTINGS,
 } from "./types";
+import { uploadMediaFile } from "@/lib/storage/upload-client";
 
 interface EditableStoreBannerModalProps {
   isOpen: boolean;
@@ -35,8 +37,9 @@ interface EditableStoreBannerModalProps {
   storeName: string;
   brandColor: string;
   accentColor: string;
-  onSelectBanner: (url: string, position?: CoverPositionSettings) => void;
-  onDeleteBanner: () => void;
+  storeId?: string;
+  onSelectBanner: (url: string, position?: CoverPositionSettings, assetId?: string) => Promise<void> | void;
+  onDeleteBanner: () => Promise<void> | void;
 }
 
 type DeviceTab = "desktop" | "tablet" | "mobile";
@@ -49,6 +52,7 @@ export function EditableStoreBannerModal({
   storeName,
   brandColor,
   accentColor,
+  storeId = "store_invamax_workspace",
   onSelectBanner,
   onDeleteBanner,
 }: EditableStoreBannerModalProps) {
@@ -71,6 +75,13 @@ export function EditableStoreBannerModal({
   // Low resolution warning
   const [isLowRes, setIsLowRes] = useState(false);
 
+  // Uploading and Saving states
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadedAsset, setUploadedAsset] = useState<{ url: string; assetId: string } | null>(null);
+  const uploadPromiseRef = useRef<Promise<{ assetId: string; url: string }> | null>(null);
+
   // Dragging interaction state
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ clientX: number; clientY: number; initialX: number; initialY: number } | null>(null);
@@ -86,6 +97,11 @@ export function EditableStoreBannerModal({
       });
       setIsLowRes(false);
       setActiveDevice("desktop");
+      setIsUploading(false);
+      setIsSaving(false);
+      setUploadError(null);
+      setUploadedAsset(null);
+      uploadPromiseRef.current = null;
     }
   }, [isOpen, currentBannerUrl, currentCoverPosition]);
 
@@ -129,19 +145,35 @@ export function EditableStoreBannerModal({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (loadEvt) => {
-      const result = loadEvt.target?.result as string;
-      if (result) {
-        setImageUrl(result);
-        setPositions({
-          desktop: { ...DEFAULT_DEVICE_COVER_SETTINGS },
-          tablet: { ...DEFAULT_DEVICE_COVER_SETTINGS },
-          mobile: { ...DEFAULT_DEVICE_COVER_SETTINGS },
-        });
-      }
-    };
-    reader.readAsDataURL(file);
+    setUploadError(null);
+    const tempUrl = URL.createObjectURL(file);
+    setImageUrl(tempUrl);
+    setPositions({
+      desktop: { ...DEFAULT_DEVICE_COVER_SETTINGS },
+      tablet: { ...DEFAULT_DEVICE_COVER_SETTINGS },
+      mobile: { ...DEFAULT_DEVICE_COVER_SETTINGS },
+    });
+
+    setIsUploading(true);
+    const promise = uploadMediaFile(file, {
+      ownerType: "STORE",
+      ownerId: storeId,
+      visibility: "PUBLIC",
+    });
+    uploadPromiseRef.current = promise;
+
+    promise
+      .then((asset) => {
+        setUploadedAsset({ url: asset.url, assetId: asset.assetId });
+      })
+      .catch((err) => {
+        console.error("Banner upload error:", err);
+        setUploadError(err.message || "Không thể tải ảnh lên bộ lưu trữ. Vui lòng thử lại.");
+      })
+      .finally(() => {
+        setIsUploading(false);
+      });
+
     e.target.value = "";
   };
 
@@ -159,18 +191,19 @@ export function EditableStoreBannerModal({
 
   const handlePointerMove = (clientX: number, clientY: number) => {
     if (!isDragging || !dragStartRef.current || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const containerW = rect.width || 1;
-    const containerH = rect.height || 1;
 
     const deltaX = clientX - dragStartRef.current.clientX;
     const deltaY = clientY - dragStartRef.current.clientY;
 
-    const pctX = (deltaX / containerW) * 100;
-    const pctY = (deltaY / containerH) * 100;
+    const rect = containerRef.current.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
 
-    const newX = Math.max(-100, Math.min(100, Math.round(dragStartRef.current.initialX + pctX)));
-    const newY = Math.max(-100, Math.min(100, Math.round(dragStartRef.current.initialY + pctY)));
+    // Convert pixels to percentage of container bounds
+    const deltaXPct = (deltaX / rect.width) * 100;
+    const deltaYPct = (deltaY / rect.height) * 100;
+
+    const newX = Math.max(-100, Math.min(100, Math.round(dragStartRef.current.initialX + deltaXPct)));
+    const newY = Math.max(-100, Math.min(100, Math.round(dragStartRef.current.initialY + deltaYPct)));
 
     updateActiveSetting((prev) => ({
       ...prev,
@@ -184,18 +217,24 @@ export function EditableStoreBannerModal({
     dragStartRef.current = null;
   };
 
-  // 3. Zoom Handlers
+  // 3. Zoom Slider Handler
   const handleZoomChange = (newScale: number) => {
-    const clamped = Math.max(1, Math.min(3, Math.round(newScale * 100) / 100));
-    updateActiveSetting((prev) => ({ ...prev, scale: clamped }));
+    const clampedScale = Math.max(1, Math.min(3, Number(newScale.toFixed(2))));
+    updateActiveSetting((prev) => ({
+      ...prev,
+      scale: clampedScale,
+    }));
   };
 
   // 4. Fit Mode Handler
   const handleFitModeChange = (mode: CoverFitMode) => {
-    updateActiveSetting((prev) => ({ ...prev, fit_mode: mode }));
+    updateActiveSetting((prev) => ({
+      ...prev,
+      fit_mode: mode,
+    }));
   };
 
-  // 5. Center Button
+  // 5. Center Button Handler
   const handleCenter = () => {
     updateActiveSetting((prev) => ({ ...prev, x: 0, y: 0 }));
   };
@@ -215,10 +254,48 @@ export function EditableStoreBannerModal({
   };
 
   // 8. Save Handler
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!imageUrl) return;
-    onSelectBanner(imageUrl, positions);
-    onClose();
+    setIsSaving(true);
+    setUploadError(null);
+
+    try {
+      let finalUrl = imageUrl;
+      let finalAssetId = uploadedAsset?.assetId;
+
+      if (uploadPromiseRef.current) {
+        const asset = await uploadPromiseRef.current;
+        finalUrl = asset.url;
+        finalAssetId = asset.assetId;
+      } else if (uploadedAsset) {
+        finalUrl = uploadedAsset.url;
+        finalAssetId = uploadedAsset.assetId;
+      }
+
+      await onSelectBanner(finalUrl, positions, finalAssetId);
+      onClose();
+    } catch (err: any) {
+      console.error("Failed to save banner:", err);
+      setUploadError(err.message || "Ảnh đã tải lên nhưng chưa thể lưu vào cửa hàng. Vui lòng thử lại.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      setIsSaving(true);
+      await onDeleteBanner();
+      setImageUrl("");
+      setUploadedAsset(null);
+      uploadPromiseRef.current = null;
+      onClose();
+    } catch (err: any) {
+      console.error("Failed to delete banner:", err);
+      setUploadError(err.message || "Không thể xóa ảnh bìa. Vui lòng thử lại.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getViewportDimensions = () => {
@@ -404,6 +481,14 @@ export function EditableStoreBannerModal({
             </div>
           )}
 
+          {/* Upload Error Banner */}
+          {uploadError && (
+            <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
+              <span>{uploadError}</span>
+            </div>
+          )}
+
           {/* 4. Controls: Fit Mode + Zoom Slider */}
           {imageUrl && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60">
@@ -503,12 +588,9 @@ export function EditableStoreBannerModal({
               {imageUrl && (
                 <button
                   type="button"
-                  onClick={() => {
-                    onDeleteBanner();
-                    setImageUrl("");
-                    onClose();
-                  }}
-                  className="px-3 py-1.5 rounded-xl border border-red-200/70 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  onClick={handleDelete}
+                  disabled={isSaving || isUploading}
+                  className="px-3 py-1.5 rounded-xl border border-red-200/70 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Xóa ảnh bìa</span>
@@ -519,7 +601,8 @@ export function EditableStoreBannerModal({
             <button
               type="button"
               onClick={handleResetAll}
-              className="text-[11px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 font-medium underline underline-offset-2 cursor-pointer"
+              disabled={isSaving || isUploading}
+              className="text-[11px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 font-medium underline underline-offset-2 cursor-pointer disabled:opacity-40"
             >
               Đặt lại tất cả thiết bị
             </button>
@@ -531,19 +614,29 @@ export function EditableStoreBannerModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-bold rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer"
+            disabled={isSaving || isUploading}
+            className="px-4 py-2 text-xs font-bold rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer disabled:opacity-40"
           >
             Hủy
           </button>
 
           <button
             type="button"
-            disabled={!imageUrl}
+            disabled={!imageUrl || isSaving || isUploading}
             onClick={handleSave}
             className="px-5 py-2 text-xs font-bold rounded-xl bg-[#00B894] hover:bg-[#00a884] text-white transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
           >
-            <Check className="w-4 h-4" />
-            <span>Lưu vị trí ảnh</span>
+            {isSaving || isUploading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>{isUploading ? "Đang tải ảnh..." : "Đang lưu..."}</span>
+              </>
+            ) : (
+              <>
+                <Check className="w-4 h-4" />
+                <span>Lưu vị trí ảnh</span>
+              </>
+            )}
           </button>
         </div>
       </div>
