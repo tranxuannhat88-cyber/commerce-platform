@@ -50,7 +50,15 @@ export async function uploadMediaFile(
   });
 
   if (!uploadRes.ok) {
-    throw new Error('Không thể tải tệp lên máy chủ lưu trữ.');
+    const errBody = await uploadRes.text().catch(() => '');
+    let errMsg = `Không thể tải tệp lên máy chủ lưu trữ (HTTP ${uploadRes.status})`;
+    try {
+      const parsed = JSON.parse(errBody);
+      if (parsed.error) errMsg = `${errMsg}: ${parsed.error}`;
+    } catch {
+      if (errBody) errMsg = `${errMsg}: ${errBody.slice(0, 120)}`;
+    }
+    throw new Error(errMsg);
   }
 
   onProgress?.(80);

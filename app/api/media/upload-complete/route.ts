@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMediaStorageService } from '@/lib/storage/service';
+import { ServerDbManager } from '@/lib/server/db';
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,6 +15,9 @@ export async function POST(req: NextRequest) {
 
     const service = getMediaStorageService();
     const mediaAsset = await service.completeUpload(body);
+
+    // Persist MediaAsset into Server Database
+    ServerDbManager.saveMediaAsset(mediaAsset);
 
     return NextResponse.json(mediaAsset, { status: 200 });
   } catch (error: any) {

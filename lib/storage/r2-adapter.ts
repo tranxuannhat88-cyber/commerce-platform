@@ -67,8 +67,6 @@ export class R2StorageAdapter implements StorageProvider {
       Bucket: params.bucket,
       Key: params.object_key,
       ContentType: params.content_type,
-      ContentLength: params.content_length,
-      ...(params.acl === 'public-read' ? { ACL: 'public-read' } : {}),
     });
 
     const uploadUrl = await getSignedUrl(this.s3Client, command, {

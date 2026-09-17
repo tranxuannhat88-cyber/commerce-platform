@@ -14,6 +14,7 @@ import {
   ReviewResponse,
   GuestIdentity,
   ReviewInvitation,
+  MediaAsset,
 } from "@/types";
 import { ReviewRevealService } from "@/lib/services/review-reveal-service";
 import { TransactionReviewService } from "@/lib/services/transaction-review-service";
@@ -45,6 +46,7 @@ export interface ServerDatabase {
   actorReviewStats?: Record<string, ActorReviewStats>;
   guestIdentities?: GuestIdentity[];
   reviewInvitations?: ReviewInvitation[];
+  mediaAssets?: MediaAsset[];
   last_updated_at: string;
 }
 
@@ -117,6 +119,7 @@ function getInitialDb(): ServerDatabase {
     actorReviewStats: {},
     guestIdentities: [],
     reviewInvitations: [],
+    mediaAssets: [],
     last_updated_at: new Date().toISOString(),
   };
 }
@@ -151,6 +154,7 @@ export class ServerDbManager {
           actorReviewStats: parsed.actorReviewStats || {},
           guestIdentities: parsed.guestIdentities || [],
           reviewInvitations: parsed.reviewInvitations || [],
+          mediaAssets: parsed.mediaAssets || [],
           last_updated_at: parsed.last_updated_at || new Date().toISOString(),
         };
         return memoryDb;
@@ -270,6 +274,29 @@ export class ServerDbManager {
 
     this.saveDb(db);
     return canonicalStore;
+  }
+
+  // =========================================================================
+  // MEDIA ASSET ACTIONS
+  // =========================================================================
+  public static saveMediaAsset(asset: MediaAsset): MediaAsset {
+    const db = this.getDb();
+    if (!db.mediaAssets) {
+      db.mediaAssets = [];
+    }
+    const existingIndex = db.mediaAssets.findIndex((a) => a.id === asset.id);
+    if (existingIndex >= 0) {
+      db.mediaAssets[existingIndex] = { ...db.mediaAssets[existingIndex], ...asset };
+    } else {
+      db.mediaAssets.push(asset);
+    }
+    this.saveDb(db);
+    return asset;
+  }
+
+  public static getMediaAsset(assetId: string): MediaAsset | null {
+    const db = this.getDb();
+    return db.mediaAssets?.find((a) => a.id === assetId) || null;
   }
 
   // =========================================================================
