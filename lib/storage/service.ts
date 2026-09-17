@@ -61,10 +61,11 @@ export class MediaStorageService {
     // 4. Generate Deterministic Object Key
     const assetId = `ast_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const safeName = getSafeFileName(file_name);
+    const uniqueFileName = `${assetId}_${safeName}`;
     
-    let objectKey = `organizations/${organization_id}/${owner_type.toLowerCase()}/${owner_id}/${assetId}/${safeName}`;
+    let objectKey = `organizations/${organization_id}/${owner_type.toLowerCase()}/${owner_id}/${assetId}/${uniqueFileName}`;
     if (guest_identity_id && !user_id) {
-      objectKey = `guests/${guest_identity_id}/${owner_type.toLowerCase()}/${assetId}/${safeName}`;
+      objectKey = `guests/${guest_identity_id}/${owner_type.toLowerCase()}/${assetId}/${uniqueFileName}`;
     }
 
     // 5. Generate Pre-signed Upload URL
@@ -160,7 +161,7 @@ export class MediaStorageService {
       upload_intent_token,
       public_url: STORAGE_CONFIG.r2.accessKeyId
         ? `${STORAGE_CONFIG.cdn.publicBaseUrl}/${object_key}`
-        : `/uploads/${original_file_name.split('/').pop()?.split('\\').pop() || object_key.split('/').pop()}`,
+        : `/uploads/${object_key.split('/').pop()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

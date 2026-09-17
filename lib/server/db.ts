@@ -211,14 +211,19 @@ export class ServerDbManager {
       );
     });
 
-    if (found) return found;
-
-    // If requested is "invamax-workspace" or "auto" and we have a store in db
-    if ((cleanSlug === "invamax-workspace" || cleanSlug === "auto") && db.stores.length > 0) {
-      return db.stores[0];
+    const storeToReturn = found || ((cleanSlug === "invamax-workspace" || cleanSlug === "auto") && db.stores.length > 0 ? db.stores[0] : null);
+    if (storeToReturn) {
+      if (!storeToReturn.logo_url && storeToReturn.logo_asset_id) {
+        const asset = db.mediaAssets?.find((a) => a.id === storeToReturn.logo_asset_id);
+        if (asset?.public_url) storeToReturn.logo_url = asset.public_url;
+      }
+      if (!storeToReturn.cover_image_url && storeToReturn.cover_asset_id) {
+        const asset = db.mediaAssets?.find((a) => a.id === storeToReturn.cover_asset_id);
+        if (asset?.public_url) storeToReturn.cover_image_url = asset.public_url;
+      }
     }
 
-    return null;
+    return storeToReturn;
   }
 
   public static getSellerProfile(storeIdOrActorId?: string): ServerSellerProfile | undefined {

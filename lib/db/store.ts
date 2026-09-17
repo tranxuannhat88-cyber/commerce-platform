@@ -519,8 +519,8 @@ export function useCommerceStore() {
 
             const serverTime = serverStore.updated_at ? new Date(serverStore.updated_at).getTime() : 0;
             const localTime = localStore?.updated_at ? new Date(localStore.updated_at).getTime() : 0;
-            const serverHasMedia = Boolean(serverStore.logo_url || serverStore.cover_image_url);
-            const localHasMedia = Boolean(localStore?.logo_url || localStore?.cover_image_url);
+            const serverHasMedia = Boolean(serverStore.logo_url || serverStore.cover_image_url || serverStore.logo_asset_id || serverStore.cover_asset_id);
+            const localHasMedia = Boolean(localStore?.logo_url || localStore?.cover_image_url || localStore?.logo_asset_id || localStore?.cover_asset_id);
 
             const shouldAdoptServer = !hasLocalData || serverTime > localTime || (serverHasMedia && !localHasMedia && serverTime >= localTime);
 
@@ -891,6 +891,20 @@ export function useCommerceStore() {
       organization_id: currentContext.context_type === "ORGANIZATION" ? currentContext.actor_id : newStore.organization_id || current.organization_id,
       updated_at: new Date().toISOString(),
     };
+
+    // Ensure logo and cover references are strictly preserved if omitted in partial updates
+    if (newStore.logo_url === undefined && current.logo_url) {
+      updated.logo_url = current.logo_url;
+    }
+    if (newStore.logo_asset_id === undefined && current.logo_asset_id) {
+      updated.logo_asset_id = current.logo_asset_id;
+    }
+    if (newStore.cover_image_url === undefined && current.cover_image_url) {
+      updated.cover_image_url = current.cover_image_url;
+    }
+    if (newStore.cover_asset_id === undefined && current.cover_asset_id) {
+      updated.cover_asset_id = current.cover_asset_id;
+    }
 
     // Defensive safeguard: never persist temporary blob: URLs into persistent store
     if (updated.logo_url?.startsWith("blob:")) {

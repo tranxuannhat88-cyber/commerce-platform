@@ -56,6 +56,20 @@ export class StorefrontDataResolver {
   }
 
   private static resolveFromStoreObject(store: Store, db: ReturnType<typeof ServerDbManager.getDb>): ResolvedPublicStoreData {
+    // 1. Resolve media URLs from media assets if needed
+    if (!store.logo_url && store.logo_asset_id) {
+      const asset = db.mediaAssets?.find((a) => a.id === store.logo_asset_id);
+      if (asset?.public_url) {
+        store.logo_url = asset.public_url;
+      }
+    }
+    if (!store.cover_image_url && store.cover_asset_id) {
+      const asset = db.mediaAssets?.find((a) => a.id === store.cover_asset_id);
+      if (asset?.public_url) {
+        store.cover_image_url = asset.public_url;
+      }
+    }
+
     // 2. Resolve Owner Actor (Personal vs Organization)
     const org = db.organizations.find(
       (o) => o.id === store.organization_id || o.id === store.owner_actor_id

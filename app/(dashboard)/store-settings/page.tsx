@@ -339,7 +339,15 @@ export default function StoreSettingsPage() {
                     {store.logo_url ? (
                       <img src={store.logo_url} alt="Logo" className="w-full h-full object-cover" />
                     ) : (
-                      <span>IW</span>
+                      <span>
+                        {(storeName || "Store")
+                          .split(" ")
+                          .map((w) => w[0])
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .join("")
+                          .toUpperCase()}
+                      </span>
                     )}
                   </div>
                   <div>

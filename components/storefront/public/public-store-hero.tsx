@@ -51,6 +51,10 @@ export function PublicStoreHero({
   const [copied, setCopied] = React.useState(false);
   const [logoLoadError, setLogoLoadError] = React.useState(false);
 
+  React.useEffect(() => {
+    setLogoLoadError(false);
+  }, [logoUrl]);
+
   const handleShare = async () => {
     const storeUrl = AppUrlService.getStoreUrl(storeSlug);
     if (navigator.share) {

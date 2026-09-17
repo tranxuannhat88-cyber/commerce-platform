@@ -98,11 +98,11 @@ export default function MyStoreLiveEditorPage() {
     try {
       const updatedStore: Store = {
         ...store,
-        logo_url: customization.logo_url,
+        logo_url: customization.logo_url !== undefined ? customization.logo_url : store.logo_url,
         logo_asset_id: store.logo_asset_id,
-        cover_image_url: customization.cover_image_url,
+        cover_image_url: customization.cover_image_url !== undefined ? customization.cover_image_url : store.cover_image_url,
         cover_asset_id: store.cover_asset_id,
-        cover_position: customization.cover_position,
+        cover_position: customization.cover_position || store.cover_position,
         customization: {
           ...(store.customization || {}),
           brand_color: customization.brand_color,
