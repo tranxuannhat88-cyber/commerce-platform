@@ -4,6 +4,9 @@ import { StorefrontDataResolver } from "@/lib/server/storefront-data-resolver";
 import { PublicStoreView } from "@/components/storefront/public/public-store-view";
 import { AppUrlService } from "@/lib/services/url";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 interface Props {
   params: Promise<{
     store_slug: string;

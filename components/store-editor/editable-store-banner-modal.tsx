@@ -301,18 +301,18 @@ export function EditableStoreBannerModal({
   const getViewportDimensions = () => {
     switch (activeDevice) {
       case "mobile":
-        return "w-[280px] sm:w-[320px] h-32 sm:h-36";
+        return "w-[280px] sm:w-[320px] aspect-[390/128]";
       case "tablet":
-        return "w-full max-w-[560px] h-40 sm:h-44";
+        return "w-full max-w-[560px] aspect-[820/176]";
       case "desktop":
       default:
-        return "w-full h-44 sm:h-52";
+        return "w-full max-w-[720px] aspect-[1440/208]";
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in overflow-y-auto">
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl max-w-2xl w-full border border-neutral-200 dark:border-neutral-800 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden my-auto">
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl max-w-3xl w-full border border-neutral-200 dark:border-neutral-800 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden my-auto">
         {/* 1. Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800 shrink-0">
           <div className="flex items-center gap-2.5">
@@ -433,8 +433,8 @@ export function EditableStoreBannerModal({
                   draggable={false}
                   className="w-full h-full pointer-events-none"
                   style={{
-                    objectFit: currentSetting.fit_mode === "CONTAIN" ? "contain" : "cover",
-                    transform: `translate(${currentSetting.x}%, ${currentSetting.y}%) scale(${currentSetting.scale})`,
+                    objectFit: (currentSetting.fit_mode || "COVER").toUpperCase() === "CONTAIN" ? "contain" : "cover",
+                    transform: `translate(${currentSetting.x ?? 0}%, ${currentSetting.y ?? 0}%) scale(${currentSetting.scale ?? 1})`,
                     transformOrigin: "center center",
                     transition: isDragging ? "none" : "transform 0.1s ease-out",
                   }}

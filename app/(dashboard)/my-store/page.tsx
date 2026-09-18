@@ -21,6 +21,95 @@ import { STORE_TEMPLATES } from "@/lib/templates/definitions";
 import { Store, StoreTemplate } from "@/types";
 import { SyncBridgeService } from "@/lib/db/sync-bridge";
 
+function DesktopVirtualPreview({
+  slug,
+  customization,
+  onEditLogo,
+  onEditBanner,
+  onEditStoreInfo,
+}: {
+  slug: string;
+  customization: StoreEditorCustomization;
+  onEditLogo: () => void;
+  onEditBanner: () => void;
+  onEditStoreInfo: () => void;
+}) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = React.useState<number>(0);
+  const [contentHeight, setContentHeight] = React.useState<number>(0);
+
+  const CANONICAL_WIDTH = 1440;
+
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+    const updateSize = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth);
+      }
+      if (contentRef.current) {
+        setContentHeight(contentRef.current.offsetHeight);
+      }
+    };
+    updateSize();
+
+    if (typeof ResizeObserver !== "undefined") {
+      const resizeObserver = new ResizeObserver(() => {
+        updateSize();
+      });
+
+      resizeObserver.observe(containerRef.current);
+      if (contentRef.current) {
+        resizeObserver.observe(contentRef.current);
+      }
+
+      return () => resizeObserver.disconnect();
+    } else {
+      window.addEventListener("resize", updateSize);
+      return () => window.removeEventListener("resize", updateSize);
+    }
+  }, []);
+
+  const scale = containerWidth > 0 ? Math.min(1, containerWidth / CANONICAL_WIDTH) : 1;
+  const scaledHeight = contentHeight > 0 && scale < 1 ? Math.ceil(contentHeight * scale) : undefined;
+
+  return (
+    <div
+      ref={containerRef}
+      className="w-full rounded-3xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden shadow-xs bg-white dark:bg-neutral-950 transition-all relative"
+      style={scaledHeight ? { height: `${scaledHeight}px` } : undefined}
+    >
+      <div
+        ref={contentRef}
+        style={{
+          width: `${CANONICAL_WIDTH}px`,
+          transform: scale < 1 ? `scale(${scale})` : undefined,
+          transformOrigin: "top left",
+        }}
+      >
+        <PublicStoreView
+          storeSlug={slug}
+          customizationOverrides={{
+            logoUrl: customization.logo_url,
+            coverImageUrl: customization.cover_image_url,
+            coverPosition: customization.cover_position,
+            previewDevice: "DESKTOP",
+            brandColor: customization.brand_color,
+            accentColor: customization.accent_color,
+            primaryCtaText: customization.primary_cta_text,
+            secondaryCtaText: customization.secondary_cta_text,
+            visibleSections: customization.visible_sections,
+            isEditable: true,
+            onEditLogo,
+            onEditBanner,
+            onEditStoreInfo,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function MyStoreLiveEditorPage() {
   const router = useRouter();
   const {
@@ -256,26 +345,13 @@ export default function MyStoreLiveEditorPage() {
         <div className="flex-1 min-w-0 w-full">
           {/* Live Storefront Frame (What You See Is What You Edit) */}
           {previewDevice === "DESKTOP" && (
-            <div className="rounded-3xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden shadow-xs bg-white dark:bg-neutral-950 transition-all">
-              <PublicStoreView
-                storeSlug={slug}
-                customizationOverrides={{
-                  logoUrl: customization.logo_url,
-                  coverImageUrl: customization.cover_image_url,
-                  coverPosition: customization.cover_position,
-                  previewDevice: "DESKTOP",
-                  brandColor: customization.brand_color,
-                  accentColor: customization.accent_color,
-                  primaryCtaText: customization.primary_cta_text,
-                  secondaryCtaText: customization.secondary_cta_text,
-                  visibleSections: customization.visible_sections,
-                  isEditable: true,
-                  onEditLogo: () => setShowLogoModal(true),
-                  onEditBanner: () => setShowBannerModal(true),
-                  onEditStoreInfo: () => router.push("/store-settings"),
-                }}
-              />
-            </div>
+            <DesktopVirtualPreview
+              slug={slug}
+              customization={customization}
+              onEditLogo={() => setShowLogoModal(true)}
+              onEditBanner={() => setShowBannerModal(true)}
+              onEditStoreInfo={() => router.push("/store-settings")}
+            />
           )}
 
           {previewDevice === "TABLET" && (
