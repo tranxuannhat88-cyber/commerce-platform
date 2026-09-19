@@ -1224,6 +1224,8 @@ export interface DeviceCoverSettings {
   x: number;
   y: number;
   fit_mode: CoverFitMode;
+  image_url?: string;
+  asset_id?: string;
 }
 
 export interface CoverPositionSettings {
@@ -1231,6 +1233,38 @@ export interface CoverPositionSettings {
   tablet: DeviceCoverSettings;
   mobile: DeviceCoverSettings;
 }
+
+export const STORE_COVER_RATIOS = {
+  desktop: {
+    ratio: 8 / 3,
+    ratioString: "8/3",
+    aspectClass: "aspect-[8/3]",
+    label: "8:3",
+    recommendedSize: "1600 × 600 px",
+    safeAreaClass: "inset-x-[10%] inset-y-[10%]",
+    previewMaxWidth: "max-w-[640px]",
+  },
+  tablet: {
+    ratio: 16 / 7,
+    ratioString: "16/7",
+    aspectClass: "aspect-[16/7]",
+    label: "16:7",
+    recommendedSize: "1280 × 560 px",
+    safeAreaClass: "inset-x-[12.5%] inset-y-[12.5%]",
+    previewMaxWidth: "max-w-[560px]",
+  },
+  mobile: {
+    ratio: 4 / 3,
+    ratioString: "4/3",
+    aspectClass: "aspect-[4/3]",
+    label: "4:3",
+    recommendedSize: "900 × 675 px",
+    safeAreaClass: "inset-x-[8%] inset-y-[8%]",
+    previewMaxWidth: "max-w-[280px]",
+  },
+} as const;
+
+export type StoreCoverDevice = keyof typeof STORE_COVER_RATIOS;
 
 export const DEFAULT_DEVICE_COVER_SETTINGS: DeviceCoverSettings = {
   scale: 1,

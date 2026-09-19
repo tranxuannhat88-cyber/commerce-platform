@@ -3,7 +3,7 @@
 import React from "react";
 import { MapPin, ShieldCheck, Phone, Share2, Store as StoreIcon, Building2, User, Camera, Pencil } from "lucide-react";
 import { AppUrlService } from "@/lib/services/url";
-import { CoverPositionSettings, DEFAULT_COVER_POSITION } from "@/types";
+import { CoverPositionSettings, DEFAULT_COVER_POSITION, STORE_COVER_RATIOS } from "@/types";
 
 interface PublicStoreHeroProps {
   storeName: string;
@@ -124,111 +124,119 @@ export function PublicStoreHero({
   const tabletPos = coverPosition?.tablet || DEFAULT_COVER_POSITION.tablet;
   const mobilePos = coverPosition?.mobile || DEFAULT_COVER_POSITION.mobile;
 
-  const heroHeightClass = previewDevice
+  // Fallback to base coverImageUrl if device-specific image is not set
+  const desktopImageUrl = desktopPos?.image_url || coverImageUrl;
+  const tabletImageUrl = tabletPos?.image_url || coverImageUrl;
+  const mobileImageUrl = mobilePos?.image_url || coverImageUrl;
+
+  const hasAnyCoverImage = Boolean(coverImageUrl || desktopImageUrl || tabletImageUrl || mobileImageUrl);
+
+  const coverAspectClass = previewDevice
     ? previewDevice === "MOBILE"
-      ? "h-32"
+      ? STORE_COVER_RATIOS.mobile.aspectClass
       : previewDevice === "TABLET"
-      ? "h-44"
-      : "h-52"
-    : "h-32 sm:h-44 lg:h-52";
+      ? STORE_COVER_RATIOS.tablet.aspectClass
+      : STORE_COVER_RATIOS.desktop.aspectClass
+    : `${STORE_COVER_RATIOS.mobile.aspectClass} sm:${STORE_COVER_RATIOS.tablet.aspectClass} lg:${STORE_COVER_RATIOS.desktop.aspectClass}`;
 
   return (
-    <section
-      className="relative w-full bg-white dark:bg-neutral-900 border-b border-neutral-200/80 dark:border-neutral-800 overflow-hidden"
-      style={{
-        "--store-hero-desktop-height": "208px",
-        "--store-hero-tablet-height": "176px",
-        "--store-hero-mobile-height": "128px",
-      } as React.CSSProperties}
-    >
+    <section className="relative w-full bg-white dark:bg-neutral-900 border-b border-neutral-200/80 dark:border-neutral-800 overflow-hidden">
       {/* 1. COVER PHOTO OR CLEAN NEUTRAL BRANDED BACKGROUND */}
-      <div
-        className={`relative w-full ${heroHeightClass} bg-neutral-900 overflow-hidden ${
-          isEditable ? "group/banner cursor-pointer select-none" : ""
-        }`}
-        onClick={isEditable ? onEditBanner : undefined}
-      >
-        {coverImageUrl ? (
-          <>
-            {/* When previewDevice is explicitly passed (e.g. in My Store preview viewport) */}
-            {previewDevice ? (
-              <StoreCoverImage
-                url={coverImageUrl}
-                storeName={storeName}
-                settings={
-                  previewDevice === "MOBILE"
-                    ? mobilePos
-                    : previewDevice === "TABLET"
-                    ? tabletPos
-                    : desktopPos
-                }
-                className="flex"
-              />
-            ) : (
-              <>
-                {/* Public Store: Responsive multi-breakpoint rendering */}
-                {/* Desktop (>= 1024px) */}
+      <div className="w-full bg-neutral-900 flex justify-center overflow-hidden">
+        <div
+          className={`relative w-full max-w-[1440px] ${coverAspectClass} bg-neutral-900 overflow-hidden ${
+            isEditable ? "group/banner cursor-pointer select-none" : ""
+          }`}
+          onClick={isEditable ? onEditBanner : undefined}
+        >
+          {hasAnyCoverImage ? (
+            <>
+              {/* When previewDevice is explicitly passed (e.g. in My Store preview viewport) */}
+              {previewDevice ? (
                 <StoreCoverImage
-                  url={coverImageUrl}
+                  url={
+                    (previewDevice === "MOBILE"
+                      ? mobileImageUrl
+                      : previewDevice === "TABLET"
+                      ? tabletImageUrl
+                      : desktopImageUrl) || ""
+                  }
                   storeName={storeName}
-                  settings={desktopPos}
-                  className="hidden lg:flex"
+                  settings={
+                    previewDevice === "MOBILE"
+                      ? mobilePos
+                      : previewDevice === "TABLET"
+                      ? tabletPos
+                      : desktopPos
+                  }
+                  className="flex"
                 />
+              ) : (
+                <>
+                  {/* Public Store: Responsive multi-breakpoint rendering */}
+                  {/* Desktop (>= 1024px) */}
+                  <StoreCoverImage
+                    url={desktopImageUrl || ""}
+                    storeName={storeName}
+                    settings={desktopPos}
+                    className="hidden lg:flex"
+                  />
 
-                {/* Tablet (640px - 1023px) */}
-                <StoreCoverImage
-                  url={coverImageUrl}
-                  storeName={storeName}
-                  settings={tabletPos}
-                  className="hidden sm:flex lg:hidden"
-                />
+                  {/* Tablet (640px - 1023px) */}
+                  <StoreCoverImage
+                    url={tabletImageUrl || ""}
+                    storeName={storeName}
+                    settings={tabletPos}
+                    className="hidden sm:flex lg:hidden"
+                  />
 
-                {/* Mobile (< 640px) */}
-                <StoreCoverImage
-                  url={coverImageUrl}
-                  storeName={storeName}
-                  settings={mobilePos}
-                  className="flex sm:hidden"
-                />
-              </>
-            )}
-          </>
-        ) : (
-          <div
-            className="w-full h-full opacity-90 transition-all flex items-center justify-center relative"
-            style={{
-              background: `linear-gradient(135deg, ${brandColor}22 0%, ${accentColor}44 100%)`,
-            }}
-          >
-            {isEditable ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditBanner?.();
-                }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/95 dark:bg-neutral-900/95 hover:bg-white text-neutral-800 dark:text-neutral-200 text-xs font-bold shadow-md border border-neutral-200/60 dark:border-neutral-700 backdrop-blur-xs transition-all cursor-pointer z-10"
-              >
+                  {/* Mobile (< 640px) */}
+                  <StoreCoverImage
+                    url={mobileImageUrl || ""}
+                    storeName={storeName}
+                    settings={mobilePos}
+                    className="flex sm:hidden"
+                  />
+                </>
+              )}
+            </>
+          ) : (
+            <div
+              className="w-full h-full opacity-90 transition-all flex items-center justify-center relative"
+              style={{
+                background: `linear-gradient(135deg, ${brandColor}22 0%, ${accentColor}44 100%)`,
+              }}
+            >
+              {isEditable ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditBanner?.();
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/95 dark:bg-neutral-900/95 hover:bg-white text-neutral-800 dark:text-neutral-200 text-xs font-bold shadow-md border border-neutral-200/60 dark:border-neutral-700 backdrop-blur-xs transition-all cursor-pointer z-10"
+                >
+                  <Camera className="w-4 h-4 text-[#00B894]" />
+                  <span>+ Thêm ảnh bìa</span>
+                </button>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-neutral-300 dark:text-neutral-700/40 opacity-40">
+                  <StoreIcon className="w-16 h-16 sm:w-24 sm:h-24 stroke-[1]" />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Hover overlay when banner exists in edit mode */}
+          {isEditable && hasAnyCoverImage && (
+            <div className="absolute inset-0 bg-black/35 opacity-0 group-hover/banner:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+              <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/95 dark:bg-neutral-900/95 text-neutral-900 dark:text-neutral-100 text-xs font-bold shadow-lg border border-neutral-200/50 backdrop-blur-xs">
                 <Camera className="w-4 h-4 text-[#00B894]" />
-                <span>+ Thêm ảnh bìa</span>
-              </button>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-neutral-300 dark:text-neutral-700/40 opacity-40">
-                <StoreIcon className="w-16 h-16 sm:w-24 sm:h-24 stroke-[1]" />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Hover overlay when banner exists in edit mode */}
-        {isEditable && coverImageUrl && (
-          <div className="absolute inset-0 bg-black/35 opacity-0 group-hover/banner:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/95 dark:bg-neutral-900/95 text-neutral-900 dark:text-neutral-100 text-xs font-bold shadow-lg border border-neutral-200/50 backdrop-blur-xs">
-              <Camera className="w-4 h-4 text-[#00B894]" />
-              <span>📷 Điều chỉnh ảnh bìa</span>
-            </span>
-          </div>
-        )}
+                <span>📷 Điều chỉnh ảnh bìa</span>
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 2. STORE IDENTITY DETAILS */}

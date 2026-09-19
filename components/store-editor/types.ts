@@ -4,17 +4,21 @@ import {
   CoverFitMode,
   DEFAULT_COVER_POSITION,
   DEFAULT_DEVICE_COVER_SETTINGS,
+  STORE_COVER_RATIOS,
+  StoreCoverDevice,
 } from "@/types";
 
 export type {
   CoverPositionSettings,
   DeviceCoverSettings,
   CoverFitMode,
+  StoreCoverDevice,
 };
 
 export {
   DEFAULT_COVER_POSITION,
   DEFAULT_DEVICE_COVER_SETTINGS,
+  STORE_COVER_RATIOS,
 };
 
 export interface StoreEditorCustomization {

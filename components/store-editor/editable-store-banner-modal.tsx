@@ -26,6 +26,8 @@ import {
   CoverFitMode,
   DEFAULT_COVER_POSITION,
   DEFAULT_DEVICE_COVER_SETTINGS,
+  STORE_COVER_RATIOS,
+  StoreCoverDevice,
 } from "./types";
 import { uploadMediaFile } from "@/lib/storage/upload-client";
 
@@ -49,6 +51,8 @@ const normalizeDeviceSetting = (setting?: Partial<DeviceCoverSettings>): DeviceC
   x: setting?.x ?? 0,
   y: setting?.y ?? 0,
   fit_mode: setting?.fit_mode || "CONTAIN",
+  image_url: setting?.image_url,
+  asset_id: setting?.asset_id,
 });
 
 export function EditableStoreBannerModal({
@@ -84,9 +88,11 @@ export function EditableStoreBannerModal({
 
   // Uploading and Saving states
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeviceUploading, setIsDeviceUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadedAsset, setUploadedAsset] = useState<{ url: string; assetId: string } | null>(null);
+  const deviceFileInputRef = useRef<HTMLInputElement>(null);
 
   // Dragging interaction state
   const [isDragging, setIsDragging] = useState(false);
@@ -105,6 +111,7 @@ export function EditableStoreBannerModal({
       setIsLowRes(false);
       setActiveDevice("desktop");
       setIsUploading(false);
+      setIsDeviceUploading(false);
       setIsSaving(false);
       setUploadError(null);
       setUploadedAsset(null);
@@ -112,9 +119,14 @@ export function EditableStoreBannerModal({
     prevIsOpenRef.current = isOpen;
   }, [isOpen]);
 
+  // Current active device setting
+  const currentSetting: DeviceCoverSettings = positions[activeDevice] || DEFAULT_DEVICE_COVER_SETTINGS;
+  const activeDeviceImageUrl = currentSetting.image_url || imageUrl;
+  const hasDeviceCustomImage = Boolean(currentSetting.image_url && currentSetting.image_url !== imageUrl);
+
   // Check image resolution on image change
   useEffect(() => {
-    if (!imageUrl) {
+    if (!activeDeviceImageUrl) {
       setIsLowRes(false);
       return;
     }
@@ -126,13 +138,10 @@ export function EditableStoreBannerModal({
         setIsLowRes(false);
       }
     };
-    img.src = imageUrl;
-  }, [imageUrl]);
+    img.src = activeDeviceImageUrl;
+  }, [activeDeviceImageUrl]);
 
   if (!isOpen) return null;
-
-  // Current active device setting
-  const currentSetting: DeviceCoverSettings = positions[activeDevice] || DEFAULT_DEVICE_COVER_SETTINGS;
 
   // Update setting for active device
   const updateActiveSetting = (updater: (prev: DeviceCoverSettings) => DeviceCoverSettings) => {
@@ -140,6 +149,80 @@ export function EditableStoreBannerModal({
       ...prev,
       [activeDevice]: updater(prev[activeDevice] || DEFAULT_DEVICE_COVER_SETTINGS),
     }));
+  };
+
+  // Device-Specific Image Handler
+  const handleDeviceFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedMimes = ["image/png", "image/jpeg", "image/webp"];
+    if (!allowedMimes.includes(file.type)) {
+      setUploadError("Chỉ chấp nhận tệp hình ảnh định dạng PNG, JPG hoặc WEBP.");
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      setUploadError("Kích thước ảnh bìa tối đa là 15MB.");
+      return;
+    }
+
+    setUploadError(null);
+    setIsDeviceUploading(true);
+
+    try {
+      const asset = await uploadMediaFile(file, {
+        ownerType: "STORE",
+        ownerId: storeId,
+        visibility: "PUBLIC",
+      });
+
+      const updatedSetting: DeviceCoverSettings = {
+        scale: 1,
+        x: 0,
+        y: 0,
+        fit_mode: "CONTAIN",
+        image_url: asset.url,
+        asset_id: asset.assetId,
+      };
+
+      const updatedPositions = {
+        ...positions,
+        [activeDevice]: updatedSetting,
+      };
+      setPositions(updatedPositions);
+
+      // Immediately sync to store
+      await onSelectBanner(imageUrl || asset.url, updatedPositions, uploadedAsset?.assetId || asset.assetId);
+    } catch (err: any) {
+      console.error("Device banner upload error:", err);
+      setUploadError(err.message || "Không thể tải ảnh riêng cho thiết bị. Vui lòng thử lại.");
+    } finally {
+      setIsDeviceUploading(false);
+      if (deviceFileInputRef.current) deviceFileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveDeviceSpecificImage = async () => {
+    const updatedSetting: DeviceCoverSettings = {
+      ...currentSetting,
+      scale: 1,
+      x: 0,
+      y: 0,
+      fit_mode: "CONTAIN",
+    };
+    delete updatedSetting.image_url;
+    delete updatedSetting.asset_id;
+
+    const updatedPositions = {
+      ...positions,
+      [activeDevice]: updatedSetting,
+    };
+    setPositions(updatedPositions);
+
+    if (imageUrl) {
+      await onSelectBanner(imageUrl, updatedPositions, uploadedAsset?.assetId);
+    }
   };
 
   // 1. File Upload Handler
@@ -197,7 +280,7 @@ export function EditableStoreBannerModal({
   const isDraggable = (currentSetting.fit_mode || "CONTAIN").toUpperCase() === "COVER" || (currentSetting.scale ?? 1) > 1;
 
   const handlePointerDown = (clientX: number, clientY: number) => {
-    if (!imageUrl || !isDraggable) return;
+    if (!activeDeviceImageUrl || !isDraggable) return;
     setIsDragging(true);
     dragStartRef.current = {
       clientX,
@@ -274,13 +357,13 @@ export function EditableStoreBannerModal({
 
   // 8. Save Handler
   const handleSave = async () => {
-    if (!imageUrl) return;
+    if (!imageUrl && !positions.desktop.image_url) return;
     setIsSaving(true);
     setUploadError(null);
 
     try {
-      const finalUrl = uploadedAsset?.url || imageUrl;
-      const finalAssetId = uploadedAsset?.assetId;
+      const finalUrl = uploadedAsset?.url || imageUrl || positions.desktop.image_url || "";
+      const finalAssetId = uploadedAsset?.assetId || positions.desktop.asset_id;
 
       await onSelectBanner(finalUrl, positions, finalAssetId);
       onClose();
@@ -298,6 +381,11 @@ export function EditableStoreBannerModal({
       await onDeleteBanner();
       setImageUrl("");
       setUploadedAsset(null);
+      setPositions({
+        desktop: { ...DEFAULT_DEVICE_COVER_SETTINGS },
+        tablet: { ...DEFAULT_DEVICE_COVER_SETTINGS },
+        mobile: { ...DEFAULT_DEVICE_COVER_SETTINGS },
+      });
       onClose();
     } catch (err: any) {
       console.error("Failed to delete banner:", err);
@@ -310,12 +398,12 @@ export function EditableStoreBannerModal({
   const getViewportDimensions = () => {
     switch (activeDevice) {
       case "mobile":
-        return "w-[280px] sm:w-[320px] aspect-[390/128]";
+        return `w-[260px] sm:w-[280px] ${STORE_COVER_RATIOS.mobile.aspectClass}`;
       case "tablet":
-        return "w-full max-w-[560px] aspect-[820/176]";
+        return `w-full ${STORE_COVER_RATIOS.tablet.previewMaxWidth} ${STORE_COVER_RATIOS.tablet.aspectClass}`;
       case "desktop":
       default:
-        return "w-full max-w-[720px] aspect-[1440/208]";
+        return `w-full ${STORE_COVER_RATIOS.desktop.previewMaxWidth} ${STORE_COVER_RATIOS.desktop.aspectClass}`;
     }
   };
 
@@ -349,75 +437,89 @@ export function EditableStoreBannerModal({
         {/* Modal Body */}
         <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
           {/* 2. Device Mode Switcher */}
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-1 p-1 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700">
-              <button
-                type="button"
-                onClick={() => setActiveDevice("desktop")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  activeDevice === "desktop"
-                    ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs border border-neutral-200/60 dark:border-neutral-700"
-                    : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400"
-                }`}
-              >
-                <Monitor className="w-3.5 h-3.5 text-[#00B894]" />
-                <span>Máy tính</span>
-              </button>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-1 p-1 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700">
+                <button
+                  type="button"
+                  onClick={() => setActiveDevice("desktop")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    activeDevice === "desktop"
+                      ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs border border-neutral-200/60 dark:border-neutral-700"
+                      : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400"
+                  }`}
+                >
+                  <Monitor className="w-3.5 h-3.5 text-[#00B894]" />
+                  <span>Máy tính (8:3)</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setActiveDevice("tablet")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  activeDevice === "tablet"
-                    ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs border border-neutral-200/60 dark:border-neutral-700"
-                    : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400"
-                }`}
-              >
-                <Tablet className="w-3.5 h-3.5 text-[#00B894]" />
-                <span>Máy tính bảng</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDevice("tablet")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    activeDevice === "tablet"
+                      ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs border border-neutral-200/60 dark:border-neutral-700"
+                      : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400"
+                  }`}
+                >
+                  <Tablet className="w-3.5 h-3.5 text-[#00B894]" />
+                  <span>Máy tính bảng (16:7)</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setActiveDevice("mobile")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  activeDevice === "mobile"
-                    ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs border border-neutral-200/60 dark:border-neutral-700"
-                    : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400"
-                }`}
-              >
-                <Smartphone className="w-3.5 h-3.5 text-[#00B894]" />
-                <span>Di động</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDevice("mobile")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    activeDevice === "mobile"
+                      ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs border border-neutral-200/60 dark:border-neutral-700"
+                      : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400"
+                  }`}
+                >
+                  <Smartphone className="w-3.5 h-3.5 text-[#00B894]" />
+                  <span>Di động (4:3)</span>
+                </button>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex items-center gap-1.5 text-xs">
+                <button
+                  type="button"
+                  onClick={handleCenter}
+                  className="px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Căn giữa hình ảnh"
+                >
+                  <AlignCenter className="w-3.5 h-3.5 text-neutral-500" />
+                  <span>Căn giữa</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResetCurrent}
+                  className="px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Đặt lại thiết bị này về mặc định"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-neutral-500" />
+                  <span>Đặt lại</span>
+                </button>
+              </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="flex items-center gap-1.5 text-xs">
-              <button
-                type="button"
-                onClick={handleCenter}
-                className="px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                title="Căn giữa hình ảnh"
-              >
-                <AlignCenter className="w-3.5 h-3.5 text-neutral-500" />
-                <span>Căn giữa</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleResetCurrent}
-                className="px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                title="Đặt lại thiết bị này về mặc định"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-neutral-500" />
-                <span>Đặt lại</span>
-              </button>
+            {/* Ratio info & recommended size */}
+            <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400 px-1">
+              <span>
+                Tỷ lệ chuẩn: <strong className="text-neutral-800 dark:text-neutral-200 font-semibold">{STORE_COVER_RATIOS[activeDevice].label}</strong> • Kích thước khuyến nghị: <strong className="text-neutral-800 dark:text-neutral-200 font-semibold">{STORE_COVER_RATIOS[activeDevice].recommendedSize}</strong>
+              </span>
+              {activeDevice !== "desktop" && (
+                <span className="text-[10px] text-neutral-400 italic hidden sm:inline">
+                  {hasDeviceCustomImage ? "(Đang dùng ảnh riêng)" : "(Dùng chung ảnh bìa gốc)"}
+                </span>
+              )}
             </div>
           </div>
 
           {/* 3. Interactive Preview Canvas Frame */}
           <div className="p-3 sm:p-4 rounded-3xl bg-neutral-100/80 dark:bg-neutral-950/60 border border-neutral-200/80 dark:border-neutral-800 flex items-center justify-center min-h-[220px]">
-            {imageUrl ? (
+            {activeDeviceImageUrl ? (
               <div
                 ref={containerRef}
                 className={`${getViewportDimensions()} rounded-2xl relative overflow-hidden bg-neutral-900 border border-neutral-300 dark:border-neutral-700 shadow-md select-none touch-none ${
@@ -437,7 +539,7 @@ export function EditableStoreBannerModal({
               >
                 {/* Banner Image with Live Transforms */}
                 <img
-                  src={imageUrl}
+                  src={activeDeviceImageUrl}
                   alt={storeName}
                   draggable={false}
                   className="w-full h-full pointer-events-none select-none"
@@ -451,9 +553,9 @@ export function EditableStoreBannerModal({
 
                 {/* Safe Area Overlay Guide - Only show when in COVER mode or zoomed */}
                 {((currentSetting.fit_mode || "CONTAIN").toUpperCase() === "COVER" || (currentSetting.scale ?? 1) > 1) && (
-                  <div className="absolute inset-2.5 sm:inset-4 border border-dashed border-white/50 rounded-xl pointer-events-none flex items-end justify-center pb-1.5 animate-in fade-in">
+                  <div className={`absolute ${STORE_COVER_RATIOS[activeDevice].safeAreaClass} border border-dashed border-white/50 rounded-xl pointer-events-none flex items-end justify-center pb-1.5 animate-in fade-in`}>
                     <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold tracking-wide shadow-xs">
-                      Đặt nội dung quan trọng trong vùng an toàn
+                      Vùng an toàn ({STORE_COVER_RATIOS[activeDevice].label})
                     </span>
                   </div>
                 )}
@@ -492,6 +594,51 @@ export function EditableStoreBannerModal({
               </div>
             )}
           </div>
+
+          {/* Device-Specific Image Card (Tablet / Mobile) */}
+          {activeDevice !== "desktop" && (
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-100/80 dark:bg-neutral-800/80 text-xs border border-neutral-200/60 dark:border-neutral-700">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300">
+                  {hasDeviceCustomImage
+                    ? `Thiết bị này đang dùng ảnh riêng (${STORE_COVER_RATIOS[activeDevice].label})`
+                    : `Tùy chọn: Dùng ảnh riêng phù hợp tỷ lệ ${STORE_COVER_RATIOS[activeDevice].label}`}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {hasDeviceCustomImage ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => deviceFileInputRef.current?.click()}
+                      disabled={isSaving || isUploading || isDeviceUploading}
+                      className="px-2.5 py-1 rounded-lg bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 font-bold text-[11px] cursor-pointer transition-colors"
+                    >
+                      {isDeviceUploading ? "Đang tải..." : "Đổi ảnh riêng"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemoveDeviceSpecificImage}
+                      disabled={isSaving || isUploading || isDeviceUploading}
+                      className="px-2.5 py-1 rounded-lg text-neutral-500 hover:text-red-600 dark:hover:text-red-400 font-bold text-[11px] cursor-pointer transition-colors underline"
+                    >
+                      Dùng lại ảnh chung
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => deviceFileInputRef.current?.click()}
+                    disabled={isSaving || isUploading || isDeviceUploading}
+                    className="px-2.5 py-1 rounded-lg bg-[#00B894]/10 hover:bg-[#00B894]/20 text-[#00B894] font-bold text-[11px] cursor-pointer transition-colors flex items-center gap-1"
+                  >
+                    <Upload className="w-3 h-3" />
+                    <span>{isDeviceUploading ? "Đang tải..." : "Dùng ảnh riêng cho thiết bị này"}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Low Resolution Notice */}
           {isLowRes && (
@@ -593,6 +740,13 @@ export function EditableStoreBannerModal({
             accept="image/png,image/jpeg,image/webp"
             className="hidden"
           />
+          <input
+            type="file"
+            ref={deviceFileInputRef}
+            onChange={handleDeviceFileChange}
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+          />
 
           <div className="flex items-center justify-between pt-1 text-xs">
             <div className="flex items-center gap-2">
@@ -609,7 +763,7 @@ export function EditableStoreBannerModal({
                 <button
                   type="button"
                   onClick={handleDelete}
-                  disabled={isSaving || isUploading}
+                  disabled={isSaving || isUploading || isDeviceUploading}
                   className="px-3 py-1.5 rounded-xl border border-red-200/70 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -621,7 +775,7 @@ export function EditableStoreBannerModal({
             <button
               type="button"
               onClick={handleResetAll}
-              disabled={isSaving || isUploading}
+              disabled={isSaving || isUploading || isDeviceUploading}
               className="text-[11px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 font-medium underline underline-offset-2 cursor-pointer disabled:opacity-40"
             >
               Đặt lại tất cả thiết bị
@@ -634,7 +788,7 @@ export function EditableStoreBannerModal({
           <button
             type="button"
             onClick={onClose}
-            disabled={isSaving || isUploading}
+            disabled={isSaving || isUploading || isDeviceUploading}
             className="px-4 py-2 text-xs font-bold rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer disabled:opacity-40"
           >
             Hủy
@@ -642,14 +796,14 @@ export function EditableStoreBannerModal({
 
           <button
             type="button"
-            disabled={!imageUrl || isSaving || isUploading}
+            disabled={(!imageUrl && !positions.desktop.image_url) || isSaving || isUploading || isDeviceUploading}
             onClick={handleSave}
             className="px-5 py-2 text-xs font-bold rounded-xl bg-[#00B894] hover:bg-[#00a884] text-white transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
           >
-            {isSaving || isUploading ? (
+            {isSaving || isUploading || isDeviceUploading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>{isUploading ? "Đang tải ảnh..." : "Đang lưu..."}</span>
+                <span>{isUploading || isDeviceUploading ? "Đang tải ảnh..." : "Đang lưu..."}</span>
               </>
             ) : (
               <>
