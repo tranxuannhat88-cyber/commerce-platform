@@ -43,7 +43,7 @@ export function StoreCoverImage({
   };
   className?: string;
 }) {
-  const fitMode = (settings?.fit_mode || "COVER").toUpperCase() === "CONTAIN" ? "contain" : "cover";
+  const fitMode = (settings?.fit_mode || "CONTAIN").toUpperCase() === "CONTAIN" ? "contain" : "cover";
   const scale = settings?.scale ?? 1;
   const x = settings?.x ?? 0;
   const y = settings?.y ?? 0;

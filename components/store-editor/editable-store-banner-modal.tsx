@@ -44,6 +44,13 @@ interface EditableStoreBannerModalProps {
 
 type DeviceTab = "desktop" | "tablet" | "mobile";
 
+const normalizeDeviceSetting = (setting?: Partial<DeviceCoverSettings>): DeviceCoverSettings => ({
+  scale: setting?.scale ?? 1,
+  x: setting?.x ?? 0,
+  y: setting?.y ?? 0,
+  fit_mode: setting?.fit_mode || "CONTAIN",
+});
+
 export function EditableStoreBannerModal({
   isOpen,
   onClose,
@@ -67,9 +74,9 @@ export function EditableStoreBannerModal({
 
   // Positions for all 3 devices
   const [positions, setPositions] = useState<CoverPositionSettings>(() => ({
-    desktop: { ...(currentCoverPosition?.desktop || DEFAULT_COVER_POSITION.desktop) },
-    tablet: { ...(currentCoverPosition?.tablet || DEFAULT_COVER_POSITION.tablet) },
-    mobile: { ...(currentCoverPosition?.mobile || DEFAULT_COVER_POSITION.mobile) },
+    desktop: normalizeDeviceSetting(currentCoverPosition?.desktop),
+    tablet: normalizeDeviceSetting(currentCoverPosition?.tablet),
+    mobile: normalizeDeviceSetting(currentCoverPosition?.mobile),
   }));
 
   // Low resolution warning
@@ -91,9 +98,9 @@ export function EditableStoreBannerModal({
     if (isOpen && !prevIsOpenRef.current) {
       setImageUrl(currentBannerUrl || "");
       setPositions({
-        desktop: { ...(currentCoverPosition?.desktop || DEFAULT_COVER_POSITION.desktop) },
-        tablet: { ...(currentCoverPosition?.tablet || DEFAULT_COVER_POSITION.tablet) },
-        mobile: { ...(currentCoverPosition?.mobile || DEFAULT_COVER_POSITION.mobile) },
+        desktop: normalizeDeviceSetting(currentCoverPosition?.desktop),
+        tablet: normalizeDeviceSetting(currentCoverPosition?.tablet),
+        mobile: normalizeDeviceSetting(currentCoverPosition?.mobile),
       });
       setIsLowRes(false);
       setActiveDevice("desktop");
@@ -155,9 +162,9 @@ export function EditableStoreBannerModal({
     const tempUrl = URL.createObjectURL(file);
     setImageUrl(tempUrl);
     const initialPositions: CoverPositionSettings = {
-      desktop: { ...DEFAULT_DEVICE_COVER_SETTINGS },
-      tablet: { ...DEFAULT_DEVICE_COVER_SETTINGS },
-      mobile: { ...DEFAULT_DEVICE_COVER_SETTINGS },
+      desktop: { scale: 1, x: 0, y: 0, fit_mode: "CONTAIN" },
+      tablet: { scale: 1, x: 0, y: 0, fit_mode: "CONTAIN" },
+      mobile: { scale: 1, x: 0, y: 0, fit_mode: "CONTAIN" },
     };
     setPositions(initialPositions);
 
@@ -187,8 +194,10 @@ export function EditableStoreBannerModal({
   };
 
   // 2. Drag Positioning Handlers (Mouse & Touch)
+  const isDraggable = (currentSetting.fit_mode || "CONTAIN").toUpperCase() === "COVER" || (currentSetting.scale ?? 1) > 1;
+
   const handlePointerDown = (clientX: number, clientY: number) => {
-    if (!imageUrl) return;
+    if (!imageUrl || !isDraggable) return;
     setIsDragging(true);
     dragStartRef.current = {
       clientX,
@@ -240,6 +249,7 @@ export function EditableStoreBannerModal({
     updateActiveSetting((prev) => ({
       ...prev,
       fit_mode: mode,
+      ...(mode === "CONTAIN" ? { scale: 1, x: 0, y: 0 } : {}),
     }));
   };
 
@@ -411,7 +421,7 @@ export function EditableStoreBannerModal({
               <div
                 ref={containerRef}
                 className={`${getViewportDimensions()} rounded-2xl relative overflow-hidden bg-neutral-900 border border-neutral-300 dark:border-neutral-700 shadow-md select-none touch-none ${
-                  isDragging ? "cursor-grabbing" : "cursor-grab"
+                  isDraggable ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default"
                 }`}
                 onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
                 onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
@@ -430,26 +440,37 @@ export function EditableStoreBannerModal({
                   src={imageUrl}
                   alt={storeName}
                   draggable={false}
-                  className="w-full h-full pointer-events-none"
+                  className="w-full h-full pointer-events-none select-none"
                   style={{
-                    objectFit: (currentSetting.fit_mode || "COVER").toUpperCase() === "CONTAIN" ? "contain" : "cover",
+                    objectFit: (currentSetting.fit_mode || "CONTAIN").toUpperCase() === "CONTAIN" ? "contain" : "cover",
                     transform: `translate(${currentSetting.x ?? 0}%, ${currentSetting.y ?? 0}%) scale(${currentSetting.scale ?? 1})`,
                     transformOrigin: "center center",
                     transition: isDragging ? "none" : "transform 0.1s ease-out",
                   }}
                 />
 
-                {/* Safe Area Overlay Guide */}
-                <div className="absolute inset-2.5 sm:inset-4 border border-dashed border-white/50 rounded-xl pointer-events-none flex items-end justify-center pb-1.5">
-                  <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold tracking-wide shadow-xs">
-                    Đặt nội dung quan trọng trong vùng an toàn
-                  </span>
-                </div>
+                {/* Safe Area Overlay Guide - Only show when in COVER mode or zoomed */}
+                {((currentSetting.fit_mode || "CONTAIN").toUpperCase() === "COVER" || (currentSetting.scale ?? 1) > 1) && (
+                  <div className="absolute inset-2.5 sm:inset-4 border border-dashed border-white/50 rounded-xl pointer-events-none flex items-end justify-center pb-1.5 animate-in fade-in">
+                    <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold tracking-wide shadow-xs">
+                      Đặt nội dung quan trọng trong vùng an toàn
+                    </span>
+                  </div>
+                )}
 
                 {/* Drag hint badge */}
                 <div className="absolute top-2.5 left-2.5 pointer-events-none px-2 py-0.5 rounded-lg bg-black/50 backdrop-blur-xs text-white/80 text-[10px] font-medium flex items-center gap-1">
-                  <Move className="w-3 h-3" />
-                  <span>Kéo để chỉnh vị trí</span>
+                  {currentSetting.fit_mode === "CONTAIN" && (currentSetting.scale ?? 1) <= 1 ? (
+                    <>
+                      <Minimize2 className="w-3 h-3 text-[#00B894]" />
+                      <span>Hiển thị toàn bộ ảnh (không cắt)</span>
+                    </>
+                  ) : (
+                    <>
+                      <Move className="w-3 h-3" />
+                      <span>Kéo để chỉnh vị trí</span>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
@@ -499,19 +520,6 @@ export function EditableStoreBannerModal({
                 <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-neutral-200/60 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700">
                   <button
                     type="button"
-                    onClick={() => handleFitModeChange("COVER")}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                      currentSetting.fit_mode === "COVER"
-                        ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs"
-                        : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400"
-                    }`}
-                  >
-                    <Maximize2 className="w-3 h-3 text-[#00B894]" />
-                    <span>Lấp đầy khung</span>
-                  </button>
-
-                  <button
-                    type="button"
                     onClick={() => handleFitModeChange("CONTAIN")}
                     className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
                       currentSetting.fit_mode === "CONTAIN"
@@ -521,6 +529,19 @@ export function EditableStoreBannerModal({
                   >
                     <Minimize2 className="w-3 h-3 text-[#00B894]" />
                     <span>Hiển thị toàn ảnh</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleFitModeChange("COVER")}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                      currentSetting.fit_mode === "COVER"
+                        ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs"
+                        : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400"
+                    }`}
+                  >
+                    <Maximize2 className="w-3 h-3 text-[#00B894]" />
+                    <span>Lấp đầy khung</span>
                   </button>
                 </div>
               </div>

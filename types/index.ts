@@ -1236,13 +1236,13 @@ export const DEFAULT_DEVICE_COVER_SETTINGS: DeviceCoverSettings = {
   scale: 1,
   x: 0,
   y: 0,
-  fit_mode: 'COVER',
+  fit_mode: 'CONTAIN',
 };
 
 export const DEFAULT_COVER_POSITION: CoverPositionSettings = {
-  desktop: { scale: 1, x: 0, y: 0, fit_mode: 'COVER' },
-  tablet: { scale: 1, x: 0, y: 0, fit_mode: 'COVER' },
-  mobile: { scale: 1, x: 0, y: 0, fit_mode: 'COVER' },
+  desktop: { scale: 1, x: 0, y: 0, fit_mode: 'CONTAIN' },
+  tablet: { scale: 1, x: 0, y: 0, fit_mode: 'CONTAIN' },
+  mobile: { scale: 1, x: 0, y: 0, fit_mode: 'CONTAIN' },
 };
 
 export interface StoreCustomizationSettings {
