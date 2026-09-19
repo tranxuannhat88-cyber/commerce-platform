@@ -80,15 +80,15 @@ export function EditableStoreBannerModal({
   const [isSaving, setIsSaving] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadedAsset, setUploadedAsset] = useState<{ url: string; assetId: string } | null>(null);
-  const uploadPromiseRef = useRef<Promise<{ assetId: string; url: string }> | null>(null);
 
   // Dragging interaction state
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ clientX: number; clientY: number; initialX: number; initialY: number } | null>(null);
+  const prevIsOpenRef = useRef(false);
 
-  // Sync state when modal opens or props update
+  // Sync state ONLY when modal opens (transition from closed to open)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !prevIsOpenRef.current) {
       setImageUrl(currentBannerUrl || "");
       setPositions({
         desktop: { ...(currentCoverPosition?.desktop || DEFAULT_COVER_POSITION.desktop) },
@@ -101,9 +101,9 @@ export function EditableStoreBannerModal({
       setIsSaving(false);
       setUploadError(null);
       setUploadedAsset(null);
-      uploadPromiseRef.current = null;
     }
-  }, [isOpen, currentBannerUrl, currentCoverPosition]);
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen]);
 
   // Check image resolution on image change
   useEffect(() => {
@@ -136,45 +136,54 @@ export function EditableStoreBannerModal({
   };
 
   // 1. File Upload Handler
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      alert("Kích thước ảnh bìa tối đa là 10MB");
+    const allowedMimes = ["image/png", "image/jpeg", "image/webp"];
+    if (!allowedMimes.includes(file.type)) {
+      setUploadError("Chỉ chấp nhận tệp hình ảnh định dạng PNG, JPG hoặc WEBP.");
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      setUploadError("Kích thước ảnh bìa tối đa là 15MB.");
       return;
     }
 
     setUploadError(null);
     const tempUrl = URL.createObjectURL(file);
     setImageUrl(tempUrl);
-    setPositions({
+    const initialPositions: CoverPositionSettings = {
       desktop: { ...DEFAULT_DEVICE_COVER_SETTINGS },
       tablet: { ...DEFAULT_DEVICE_COVER_SETTINGS },
       mobile: { ...DEFAULT_DEVICE_COVER_SETTINGS },
-    });
+    };
+    setPositions(initialPositions);
 
     setIsUploading(true);
-    const promise = uploadMediaFile(file, {
-      ownerType: "STORE",
-      ownerId: storeId,
-      visibility: "PUBLIC",
-    });
-    uploadPromiseRef.current = promise;
 
-    promise
-      .then((asset) => {
-        setUploadedAsset({ url: asset.url, assetId: asset.assetId });
-      })
-      .catch((err) => {
-        console.error("Banner upload error:", err);
-        setUploadError(err.message || "Không thể tải ảnh lên bộ lưu trữ. Vui lòng thử lại.");
-      })
-      .finally(() => {
-        setIsUploading(false);
+    try {
+      const asset = await uploadMediaFile(file, {
+        ownerType: "STORE",
+        ownerId: storeId,
+        visibility: "PUBLIC",
       });
 
-    e.target.value = "";
+      // Switch to permanent URL
+      setImageUrl(asset.url);
+      setUploadedAsset({ url: asset.url, assetId: asset.assetId });
+
+      // Step 1: Immediately persist image reference to Store
+      await onSelectBanner(asset.url, initialPositions, asset.assetId);
+    } catch (err: any) {
+      console.error("Banner upload error:", err);
+      setUploadError(err.message || "Không thể tải ảnh lên máy chủ lưu trữ. Vui lòng thử lại.");
+    } finally {
+      setIsUploading(false);
+      URL.revokeObjectURL(tempUrl);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   // 2. Drag Positioning Handlers (Mouse & Touch)
@@ -260,17 +269,8 @@ export function EditableStoreBannerModal({
     setUploadError(null);
 
     try {
-      let finalUrl = imageUrl;
-      let finalAssetId = uploadedAsset?.assetId;
-
-      if (uploadPromiseRef.current) {
-        const asset = await uploadPromiseRef.current;
-        finalUrl = asset.url;
-        finalAssetId = asset.assetId;
-      } else if (uploadedAsset) {
-        finalUrl = uploadedAsset.url;
-        finalAssetId = uploadedAsset.assetId;
-      }
+      const finalUrl = uploadedAsset?.url || imageUrl;
+      const finalAssetId = uploadedAsset?.assetId;
 
       await onSelectBanner(finalUrl, positions, finalAssetId);
       onClose();
@@ -288,7 +288,6 @@ export function EditableStoreBannerModal({
       await onDeleteBanner();
       setImageUrl("");
       setUploadedAsset(null);
-      uploadPromiseRef.current = null;
       onClose();
     } catch (err: any) {
       console.error("Failed to delete banner:", err);
