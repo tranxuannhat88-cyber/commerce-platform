@@ -263,7 +263,26 @@ export class ServerDbManager {
     );
 
     if (existingIndex >= 0) {
-      db.stores[existingIndex] = { ...db.stores[existingIndex], ...canonicalStore };
+      const existing = db.stores[existingIndex];
+      db.stores[existingIndex] = {
+        ...existing,
+        ...canonicalStore,
+        cover_image_url: canonicalStore.cover_image_url !== undefined
+          ? canonicalStore.cover_image_url
+          : existing.cover_image_url,
+        cover_asset_id: canonicalStore.cover_asset_id !== undefined
+          ? canonicalStore.cover_asset_id
+          : existing.cover_asset_id,
+        logo_url: canonicalStore.logo_url !== undefined
+          ? canonicalStore.logo_url
+          : existing.logo_url,
+        logo_asset_id: canonicalStore.logo_asset_id !== undefined
+          ? canonicalStore.logo_asset_id
+          : existing.logo_asset_id,
+        cover_position: canonicalStore.cover_position !== undefined
+          ? canonicalStore.cover_position
+          : existing.cover_position,
+      };
     } else {
       db.stores.push({ ...canonicalStore, created_at: store.created_at || new Date().toISOString() });
     }
